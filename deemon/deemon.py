@@ -47,13 +47,9 @@ def import_artists():
 
 
 def main():
-    url = []
-    new_releases = []
     active_artists = []
     queue_list = []
     new_artist = False
-    total_new_releases = 0
-    # textfile_artists = open_artist_file(input_artist)
 
     for line in import_artists():
         # Skip blank lines
@@ -62,7 +58,6 @@ def main():
 
         try:
             print(f"Searching for new releases by '{line}'...", end='')
-            #TODO: create class to handle artist object?
             artist = dz.api.search_artist(line, limit=1)['data'][0]
         except IndexError:
             print(f" not found")

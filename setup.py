@@ -3,7 +3,6 @@ from setuptools import setup
 DESCRIPTION = 'Monitor new releases by a specified list of artists and auto download using the deemix library'
 LONG_DESCRIPTION = DESCRIPTION
 
-# Setting up
 setup(
     name='deemon',
     version='0.1.2',
