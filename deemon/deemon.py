@@ -14,44 +14,46 @@ DB_FILE.parent.mkdir(parents=True, exist_ok=True)
 DEFAULT_DOWNLOAD_PATH = HOME + "/Music/deemix Music"
 DEFAULT_CONFIG_PATH = HOME + "/.config/deemix"
 
-dz = Deezer()
-dz_logger = getLogger('deemix')
-dz_logger.setLevel(WARN)
 
-db = DB(DB_FILE)
-database_artists = db.get_all_artists()
-
-parser = ArgumentParser()
-parser.add_argument('-i', '--input', dest='input_artist', help='text file or directory of artists', required=True)
-parser.add_argument('-o', '--output', dest='download_path', help='path for downloads', default=DEFAULT_DOWNLOAD_PATH)
-parser.add_argument('-c', '--config', dest='config_path', help='path to deemix config dir', default=DEFAULT_CONFIG_PATH)
-parser.add_argument('-b', '--bitrate', dest='bitrate', type=int, help='1=MP3 128, 3=MP3 320, 9=FLAC', default=3)
-args = parser.parse_args()
-
-input_artist = args.input_artist
-deemix_download_path = args.download_path
-deemix_config_path = args.config_path
-deemix_bitrate = args.bitrate
-
-
-def import_artists():
-    if os.path.isfile(input_artist):
-        with open(input_artist) as a:
-            list_of_artists = a.read().splitlines()
+def import_artists(file):
+    if os.path.isfile(file):
+        with open(file) as text_file:
+            list_of_artists = text_file.read().splitlines()
             return list_of_artists
-    elif os.path.isdir(input_artist):
-        list_of_artists = os.listdir(input_artist)
+    elif os.path.isdir(file):
+        list_of_artists = os.listdir(file)
         return list_of_artists
     else:
-        print(f"{input_artist}: not found")
+        print(f"{file}: not found")
 
 
 def main():
+    parser = ArgumentParser()
+    parser.add_argument('-i', '--input', dest='input_artist', help='text file or directory of artists', required=True)
+    parser.add_argument('-o', '--output', dest='download_path', help='path for downloads',
+                        default=DEFAULT_DOWNLOAD_PATH)
+    parser.add_argument('-c', '--config', dest='config_path', help='path to deemix config dir',
+                        default=DEFAULT_CONFIG_PATH)
+    parser.add_argument('-b', '--bitrate', dest='bitrate', type=int, help='1=MP3 128, 3=MP3 320, 9=FLAC', default=3)
+    args = parser.parse_args()
+
+    artists = args.input_artist
+    deemix_download_path = args.download_path
+    deemix_config_path = args.config_path
+    deemix_bitrate = args.bitrate
+
+    db = DB(DB_FILE)
+    database_artists = db.get_all_artists()
+
+    dz = Deezer()
+    dz_logger = getLogger('deemix')
+    dz_logger.setLevel(WARN)
+
     active_artists = []
     queue_list = []
     new_artist = False
 
-    for line in import_artists():
+    for line in import_artists(artists):
         # Skip blank lines
         if line == '':
             continue
