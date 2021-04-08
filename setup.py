@@ -15,6 +15,6 @@ setup(
     install_requires=['deemix'],
     url='https://github.com/digitalec/deemon',
     entry_points = {
-        'console_scripts': ['deemon=deemon.deemon:main'],
+        'console_scripts': ['deemon=deemon.__main__:main'],
     }
 )
