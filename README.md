@@ -8,7 +8,6 @@ the deezer-py API module to monitor a specified list of artists for new releases
 ### Prerequisites
 * python >= 3.6
 * deemix >= 2.0.1
-* deezer-py > 0.0.15
 
 ### Installation
 
@@ -26,27 +25,32 @@ deemon -a <file|dir\> [ -m <dir\> ] [ -c <dir\> ] [ -b < 1 | 3 | 9 > ] [ -d <dir
 By default, deemon uses the default paths for the config and download directories
 provided by deemix to make getting started easier.
 
-* **-a**
-  * _*Required*_ Path to text file containing list of artists -or- path to parent directory of artist subdirectories
+* **-a** [ _/path/to/file.txt_ | _/path/..._ ]
+
+    * ***Required*** Path to text file containing list of artists -or- path to parent directory of artist subdirectories
 
 
-* **-m**
-  * _Optional_ Path to save new releases
-  * **Default:** _~/Music/deemix Music_
+* **-m** [ _/path/to/music_ ]
+
+    * ***Optional*** Path to save new releases
+    * _Default: ~/Music/deemix Music_
     
 
-* **-c**
-  * _Optional_ Path to deemix config directory
-  * **Default:** _~/.config/deemix_
+* **-c** [ _/path/to/config_ ]
+
+    * ***Optional*** Path to deemix config directory
+    * _Default: ~/.config/deemix_
     
 
-* **-b**
-  * _Optional_ Set bitrate
-  * **1** - MP3 128kbps
-  * **3** - MP3 320kbps **(Default)**
-  * **9** - FLAC
+* **-b** [ _int_ ]
+
+    * ***Optional*** Set bitrate
+    * **1** - MP3 128kbps
+    * **3** - MP3 320kbps **(Default)**
+    * **9** - FLAC
 
 
-* **-d**
-  * _Optional_ Path to save database
-  * **Default:** _~/.config/deemon_
+* **-d** [ _/path/to/database_ ]
+
+    * ***Optional*** Path to save database
+    * _Default: ~/.config/deemon_
