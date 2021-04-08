@@ -30,14 +30,17 @@ def import_artists(file):
 
 
 def main():
-    parser = ArgumentParser(description="Monitor artists for new releases")
-    parser.add_argument('--input', dest='file', help='text file or directory of artists', required=True)
-    parser.add_argument('--output', dest='download_path', help='path for downloads',
-                        default=DEFAULT_DOWNLOAD_PATH)
-    parser.add_argument('--config', dest='config_path', help='path to deemix config dir',
-                        default=DEFAULT_CONFIG_PATH)
-    parser.add_argument('--bitrate', dest='bitrate', type=int, help='1=MP3 128, 3=MP3 320, 9=FLAC', default=3)
-    parser.add_argument('--version', action='version', version=f'%(prog)s-{__version__}', help='show version information')
+    parser = ArgumentParser(description="Monitor artists for new releases and download via deemix")
+    parser.add_argument('-a', dest='file', type=str, metavar='artists_file',
+                        help='file or directory containing artists', required=True)
+    parser.add_argument('-d', dest='download_path', type=str, metavar='music_path',
+                        help='path to music directory', default=DEFAULT_DOWNLOAD_PATH)
+    parser.add_argument('-c', dest='config_path', type=str, metavar='config_path',
+                        help='path to deemix config directory', default=DEFAULT_CONFIG_PATH)
+    parser.add_argument('-b', dest='bitrate', choices=[1, 3, 9], metavar='bitrate',
+                        help='available options: 1=MP3 128k, 3=MP3 320k, 9=FLAC', default=3)
+    parser.add_argument('--version', action='version', version=f'%(prog)s-{__version__}',
+                        help='show version information')
     parser.print_usage = parser.print_help
     args = parser.parse_args()
 
