@@ -13,6 +13,7 @@ setup(
     author_email="digitalec@gradiian.io",
     description=DESCRIPTION,
     long_description=README,
+    long_description_content_type="text/markdown",
     license="GPL3",
     classifiers=[
         "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
