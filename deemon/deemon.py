@@ -9,6 +9,8 @@ from deemon.db import DB
 ALBUM_URL = "https://www.deezer.com/us/album/"
 BITRATE = {1: 'MP3 128', 3: 'MP3 320', 9: 'FLAC'}
 HOME = str(Path.home())
+DB_FILE = Path(HOME + "/.config/deemon/releases.db")
+DB_FILE.parent.mkdir(parents=True, exist_ok=True)
 DEFAULT_DOWNLOAD_PATH = HOME + "/Music/deemix Music"
 DEFAULT_CONFIG_PATH = HOME + "/.config/deemix"
 
@@ -16,7 +18,7 @@ dz = Deezer()
 dz_logger = getLogger('deemix')
 dz_logger.setLevel(WARN)
 
-db = DB("releases.db")
+db = DB(DB_FILE)
 database_artists = db.get_all_artists()
 
 parser = ArgumentParser()
