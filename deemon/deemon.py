@@ -6,7 +6,6 @@ from logging import getLogger, WARN
 from deemon.queuemanager import QueueManager
 from deemon.db import DB
 
-ALBUM_URL = "https://www.deezer.com/us/album/"
 BITRATE = {1: 'MP3 128', 3: 'MP3 320', 9: 'FLAC'}
 HOME = str(Path.home())
 DB_FILE = Path(HOME + "/.config/deemon/releases.db")
