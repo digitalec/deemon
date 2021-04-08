@@ -5,6 +5,7 @@ from argparse import ArgumentParser
 from logging import getLogger, WARN
 from deemon.queuemanager import QueueManager
 from deemon.db import DB
+import os
 
 BITRATE = {1: 'MP3 128', 3: 'MP3 320', 9: 'FLAC'}
 HOME = str(Path.home())
@@ -21,26 +22,28 @@ db = DB(DB_FILE)
 database_artists = db.get_all_artists()
 
 parser = ArgumentParser()
-parser.add_argument('-f', '--file', dest='artist_file', help='list of artists in plain text', required=True)
+parser.add_argument('-i', '--input', dest='input_artist', help='text file or directory of artists', required=True)
 parser.add_argument('-o', '--output', dest='download_path', help='path for downloads', default=DEFAULT_DOWNLOAD_PATH)
 parser.add_argument('-c', '--config', dest='config_path', help='path to deemix config dir', default=DEFAULT_CONFIG_PATH)
 parser.add_argument('-b', '--bitrate', dest='bitrate', type=int, help='1=MP3 128, 3=MP3 320, 9=FLAC', default=3)
 args = parser.parse_args()
 
-artist_file = args.artist_file
+input_artist = args.input_artist
 deemix_download_path = args.download_path
 deemix_config_path = args.config_path
 deemix_bitrate = args.bitrate
 
 
-def open_artist_file(file: object):
-    if Path(file).exists():
-        with open(file) as a:
+def import_artists():
+    if os.path.isfile(input_artist):
+        with open(input_artist) as a:
             list_of_artists = a.read().splitlines()
             return list_of_artists
+    elif os.path.isdir(input_artist):
+        list_of_artists = os.listdir(input_artist)
+        return list_of_artists
     else:
-        print(f"{artist_file}: file not found")
-        exit(1)
+        print(f"{input_artist}: not found")
 
 
 def main():
@@ -50,9 +53,9 @@ def main():
     queue_list = []
     new_artist = False
     total_new_releases = 0
-    textfile_artists = open_artist_file(artist_file)
+    # textfile_artists = open_artist_file(input_artist)
 
-    for line in textfile_artists:
+    for line in import_artists():
         # Skip blank lines
         if line == '':
             continue

@@ -6,7 +6,7 @@ LONG_DESCRIPTION = DESCRIPTION
 # Setting up
 setup(
     name='deemon',
-    version='0.1.1',
+    version='0.1.2',
     author='digitalec',
     description=DESCRIPTION,
     long_description=LONG_DESCRIPTION,
