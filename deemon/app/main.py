@@ -28,11 +28,11 @@ def import_artists(file):
         print(f"{file}: not found")
 
 
-def init_db_path(p):
+def custom_db_path(p):
     try:
         p.parent.mkdir(parents=True, exist_ok=True)
     except PermissionError as e:
-        print(f"Insufficient permissions to write to {p.parent}")
+        print(f"Error: Insufficient permissions to write to {p.parent}")
         exit(1)
 
 
@@ -60,7 +60,7 @@ def main():
     db_path = Path(args.db_path + "/" + DB_FILE)
 
     # TODO: move init related items to __init__.py
-    init_db_path(db_path)
+    custom_db_path(db_path)
 
     db = DB(db_path)
     database_artists = db.get_all_artists()
