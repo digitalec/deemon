@@ -3,8 +3,8 @@ from deemix.app.cli import cli
 from pathlib import Path
 from argparse import ArgumentParser
 from logging import getLogger, WARN
-from deemon.queuemanager import QueueManager
-from deemon.db import DB
+from deemon.app.queuemanager import QueueManager
+from deemon.app.db import DB
 import os
 
 BITRATE = {1: 'MP3 128', 3: 'MP3 320', 9: 'FLAC'}
