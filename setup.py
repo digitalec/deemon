@@ -1,4 +1,4 @@
-from setuptools import setup, find_packages
+from setuptools import setup
 
 DESCRIPTION = 'Monitor new releases by a specified list of artists and auto download using the deemix library'
 LONG_DESCRIPTION = DESCRIPTION
@@ -11,6 +11,7 @@ setup(
     description=DESCRIPTION,
     long_description=LONG_DESCRIPTION,
     packages=['deemon'],
+    python_requires='>=3.6',
     install_requires=['deemix'],
     url='https://github.com/digitalec/deemon',
     entry_points = {
