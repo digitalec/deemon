@@ -9,7 +9,7 @@ setup(
     author='digitalec',
     description=DESCRIPTION,
     long_description=LONG_DESCRIPTION,
-    packages=['deemon', 'deemon.app'],
+    packages=find_packages(),
     include_package_data=True,
     python_requires='>=3.6',
     install_requires=['deemix>=2.0.1', 'deezer-py>=0.0.15'],

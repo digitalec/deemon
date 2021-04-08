@@ -5,6 +5,8 @@ from argparse import ArgumentParser
 from logging import getLogger, WARN
 from deemon.app.queuemanager import QueueManager
 from deemon.app.db import DB
+from deemon import __version__
+
 import os
 
 BITRATE = {1: 'MP3 128', 3: 'MP3 320', 9: 'FLAC'}
@@ -28,16 +30,18 @@ def import_artists(file):
 
 
 def main():
-    parser = ArgumentParser()
-    parser.add_argument('-i', '--input', dest='input_artist', help='text file or directory of artists', required=True)
-    parser.add_argument('-o', '--output', dest='download_path', help='path for downloads',
+    parser = ArgumentParser(description="Monitor artists for new releases")
+    parser.add_argument('--input', dest='file', help='text file or directory of artists', required=True)
+    parser.add_argument('--output', dest='download_path', help='path for downloads',
                         default=DEFAULT_DOWNLOAD_PATH)
-    parser.add_argument('-c', '--config', dest='config_path', help='path to deemix config dir',
+    parser.add_argument('--config', dest='config_path', help='path to deemix config dir',
                         default=DEFAULT_CONFIG_PATH)
-    parser.add_argument('-b', '--bitrate', dest='bitrate', type=int, help='1=MP3 128, 3=MP3 320, 9=FLAC', default=3)
+    parser.add_argument('--bitrate', dest='bitrate', type=int, help='1=MP3 128, 3=MP3 320, 9=FLAC', default=3)
+    parser.add_argument('--version', action='version', version=f'%(prog)s-{__version__}', help='show version information')
+    parser.print_usage = parser.print_help
     args = parser.parse_args()
 
-    artists = args.input_artist
+    artists = args.file
     deemix_download_path = args.download_path
     deemix_config_path = args.config_path
     deemix_bitrate = args.bitrate
