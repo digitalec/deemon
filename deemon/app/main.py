@@ -6,13 +6,12 @@ from logging import getLogger, WARN
 from deemon.app.queuemanager import QueueManager
 from deemon.app.db import DB
 from deemon import __version__
-
 import os
 
 BITRATE = {1: 'MP3 128', 3: 'MP3 320', 9: 'FLAC'}
 HOME = str(Path.home())
-DB_FILE = Path(HOME + "/.config/deemon/releases.db")
-DB_FILE.parent.mkdir(parents=True, exist_ok=True)
+DB_FILE = "releases.db"
+DEFAULT_DB_PATH = HOME + "/.config/deemon"
 DEFAULT_DOWNLOAD_PATH = HOME + "/Music/deemix Music"
 DEFAULT_CONFIG_PATH = HOME + "/.config/deemix"
 
@@ -29,16 +28,26 @@ def import_artists(file):
         print(f"{file}: not found")
 
 
+def init_db_path(p):
+    try:
+        p.parent.mkdir(parents=True, exist_ok=True)
+    except PermissionError as e:
+        print(f"Insufficient permissions to write to {p.parent}")
+        exit(1)
+
+
 def main():
     parser = ArgumentParser(description="Monitor artists for new releases and download via deemix")
     parser.add_argument('-a', dest='file', type=str, metavar='artists_file',
                         help='file or directory containing artists', required=True)
-    parser.add_argument('-d', dest='download_path', type=str, metavar='music_path',
+    parser.add_argument('-m', dest='download_path', type=str, metavar='music_path',
                         help='path to music directory', default=DEFAULT_DOWNLOAD_PATH)
     parser.add_argument('-c', dest='config_path', type=str, metavar='config_path',
                         help='path to deemix config directory', default=DEFAULT_CONFIG_PATH)
     parser.add_argument('-b', dest='bitrate', choices=[1, 3, 9], metavar='bitrate',
                         help='available options: 1=MP3 128k, 3=MP3 320k, 9=FLAC', default=3)
+    parser.add_argument('-d', dest='db_path', type=str, metavar='database_path',
+                        help='custom path to store deemon database', default=DEFAULT_DB_PATH)
     parser.add_argument('--version', action='version', version=f'%(prog)s-{__version__}',
                         help='show version information')
     parser.print_usage = parser.print_help
@@ -48,8 +57,12 @@ def main():
     deemix_download_path = args.download_path
     deemix_config_path = args.config_path
     deemix_bitrate = args.bitrate
+    db_path = Path(args.db_path + "/" + DB_FILE)
 
-    db = DB(DB_FILE)
+    # TODO: move init related items to __init__.py
+    init_db_path(db_path)
+
+    db = DB(db_path)
     database_artists = db.get_all_artists()
 
     dz = Deezer()

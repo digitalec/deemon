@@ -1,12 +1,16 @@
 import sqlite3
 
-
 class DB:
 
-    def __init__(self, db_file: object):
-        self.conn = sqlite3.connect(db_file)
-        self.cursor = self.conn.cursor()
-        self.query("CREATE TABLE IF NOT EXISTS releases (artist_id INTEGER, album_id INTEGER)")
+    def __init__(self, db_path: object):
+        try:
+            self.conn = sqlite3.connect(db_path)
+        except sqlite3.OperationalError as e:
+            print(e)
+            exit(1)
+        finally:
+            self.cursor = self.conn.cursor()
+            self.query("CREATE TABLE IF NOT EXISTS releases (artist_id INTEGER, album_id INTEGER)")
 
 
     def query(self, query: str):
