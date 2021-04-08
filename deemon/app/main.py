@@ -7,6 +7,7 @@ from deemon.app.queuemanager import QueueManager
 from deemon.app.db import DB
 from deemon import __version__
 import os
+import time
 
 BITRATE = {1: 'MP3 128', 3: 'MP3 320', 9: 'FLAC'}
 HOME = str(Path.home())
@@ -119,7 +120,7 @@ def main():
         app.login()
         print(f"Bitrate: {BITRATE[deemix_bitrate]}\n")
         for q in queue_list:
-            print(f"Downloading {q.artist_name} - {q.album_title}... ", end='')
+            print(f"Downloading {q.artist_name} - {q.album_title}... ", end='', flush=True)
             app.downloadLink([q.url], deemix_bitrate)
             print("done!")
 
