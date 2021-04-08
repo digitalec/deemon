@@ -1,20 +1,32 @@
+from pathlib import Path
 from setuptools import setup, find_packages
+from deemon import __version__
 
-DESCRIPTION = 'Monitor new releases by a specified list of artists and auto download using the deemix library'
-LONG_DESCRIPTION = DESCRIPTION
+HERE = Path(__file__).parent
+README = (HERE / "README.md").read_text()
+DESCRIPTION = "Monitor new releases by a specified list of artists and auto download using the deemix library"
 
 setup(
-    name='deemon',
-    version='0.1.2',
-    author='digitalec',
+    name="deemon",
+    version=__version__,
+    author="digitalec",
+    author_email="digitalec@gradiian.io",
     description=DESCRIPTION,
-    long_description=LONG_DESCRIPTION,
+    long_description=README,
+    license="GPL3",
+    classifiers=[
+        "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+        "Development Status :: 4 - Beta",
+        "Programming Language :: Python :: 3 :: Only",
+        "Programming Language :: Python :: 3.6",
+        "Operating System :: OS Independent",
+    ],
     packages=find_packages(),
     include_package_data=True,
-    python_requires='>=3.6',
-    install_requires=['deemix>=2.0.1', 'deezer-py>=0.0.15'],
-    url='https://github.com/digitalec/deemon',
+    python_requires=">=3.6",
+    install_requires=["deemix>=2.0.1"],
+    url="https://github.com/digitalec/deemon",
     entry_points = {
-        'console_scripts': ['deemon=deemon.__main__:main'],
+        "console_scripts": ["deemon=deemon.__main__:main"],
     }
 )
