@@ -34,6 +34,8 @@ def custom_db_path(p):
     except PermissionError as e:
         print(f"Error: Insufficient permissions to write to {p.parent}")
         exit(1)
+    except FileExistsError as e:
+        pass
 
 
 def main():
