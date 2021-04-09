@@ -7,6 +7,7 @@ from deemon.app.queuemanager import QueueManager
 from deemon.app.db import DB
 from deemon import __version__
 import os
+import time
 
 BITRATE = {1: 'MP3 128', 3: 'MP3 320', 9: 'FLAC'}
 HOME = str(Path.home())
@@ -28,12 +29,14 @@ def import_artists(file):
         print(f"{file}: not found")
 
 
-def init_db_path(p):
+def custom_db_path(p):
     try:
         p.parent.mkdir(parents=True, exist_ok=True)
     except PermissionError as e:
-        print(f"Insufficient permissions to write to {p.parent}")
+        print(f"Error: Insufficient permissions to write to {p.parent}")
         exit(1)
+    except FileExistsError as e:
+        pass
 
 
 def main():
@@ -60,7 +63,7 @@ def main():
     db_path = Path(args.db_path + "/" + DB_FILE)
 
     # TODO: move init related items to __init__.py
-    init_db_path(db_path)
+    custom_db_path(db_path)
 
     db = DB(db_path)
     database_artists = db.get_all_artists()
@@ -117,7 +120,7 @@ def main():
         app.login()
         print(f"Bitrate: {BITRATE[deemix_bitrate]}\n")
         for q in queue_list:
-            print(f"Downloading {q.artist_name} - {q.album_title}... ", end='')
+            print(f"Downloading {q.artist_name} - {q.album_title}... ", end='', flush=True)
             app.downloadLink([q.url], deemix_bitrate)
             print("done!")
 

@@ -5,12 +5,11 @@ class DB:
     def __init__(self, db_path: object):
         try:
             self.conn = sqlite3.connect(db_path)
-        except sqlite3.OperationalError as e:
-            print(e)
-            exit(1)
-        finally:
             self.cursor = self.conn.cursor()
             self.query("CREATE TABLE IF NOT EXISTS releases (artist_id INTEGER, album_id INTEGER)")
+        except sqlite3.OperationalError as e:
+            print("Error: unable to open database file")
+            exit()
 
 
     def query(self, query: str):
