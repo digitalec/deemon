@@ -27,7 +27,7 @@ provided by deemix to make getting started easier.
 
 * **-a** [ _/path/to/file.txt_ | _/path/..._ ]
 
-    * ***Required*** Path to text file containing list of artists -or- path to parent directory of artist subdirectories
+    * ***Required*** Path to text file containing list of artists _one per line_ -or- path to parent directory of artist subdirectories
 
 
 * **-m** [ _/path/to/music_ ]
