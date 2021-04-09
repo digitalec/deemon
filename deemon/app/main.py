@@ -7,7 +7,6 @@ from deemon.app.queuemanager import QueueManager
 from deemon.app.db import DB
 from deemon import __version__
 import os
-import time
 
 BITRATE = {1: 'MP3 128', 3: 'MP3 320', 9: 'FLAC'}
 HOME = str(Path.home())
@@ -71,6 +70,24 @@ def main():
     dz = Deezer()
     dz_logger = getLogger('deemix')
     dz_logger.setLevel(WARN)
+
+    # Preliminary checks need to be organized moved into separate functions
+    if Path(deemix_config_path).is_dir():
+        if Path(deemix_config_path + '/.arl').is_file():
+            with open(deemix_config_path + '/.arl') as f:
+                arl = f.readline().rstrip("\n")
+            print("Verifying ARL is valid... ", end="", flush=True)
+            if not dz.login_via_arl(arl):
+                print("FAILED!")
+                exit(1)
+            else:
+                print("OK!\n")
+        else:
+            print("ARL file is missing")
+            exit(1)
+    else:
+        print("Unable to locate config directory")
+        exit(1)
 
     active_artists = []
     queue_list = []
