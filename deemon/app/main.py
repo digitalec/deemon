@@ -47,7 +47,7 @@ def main():
                         help='path to music directory', default=DEFAULT_DOWNLOAD_PATH)
     parser.add_argument('-c', dest='config_path', type=str, metavar='config_path',
                         help='path to deemix config directory', default=DEFAULT_CONFIG_PATH)
-    parser.add_argument('-b', dest='bitrate', choices=[1, 3, 9], metavar='bitrate',
+    parser.add_argument('-b', dest='bitrate', type=int, choices=[1, 3, 9], metavar='bitrate',
                         help='available options: 1=MP3 128k, 3=MP3 320k, 9=FLAC', default=3)
     parser.add_argument('-d', dest='db_path', type=str, metavar='database_path',
                         help='custom path to store deemon database', default=DEFAULT_DB_PATH)
