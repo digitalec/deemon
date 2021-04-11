@@ -69,7 +69,6 @@ def main():
     print("Verifying ARL, please wait... ", end="", flush=True)
     if not di.login():
         print("FAILED\n")
-        print("There was a problem with your ARL: " + deemix_config_path + "/.arl")
         exit(1)
     else:
         print("OK!\n")
