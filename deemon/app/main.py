@@ -1,19 +1,31 @@
 from deezer import Deezer
-from deemix.app.cli import cli
 from pathlib import Path
 from argparse import ArgumentParser
 from logging import getLogger, WARN
-from deemon.app.queuemanager import QueueManager
 from deemon.app.db import DB
+from deemon.app.dmi import DeemixInterface
 from deemon import __version__
 import os
 
 BITRATE = {1: 'MP3 128', 3: 'MP3 320', 9: 'FLAC'}
 HOME = str(Path.home())
-DB_FILE = "releases.db"
 DEFAULT_DB_PATH = HOME + "/.config/deemon"
-DEFAULT_DOWNLOAD_PATH = HOME + "/Music/deemix Music"
-DEFAULT_CONFIG_PATH = HOME + "/.config/deemix"
+DB_FILE = "releases.db"
+
+parser = ArgumentParser(description="Monitor artists for new releases and download via deemix")
+parser.add_argument('-a', dest='file', type=str, metavar='artists_file',
+                    help='file or directory containing artists', required=True)
+parser.add_argument('-m', dest='download_path', type=str, metavar='music_path',
+                    help='path to music directory')
+parser.add_argument('-c', dest='config_path', type=str, metavar='config_path',
+                    help='path to deemix config directory')
+parser.add_argument('-b', dest='bitrate', type=int, choices=[1, 3, 9], metavar='bitrate',
+                    help='available options: 1=MP3 128k, 3=MP3 320k, 9=FLAC', default=3)
+parser.add_argument('-d', dest='db_path', type=str, metavar='database_path',
+                    help='custom path to store deemon database', default=DEFAULT_DB_PATH)
+parser.add_argument('--version', action='version', version=f'%(prog)s-{__version__}',
+                    help='show version information')
+parser.print_usage = parser.print_help
 
 
 def import_artists(file):
@@ -39,20 +51,9 @@ def custom_db_path(p):
 
 
 def main():
-    parser = ArgumentParser(description="Monitor artists for new releases and download via deemix")
-    parser.add_argument('-a', dest='file', type=str, metavar='artists_file',
-                        help='file or directory containing artists', required=True)
-    parser.add_argument('-m', dest='download_path', type=str, metavar='music_path',
-                        help='path to music directory', default=DEFAULT_DOWNLOAD_PATH)
-    parser.add_argument('-c', dest='config_path', type=str, metavar='config_path',
-                        help='path to deemix config directory', default=DEFAULT_CONFIG_PATH)
-    parser.add_argument('-b', dest='bitrate', type=int, choices=[1, 3, 9], metavar='bitrate',
-                        help='available options: 1=MP3 128k, 3=MP3 320k, 9=FLAC', default=3)
-    parser.add_argument('-d', dest='db_path', type=str, metavar='database_path',
-                        help='custom path to store deemon database', default=DEFAULT_DB_PATH)
-    parser.add_argument('--version', action='version', version=f'%(prog)s-{__version__}',
-                        help='show version information')
-    parser.print_usage = parser.print_help
+    dm_logger = getLogger('deemix')
+    dm_logger.setLevel(WARN)
+
     args = parser.parse_args()
 
     artists = args.file
@@ -61,33 +62,24 @@ def main():
     deemix_bitrate = args.bitrate
     db_path = Path(args.db_path + "/" + DB_FILE)
 
-    # TODO: move init related items to __init__.py
+    di = DeemixInterface(deemix_download_path, deemix_config_path)
+
+    # TODO: MOVE THIS TO FUNCTION AND CLEAN IT UP
+    print("Starting deemon " + __version__ + "...")
+    print("Verifying ARL, please wait... ", end="", flush=True)
+    if not di.login():
+        print("FAILED\n")
+        print("There was a problem with your ARL: " + deemix_config_path + "/.arl")
+        exit(1)
+    else:
+        print("OK!\n")
+
     custom_db_path(db_path)
 
     db = DB(db_path)
     database_artists = db.get_all_artists()
 
     dz = Deezer()
-    dz_logger = getLogger('deemix')
-    dz_logger.setLevel(WARN)
-
-    # Preliminary checks need to be organized moved into separate functions
-    if Path(deemix_config_path).is_dir():
-        if Path(deemix_config_path + '/.arl').is_file():
-            with open(deemix_config_path + '/.arl') as f:
-                arl = f.readline().rstrip("\n")
-            print("Verifying ARL is valid... ", end="", flush=True)
-            if not dz.login_via_arl(arl):
-                print("FAILED!")
-                exit(1)
-            else:
-                print("OK!\n")
-        else:
-            print("ARL file is missing")
-            exit(1)
-    else:
-        print("Unable to locate config directory")
-        exit(1)
 
     active_artists = []
     queue_list = []
@@ -119,7 +111,7 @@ def main():
             album_exists = db.check_exists(album_id=album["id"])
             if not album_exists:
                 if not new_artist:
-                    queue_list.append(QueueManager(artist, album))
+                    queue_list.append(Queue(artist, album))
                 artist_new_releases += 1
                 db.add_new_release(artist['id'], album['id'])
         print(f" {artist_new_releases} releases")
@@ -133,16 +125,23 @@ def main():
     # Send queue to deemix
     if queue_list:
         print(f"\nHere we go! Starting download of {len(queue_list)} release(s):")
-        app = cli(deemix_download_path, deemix_config_path)
-        app.login()
         print(f"Bitrate: {BITRATE[deemix_bitrate]}\n")
         for q in queue_list:
             print(f"Downloading {q.artist_name} - {q.album_title}... ", end='', flush=True)
-            app.downloadLink([q.url], deemix_bitrate)
+            di.download_url([q.url], deemix_bitrate)
             print("done!")
 
     # Save changes only after download is attempted
     db.commit_and_close()
+
+
+class Queue:
+
+    def __init__(self, artist: dict, album: dict):
+        self.artist_name = artist["name"]
+        self.album_id = album["id"]
+        self.album_title = album["title"]
+        self.url = album["link"]
 
 
 if __name__ == "__main__":
