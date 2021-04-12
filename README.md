@@ -69,12 +69,12 @@ provided by deemix to make getting started easier.
 
 * **-D**, **--download-all**
 
-    * ***Optional*** - Download all releases from new artist
+    * ***Optional*** - Download all releases when adding new artist
 
 
 * **-r**, **--record-type** _album_ **or** _single_
 
-    * ***Optional*** - Only monitor for either 'album' or 'single
+    * ***Optional*** - Only monitor for either 'album' or 'single'
 
 
 * **-V**, **--version**
