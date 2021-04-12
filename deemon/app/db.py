@@ -7,6 +7,7 @@ class DB:
             self.conn = sqlite3.connect(db_path)
             self.cursor = self.conn.cursor()
             self.query("CREATE TABLE IF NOT EXISTS releases (artist_id INTEGER, album_id INTEGER)")
+            self.query("CREATE TABLE IF NOT EXISTS settings (property STRING, value STRING)")
         except sqlite3.OperationalError as e:
             print("Error: unable to open database file")
             exit()
