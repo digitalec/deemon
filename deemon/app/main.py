@@ -7,6 +7,7 @@ from deemon.app.dmi import DeemixInterface
 from deemon import __version__
 import os
 
+# TODO: Config directory should be set by os.getenv
 BITRATE = {1: 'MP3 128', 3: 'MP3 320', 9: 'FLAC'}
 HOME = str(Path.home())
 DEFAULT_DB_PATH = HOME + "/.config/deemon"
@@ -23,6 +24,8 @@ parser.add_argument('-b', dest='bitrate', type=int, choices=[1, 3, 9], metavar='
                     help='available options: 1=MP3 128k, 3=MP3 320k, 9=FLAC', default=3)
 parser.add_argument('-d', dest='db_path', type=str, metavar='database_path',
                     help='custom path to store deemon database', default=DEFAULT_DB_PATH)
+parser.add_argument('--download-all', dest="download_all", action="store_true",
+                    help='download all tracks by newly added artists')
 parser.add_argument('--version', action='version', version=f'%(prog)s-{__version__}',
                     help='show version information')
 parser.print_usage = parser.print_help
@@ -60,6 +63,7 @@ def main():
     deemix_download_path = args.download_path
     deemix_config_path = args.config_path
     deemix_bitrate = args.bitrate
+    download_all = args.download_all
     db_path = Path(args.db_path + "/" + DB_FILE)
 
     di = DeemixInterface(deemix_download_path, deemix_config_path)
@@ -109,7 +113,7 @@ def main():
         for album in all_albums['data']:
             album_exists = db.check_exists(album_id=album["id"])
             if not album_exists:
-                if not new_artist:
+                if download_all or not new_artist:
                     queue_list.append(Queue(artist, album))
                 artist_new_releases += 1
                 db.add_new_release(artist['id'], album['id'])
