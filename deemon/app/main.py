@@ -1,11 +1,17 @@
+import logging
+
 from deezer import Deezer
 from pathlib import Path
-from argparse import ArgumentParser
-from logging import getLogger, WARN
+from argparse import ArgumentParser, HelpFormatter
+from logging import getLogger, WARN, DEBUG, INFO
 from deemon.app.db import DB
 from deemon.app.dmi import DeemixInterface
 from deemon import __version__
 import os
+
+logger = getLogger(__name__)
+logger.setLevel(DEBUG)
+
 
 # TODO: Config directory should be set by os.getenv
 BITRATE = {1: 'MP3 128', 3: 'MP3 320', 9: 'FLAC'}
@@ -13,20 +19,24 @@ HOME = str(Path.home())
 DEFAULT_DB_PATH = HOME + "/.config/deemon"
 DB_FILE = "releases.db"
 
-parser = ArgumentParser(description="Monitor artists for new releases and download via deemix")
-parser.add_argument('-a', dest='file', type=str, metavar='artists_file',
+
+formatter = lambda prog: HelpFormatter(prog,max_help_position=35)
+parser = ArgumentParser(description="Monitor artists for new releases and download via deemix", formatter_class=formatter)
+parser.add_argument('-a', '--artists', dest='file', type=str, metavar='<file>',
                     help='file or directory containing artists', required=True)
-parser.add_argument('-m', dest='download_path', type=str, metavar='music_path',
+parser.add_argument('-m', '--music', dest='download_path', type=str, metavar='<path>',
                     help='path to music directory')
-parser.add_argument('-c', dest='config_path', type=str, metavar='config_path',
+parser.add_argument('-c', '--config', dest='config_path', type=str, metavar='<path>',
                     help='path to deemix config directory')
-parser.add_argument('-b', dest='bitrate', type=int, choices=[1, 3, 9], metavar='bitrate',
-                    help='available options: 1=MP3 128k, 3=MP3 320k, 9=FLAC', default=3)
-parser.add_argument('-d', dest='db_path', type=str, metavar='database_path',
+parser.add_argument('-b', '--bitrate', dest='bitrate', type=int, choices=[1, 3, 9], metavar='N',
+                    help='options: 1 (MP3 128k), 3 (MP3 320k), 9 (FLAC)', default=3)
+parser.add_argument('-d', '--db', dest='db_path', type=str, metavar='<path>',
                     help='custom path to store deemon database', default=DEFAULT_DB_PATH)
-parser.add_argument('--download-all', dest="download_all", action="store_true",
+parser.add_argument('-r', '--record-type', dest="record_type", type=str, metavar="type",
+                    choices=['album', 'single'], help='choose record type: %(choices)s')
+parser.add_argument('-D', '--download-all', dest="download_all", action="store_true",
                     help='download all tracks by newly added artists')
-parser.add_argument('--version', action='version', version=f'%(prog)s-{__version__}',
+parser.add_argument('-V', '--version', action='version', version=f'%(prog)s-{__version__}',
                     help='show version information')
 parser.print_usage = parser.print_help
 
@@ -64,6 +74,7 @@ def main():
     deemix_config_path = args.config_path
     deemix_bitrate = args.bitrate
     download_all = args.download_all
+    record_type = args.record_type
     db_path = Path(args.db_path + "/" + DB_FILE)
 
     di = DeemixInterface(deemix_download_path, deemix_config_path)
@@ -114,7 +125,8 @@ def main():
             album_exists = db.check_exists(album_id=album["id"])
             if not album_exists:
                 if download_all or not new_artist:
-                    queue_list.append(Queue(artist, album))
+                    if record_type and album['record_type'] == record_type or not record_type:
+                        queue_list.append(Queue(artist, album))
                 artist_new_releases += 1
                 db.add_new_release(artist['id'], album['id'])
         print(f" {artist_new_releases} releases")
@@ -128,7 +140,10 @@ def main():
     # Send queue to deemix
     if queue_list:
         print(f"\nHere we go! Starting download of {len(queue_list)} release(s):")
-        print(f"Bitrate: {BITRATE[deemix_bitrate]}\n")
+        print(f"Bitrate: {BITRATE[deemix_bitrate]}")
+        if not record_type:
+            record_type = " all"
+        print("Record type: " + record_type + "\n")
         for q in queue_list:
             print(f"Downloading {q.artist_name} - {q.album_title}... ", end='', flush=True)
             di.download_url([q.url], deemix_bitrate)
