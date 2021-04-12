@@ -29,30 +29,37 @@ You may want to add an entry in your crontab to run this weekly _(e.g. every Fri
 
 ### Usage
 ```
-$ deemon -a <file|dir\> [ -m <dir\> ] [ -c <dir\> ] [ -b < 1 | 3 | 9 > ] [ -d <dir\> ]
+$ deemon --artists <file|dir\> [ --music <dir\> ] [ --config <dir\> ] [ --bitrate < 1 | 3 | 9 > ]
+                        [ --db <dir\> ] [ --download-all ] [ --record-type <album|single> ]
 ```
 
 By default, deemon uses the default paths for the config and download directories
 provided by deemix to make getting started easier.
 
-* **-a** _/path/to/file.txt_ _**or**_ _/path/to/artists..._
+* **-a**, **--artists** _/path/to/file.txt_ _**or**_ _/path/to/artists..._
 
     * ***Required*** - Path to text file containing _one artist per line_ -or- path to parent directory containing artist subdirectories
 
 
-* **-m** _/path/to/music_
+* **-m**, **--music** _/path/to/music_
 
     * ***Optional*** - Path to download new releases
     * _Default: ~/Music/deemix Music_
     
 
-* **-c** _/path/to/config_
+* **-c**, **--config** _/path/to/config_
 
     * ***Optional*** - Path to deemix config directory
     * _Default: ~/.config/deemix_
+
+
+* **-d**, **--db** _/path/to/database_
+
+    * ***Optional*** - Path to save database
+    * _Default: ~/.config/deemon_
     
 
-* **-b** _int_
+* **-b**, **--bitrate** _int_
 
     * ***Optional*** - Set bitrate
     * **1** - MP3 128kbps
@@ -60,10 +67,19 @@ provided by deemix to make getting started easier.
     * **9** - FLAC
 
 
-* **-d** _/path/to/database_
+* **-D**, **--download-all**
 
-    * ***Optional*** - Path to save database
-    * _Default: ~/.config/deemon_
+    * ***Optional*** - Download all releases when adding new artist
+
+
+* **-r**, **--record-type** _album_ **or** _single_
+
+    * ***Optional*** - Only monitor for either 'album' or 'single'
+
+
+* **-V**, **--version**
+
+    * Print version information
 
 ### Examples
 In the examples below, my music library structure is as follows:
