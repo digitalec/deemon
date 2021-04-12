@@ -1,4 +1,9 @@
 from deemon.app.main import Deemon
 
-if __name__ == "__main__":
+
+def main():
     Deemon().main()
+
+
+if __name__ == "__main__":
+    main()

@@ -28,6 +28,6 @@ setup(
     install_requires=["deemix>=2.0.1"],
     url="https://github.com/digitalec/deemon",
     entry_points = {
-        "console_scripts": ["deemon=deemon.app.main:Deemon"],
+        "console_scripts": ["deemon=deemon.__main__:main"],
     }
 )
