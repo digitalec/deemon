@@ -1,9 +1,12 @@
 from pathlib import Path
+from logging import getLogger, WARN
 from deemix.app import deemix
 
 
 class DeemixInterface(deemix):
     def __init__(self, download_path, config_dir=None):
+        dm_logger = getLogger('deemix')
+        dm_logger.setLevel(WARN)
         super().__init__(config_dir, overwriteDownloadFolder=download_path)
 
     def download_url(self, url, bitrate=None):

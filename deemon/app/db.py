@@ -5,6 +5,7 @@ from logging import getLogger, ERROR, DEBUG
 class DB:
 
     def __init__(self, db_path: object):
+        self.set_db_path(db_path)
         try:
             self.conn = sqlite3.connect(db_path)
             self.cursor = self.conn.cursor()
@@ -12,6 +13,16 @@ class DB:
         except sqlite3.OperationalError as e:
             print("Unable to open database file")
             exit(1)
+
+    @staticmethod
+    def set_db_path(p):
+        try:
+            p.parent.mkdir(parents=True, exist_ok=True)
+        except PermissionError:
+            print(f"Error: Insufficient permissions to write to {p.parent}")
+            exit(1)
+        except FileExistsError:
+            pass
 
     def query(self, query: str):
         result = self.cursor.execute(query)
@@ -44,15 +55,12 @@ class DB:
         '''
         self.query(f"INSERT INTO releases VALUES({artist_id}, {album_id})")
 
-    def purge_unmonitored_artists(self, artists: list):
-        '''
-
-        :param artists:
-        :return:
-        '''
-        nb_artists = len(artists)
+    def purge_unmonitored_artists(self, active_artists):
+        db_artists = self.get_all_artists()
+        purge_list = [x for x in db_artists if x not in active_artists]
+        nb_artists = len(purge_list)
         if nb_artists > 0:
-            self.query(f"DELETE FROM releases WHERE artist_id IN ({str(artists).strip('[]')})")
+            self.query(f"DELETE FROM releases WHERE artist_id IN ({str(purge_list).strip('[]')})")
             return nb_artists
 
     def commit_and_close(self):

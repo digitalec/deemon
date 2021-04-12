@@ -1,159 +1,154 @@
-import logging
-
 from deezer import Deezer
 from pathlib import Path
 from argparse import ArgumentParser, HelpFormatter
-from logging import getLogger, WARN, DEBUG, INFO
 from deemon.app.db import DB
 from deemon.app.dmi import DeemixInterface
 from deemon import __version__
 import os
 
-logger = getLogger(__name__)
-logger.setLevel(DEBUG)
+
+def parse_args():
+
+    formatter = lambda prog: HelpFormatter(prog, max_help_position=35)
+    parser = ArgumentParser(formatter_class=formatter)
+    parser.add_argument('-a', '--artists', dest='file', type=str, metavar='<file>',
+                        help='file or directory containing artists', required=True)
+    parser.add_argument('-m', '--music', dest='download_path', type=str, metavar='<path>',
+                        help='path to music directory')
+    parser.add_argument('-c', '--config', dest='config_path', type=str, metavar='<path>',
+                        help='path to deemix config directory')
+    parser.add_argument('-b', '--bitrate', dest='bitrate', type=int, choices=[1, 3, 9], metavar='N',
+                        help='options: 1 (MP3 128k), 3 (MP3 320k), 9 (FLAC)', default=3)
+    parser.add_argument('-d', '--db', dest='db_path', type=str, metavar='<path>',
+                        help='custom path to store deemon database')
+    parser.add_argument('-r', '--record-type', dest="record_type", type=str, metavar="type",
+                        choices=['album', 'single'], help='choose record type: %(choices)s')
+    parser.add_argument('-D', '--download-all', dest="download_all", action="store_true",
+                        help='download all tracks by newly added artists')
+    parser.add_argument('-V', '--version', action='version', version=f'%(prog)s-{__version__}',
+                        help='show version information')
+    parser.print_usage = parser.print_help
+
+    return parser.parse_args()
 
 
-# TODO: Config directory should be set by os.getenv
-BITRATE = {1: 'MP3 128', 3: 'MP3 320', 9: 'FLAC'}
-HOME = str(Path.home())
-DEFAULT_DB_PATH = HOME + "/.config/deemon"
-DB_FILE = "releases.db"
+class Deemon:
 
+    def __init__(self):
+        args = parse_args()
+        self.artists = args.file
+        self.download_path = args.download_path
+        self.config_path = args.config_path
+        self.bitrate = args.bitrate
+        self.download_all = args.download_all
+        self.record_type = args.record_type
+        self.active_artists = []
+        self.queue_list = []
+        self.dz = Deezer()
+        self.di = DeemixInterface(self.download_path, self.config_path)
 
-formatter = lambda prog: HelpFormatter(prog,max_help_position=35)
-parser = ArgumentParser(description="Monitor artists for new releases and download via deemix", formatter_class=formatter)
-parser.add_argument('-a', '--artists', dest='file', type=str, metavar='<file>',
-                    help='file or directory containing artists', required=True)
-parser.add_argument('-m', '--music', dest='download_path', type=str, metavar='<path>',
-                    help='path to music directory')
-parser.add_argument('-c', '--config', dest='config_path', type=str, metavar='<path>',
-                    help='path to deemix config directory')
-parser.add_argument('-b', '--bitrate', dest='bitrate', type=int, choices=[1, 3, 9], metavar='N',
-                    help='options: 1 (MP3 128k), 3 (MP3 320k), 9 (FLAC)', default=3)
-parser.add_argument('-d', '--db', dest='db_path', type=str, metavar='<path>',
-                    help='custom path to store deemon database', default=DEFAULT_DB_PATH)
-parser.add_argument('-r', '--record-type', dest="record_type", type=str, metavar="type",
-                    choices=['album', 'single'], help='choose record type: %(choices)s')
-parser.add_argument('-D', '--download-all', dest="download_all", action="store_true",
-                    help='download all tracks by newly added artists')
-parser.add_argument('-V', '--version', action='version', version=f'%(prog)s-{__version__}',
-                    help='show version information')
-parser.print_usage = parser.print_help
+        if args.db_path:
+            self.db_path = Path(args.db_path + "/releases.db")
+        else:
+            # TODO: os.getenv()
+            # TODO: check this path *first* before using env for backwards compatibility
+            self.db_path = Path(Path.home() / ".config/deemon/releases.db")
 
+        self.db = DB(self.db_path)
 
-def import_artists(file):
-    if os.path.isfile(file):
-        with open(file) as text_file:
-            list_of_artists = text_file.read().splitlines()
-            return list_of_artists
-    elif os.path.isdir(file):
-        list_of_artists = os.listdir(file)
-        return list_of_artists
-    else:
-        print(f"{file}: not found")
+    @staticmethod
+    def import_artists(artists):
+        if os.path.isfile(artists):
+            with open(artists) as text_file:
+                list_of_artists = [a for a in text_file.read().splitlines() if a]
+                return sorted(list_of_artists)
+        elif os.path.isdir(artists):
+            list_of_artists = os.listdir(artists)
+            return sorted(list_of_artists)
+        else:
+            print(f"{artists}: not found")
 
+    def print_settings(self):
+        quality = {1: 'MP3 128k', 3: 'MP3 320k', 9: 'FLAC'}
 
-def custom_db_path(p):
-    try:
-        p.parent.mkdir(parents=True, exist_ok=True)
-    except PermissionError as e:
-        print(f"Error: Insufficient permissions to write to {p.parent}")
-        exit(1)
-    except FileExistsError as e:
-        pass
+        if self.download_all:
+            download = "all"
+        else:
+            download = "only new"
 
+        if not self.record_type:
+            rtype = "any"
+        else:
+            rtype = self.record_type
 
-def main():
-    dm_logger = getLogger('deemix')
-    dm_logger.setLevel(WARN)
+        return f"- Bitrate: {quality[self.bitrate]}\n- Download: {download}\n- Record Type: {rtype}\n"
 
-    args = parser.parse_args()
+    def download_queue(self, queue):
+        if queue:
+            num_queued = len(queue)
+            print("\n** Here we go! Starting download of " + str(num_queued) + " release(s):")
+            for q in queue:
+                print(f"Downloading {q.artist_name} - {q.album_title}... ", end='', flush=True)
+                self.di.download_url([q.url], self.bitrate)
+                print("done!")
 
-    artists = args.file
-    deemix_download_path = args.download_path
-    deemix_config_path = args.config_path
-    deemix_bitrate = args.bitrate
-    download_all = args.download_all
-    record_type = args.record_type
-    db_path = Path(args.db_path + "/" + DB_FILE)
-
-    di = DeemixInterface(deemix_download_path, deemix_config_path)
-
-    # TODO: MOVE THIS TO FUNCTION AND CLEAN IT UP
-    print("Starting deemon " + __version__ + "...")
-    print("Verifying ARL, please wait... ", end="", flush=True)
-    if not di.login():
-        print("FAILED\n")
-        exit(1)
-    else:
-        print("OK!\n")
-
-    custom_db_path(db_path)
-
-    db = DB(db_path)
-    database_artists = db.get_all_artists()
-
-    dz = Deezer()
-
-    active_artists = []
-    queue_list = []
-    new_artist = False
-
-    for line in import_artists(artists):
-        # Skip blank lines
-        if line == '':
-            continue
-
-        try:
-            print(f"Searching for new releases by '{line}'...", end='')
-            artist = dz.api.search_artist(line, limit=1)['data'][0]
-        except IndexError:
-            print(f" not found")
-            continue
-
-        # Check if monitoring new artist and disable auto download
-        active_artists.append(artist['id'])
-        artist_exists = db.check_exists(artist_id=artist['id'])
+    def get_new_releases(self, artist):
+        new_artist = False
+        self.active_artists.append(artist["id"])
+        artist_exists = self.db.check_exists(artist_id=artist["id"])
         if not artist_exists:
             new_artist = True
-            print(f" new artist detected...", end='')
 
-        # Check for new release; add to queue if not available
-        artist_new_releases = 0
-        all_albums = dz.api.get_artist_albums(artist['id'])
-        for album in all_albums['data']:
-            album_exists = db.check_exists(album_id=album["id"])
-            if not album_exists:
-                if download_all or not new_artist:
-                    if record_type and album['record_type'] == record_type or not record_type:
-                        queue_list.append(Queue(artist, album))
-                artist_new_releases += 1
-                db.add_new_release(artist['id'], album['id'])
-        print(f" {artist_new_releases} releases")
+        new_release_count = 0
+        albums = self.dz.api.get_artist_albums(artist["id"])
+        for album in albums["data"]:
+            already_exists = self.db.check_exists(album_id=album["id"])
 
-    # Purge artists that are no longer being monitored
-    purge_list = [x for x in database_artists if x not in active_artists]
-    nb_purged = db.purge_unmonitored_artists(purge_list)
-    if nb_purged:
-        print(f"\nPurged {nb_purged} artist(s) from database")
+            if already_exists:
+                continue
 
-    # Send queue to deemix
-    if queue_list:
-        print(f"\nHere we go! Starting download of {len(queue_list)} release(s):")
-        print(f"Bitrate: {BITRATE[deemix_bitrate]}")
-        if not record_type:
-            record_type = " all"
-        print("Record type: " + record_type + "\n")
-        for q in queue_list:
-            print(f"Downloading {q.artist_name} - {q.album_title}... ", end='', flush=True)
-            di.download_url([q.url], deemix_bitrate)
-            print("done!")
+            if (new_artist and self.download_all) or (not new_artist):
+                if (self.record_type and self.record_type == album["record_type"]) or (not self.record_type):
+                    self.queue_list.append(QueueItem(artist, album))
 
-    # Save changes only after download is attempted
-    db.commit_and_close()
+            new_release_count += 1
+            self.db.add_new_release(artist["id"], album["id"])
+        return new_release_count
+
+    def main(self):
+
+        print("Starting deemon " + __version__ + "...")
+        print("Verifying ARL, please wait... ", end="", flush=True)
+        if not self.di.login():
+            print("FAILED")
+            exit(1)
+        else:
+            print("OK")
+
+        print(self.print_settings())
+
+        print("Checking for new releases...\n")
+        for line in self.import_artists(self.artists):
+            print(f"Searching for releases by {line}... ", end="", flush=True)
+            try:
+                artist = self.dz.api.search_artist(line, limit=1)['data'][0]
+            except IndexError:
+                print("not found")
+                continue
+
+            new_releases = self.get_new_releases(artist)
+            print(f"{new_releases} found")
+
+        num_purged = self.db.purge_unmonitored_artists(self.active_artists)
+        if num_purged:
+            print(f"\nPurged {num_purged} artist(s) from database")
+
+        self.download_queue(self.queue_list)
+
+        self.db.commit_and_close()
 
 
-class Queue:
+class QueueItem:
 
     def __init__(self, artist: dict, album: dict):
         self.artist_name = artist["name"]
@@ -163,4 +158,4 @@ class Queue:
 
 
 if __name__ == "__main__":
-    main()
+    Deemon().main()

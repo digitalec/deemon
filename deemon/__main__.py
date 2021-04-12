@@ -1,4 +1,4 @@
-from deemon.app.main import main
+from deemon.app.main import Deemon
 
 if __name__ == "__main__":
-    main()
+    Deemon().main()
