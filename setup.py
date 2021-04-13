@@ -25,7 +25,7 @@ setup(
     packages=find_packages(),
     include_package_data=True,
     python_requires=">=3.6",
-    install_requires=["deemix>=2.0.1"],
+    install_requires=["deemix>=2.0.1", "packaging"],
     url="https://github.com/digitalec/deemon",
     entry_points = {
         "console_scripts": ["deemon=deemon.__main__:main"],

@@ -4,6 +4,8 @@ from argparse import ArgumentParser, HelpFormatter
 from deemon.app.db import DB
 from deemon.app.dmi import DeemixInterface
 from deemon import __version__
+from packaging.version import parse as parse_version
+import requests
 import os
 
 
@@ -68,6 +70,18 @@ class Deemon:
         else:
             print(f"{artists}: not found")
 
+    @staticmethod
+    def check_for_updates(enabled=True):
+        if enabled:
+            response = requests.get("https://api.github.com/repos/digitalec/deemon/releases/latest")
+            local_version = __version__
+            remote_version = response.json()["name"]
+            if parse_version(remote_version) > parse_version(local_version):
+                print("*" * 44)
+                print("New version available: " + remote_version)
+                print("To update, run: pip install --upgrade deemon")
+                print("*" * 44)
+
     def print_settings(self):
         quality = {1: 'MP3 128k', 3: 'MP3 320k', 9: 'FLAC'}
 
@@ -81,7 +95,7 @@ class Deemon:
         else:
             rtype = self.record_type
 
-        return f"- Bitrate: {quality[self.bitrate]}\n- Download: {download}\n- Record Type: {rtype}\n"
+        print(f"- Bitrate: {quality[self.bitrate]}\n- Download: {download}\n- Record Type: {rtype}\n")
 
     def download_queue(self, queue):
         if queue:
@@ -118,14 +132,14 @@ class Deemon:
     def main(self):
 
         print("Starting deemon " + __version__ + "...")
+        self.check_for_updates()
+        self.print_settings()
         print("Verifying ARL, please wait... ", end="", flush=True)
         if not self.di.login():
             print("FAILED")
             exit(1)
         else:
             print("OK")
-
-        print(self.print_settings())
 
         print("Checking for new releases...\n")
         for line in self.import_artists(self.artists):

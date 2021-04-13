@@ -1,2 +1,2 @@
 deemix>=2.0.1
-deezer-py>=0.0.15
+packaging
