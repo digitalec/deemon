@@ -15,6 +15,9 @@
 deemon is an automation tool that relies on the deemix library and
 the deezer-py API module to monitor a specified list of artists for new releases
 
+### Support
+[Open an Issue](https://github.com/digitalec/deemon/issues/new) | [Discord](https://discord.gg/KzNCG2tkvn)
+
 
 ### Prerequisites
 * python >= 3.6
