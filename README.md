@@ -5,6 +5,7 @@
 ![PyPI - Status](https://img.shields.io/pypi/status/deemon?style=flat-square)
 ![PyPI - Downloads](https://img.shields.io/pypi/dm/deemon?style=flat-square)
 ![GitHub last commit](https://img.shields.io/github/last-commit/digitalec/deemon?style=flat-square)
+![Discord](https://img.shields.io/discord/831356172464160838?style=flat-square)
 
 
 [About](#about) **|** [Prerequisites](#prerequisites) **|** [Installation](#installation) **|** [Usage](#usage) **|** [Examples](#examples)
@@ -13,6 +14,9 @@
 ### About
 deemon is an automation tool that relies on the deemix library and
 the deezer-py API module to monitor a specified list of artists for new releases
+
+### Support
+[Open an Issue](https://github.com/digitalec/deemon/issues/new) | [Discord](https://discord.gg/KzNCG2tkvn)
 
 
 ### Prerequisites
