@@ -2,7 +2,9 @@ from deezer import Deezer
 from pathlib import Path
 from argparse import ArgumentParser, HelpFormatter
 from deemon.app.db import DB
+from deemon.app.notify import EmailNotification
 from deemon.app.dmi import DeemixInterface
+from deemon.app import settings
 from deemon import __version__
 from packaging.version import parse as parse_version
 import requests
@@ -39,24 +41,21 @@ class Deemon:
     def __init__(self):
         args = parse_args()
         self.artists = args.file
-        self.download_path = args.download_path
-        self.config_path = args.config_path
+        self.custom_download_path = args.download_path
+        # TODO rename args.db_path
+        self.custom_deemon_path = args.db_path
+        self.custom_deemix_path = args.config_path
         self.bitrate = args.bitrate
         self.download_all = args.download_all
         self.record_type = args.record_type
         self.active_artists = []
         self.queue_list = []
+        self.appdata_dir = settings.get_appdata_dir()
+        self.config = settings.Settings()
+        self.notify = EmailNotification(self.config.config)
         self.dz = Deezer()
-        self.di = DeemixInterface(self.download_path, self.config_path)
-
-        if args.db_path:
-            self.db_path = Path(args.db_path + "/releases.db")
-        else:
-            # TODO: os.getenv()
-            # TODO: check this path *first* before using env for backwards compatibility
-            self.db_path = Path(Path.home() / ".config/deemon/releases.db")
-
-        self.db = DB(self.db_path)
+        self.di = DeemixInterface(self.custom_download_path, self.custom_deemix_path)
+        self.db = DB(self.config.db_path)
 
     @staticmethod
     def import_artists(artists):
@@ -99,12 +98,17 @@ class Deemon:
 
     def download_queue(self, queue):
         if queue:
+            # move notify_releases to notify Class
+            notify_releases = []
             num_queued = len(queue)
             print("\n** Here we go! Starting download of " + str(num_queued) + " release(s):")
             for q in queue:
+                notify_releases.append(q.artist_name + " - " + q.album_title)
                 print(f"Downloading {q.artist_name} - {q.album_title}... ", end='', flush=True)
                 self.di.download_url([q.url], self.bitrate)
                 print("done!")
+
+            self.notify.notify(notify_releases)
 
     def get_new_releases(self, artist):
         new_artist = False
@@ -130,8 +134,6 @@ class Deemon:
         return new_release_count
 
     def main(self):
-
-        print("Starting deemon " + __version__ + "...")
         self.check_for_updates()
         self.print_settings()
         print("Verifying ARL, please wait... ", end="", flush=True)
