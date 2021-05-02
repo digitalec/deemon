@@ -81,6 +81,11 @@ provided by deemix to make getting started easier.
     * ***Optional*** - Only monitor for either 'album' or 'single'
 
 
+* **--smtp-test**
+
+    * Send test notification to verify SMTP settings
+
+
 * **-V**, **--version**
 
     * Print version information
