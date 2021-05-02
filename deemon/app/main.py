@@ -8,8 +8,10 @@ from deemon.app import settings
 from deemon import __version__
 from packaging.version import parse as parse_version
 import requests
+import logging
 import os
 
+logger = logging.getLogger("deemon")
 
 def parse_args():
 
@@ -29,6 +31,8 @@ def parse_args():
                         choices=['album', 'single'], help='choose record type: %(choices)s')
     parser.add_argument('-D', '--download-all', dest="download_all", action="store_true",
                         help='download all tracks by newly added artists')
+    parser.add_argument('--smtp-test', dest="smtp_test", action="store_true",
+                        help='test smtp settings')
     parser.add_argument('-V', '--version', action='version', version=f'%(prog)s-{__version__}',
                         help='show version information')
     parser.print_usage = parser.print_help
@@ -56,6 +60,17 @@ class Deemon:
         self.dz = Deezer()
         self.di = DeemixInterface(self.custom_download_path, self.custom_deemix_path)
         self.db = DB(self.config.db_path)
+
+        if args.smtp_test:
+            logger.info("Attempting to send test notification...")
+            if self.notify.enable_notify:
+                self.smtp_test()
+            else:
+                logger.error("SMTP server settings have not been configured.")
+            exit()
+
+    def smtp_test(self):
+        self.notify.notify(test=True)
 
     @staticmethod
     def import_artists(artists):
@@ -94,19 +109,27 @@ class Deemon:
         else:
             rtype = self.record_type
 
-        print(f"- Bitrate: {quality[self.bitrate]}\n- Download: {download}\n- Record Type: {rtype}\n")
+        logger.info("----------------------------")
+
+        if self.notify.enable_notify:
+            logger.info("Notifications: enabled")
+        else:
+            logger.info("Notifications: disabled (not configured)")
+            logger.debug("* New release notifications disabled: SMTP server settings have not been configured.")
+
+        logger.info(f"Bitrate: {quality[self.bitrate]} / Download: {download} / Record Type: {rtype}")
 
     def download_queue(self, queue):
         if queue:
-            # move notify_releases to notify Class
+            # move notify_releases to notify Class attribute
             notify_releases = []
             num_queued = len(queue)
-            print("\n** Here we go! Starting download of " + str(num_queued) + " release(s):")
+            logger.info("----------------------------")
+            logger.info("** Here we go! Starting download of " + str(num_queued) + " release(s):")
             for q in queue:
                 notify_releases.append(q.artist_name + " - " + q.album_title)
-                print(f"Downloading {q.artist_name} - {q.album_title}... ", end='', flush=True)
+                logger.info(f"Downloading {q.artist_name} - {q.album_title}... ")
                 self.di.download_url([q.url], self.bitrate)
-                print("done!")
 
             self.notify.notify(notify_releases)
 
@@ -136,28 +159,27 @@ class Deemon:
     def main(self):
         self.check_for_updates()
         self.print_settings()
-        print("Verifying ARL, please wait... ", end="", flush=True)
+        logger.info("Verifying ARL...")
         if not self.di.login():
-            print("FAILED")
+            logger.critical("ARL verification failed. ")
             exit(1)
-        else:
-            print("OK")
-
-        print("Checking for new releases...\n")
+        logger.info("----------------------------")
+        logger.info("Checking for new releases...")
+        logger.info("----------------------------")
         for line in self.import_artists(self.artists):
-            print(f"Searching for releases by {line}... ", end="", flush=True)
             try:
                 artist = self.dz.api.search_artist(line, limit=1)['data'][0]
+                logger.debug(f"Found result - artist_id: {artist['id']}, artist_name: {artist['name']}")
             except IndexError:
-                print("not found")
+                logger.error(f"Artist '{line}' not found")
                 continue
 
             new_releases = self.get_new_releases(artist)
-            print(f"{new_releases} found")
+            logger.info(f"{line}: {new_releases} release(s)")
 
         num_purged = self.db.purge_unmonitored_artists(self.active_artists)
         if num_purged:
-            print(f"\nPurged {num_purged} artist(s) from database")
+            logger.info(f"Purged {num_purged} artist(s) from database")
 
         self.download_queue(self.queue_list)
 

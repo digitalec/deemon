@@ -66,7 +66,8 @@ class Settings:
             self.config = json.load(f)
 
         for opt in DEFAULT_CONFIG:
-            if opt not in self.config or isinstance(self.config[opt], type(DEFAULT_CONFIG[opt])):
+            if opt not in self.config or not isinstance(self.config[opt], type(DEFAULT_CONFIG[opt])):
+                logger.debug(f"config: {self.config[opt]} / default: {DEFAULT_CONFIG[opt]}")
                 self.config[opt] = DEFAULT_CONFIG[opt]
 
     def init_log(self):
@@ -89,6 +90,7 @@ class Settings:
         logger.info(f"Starting deemon {__version__}...")
         logger.debug(f"Python version {platform.python_version()}")
 
+        # circulating log
         max_log_files = 7
         log_list = os.listdir(log_path)
         log_list.sort()
