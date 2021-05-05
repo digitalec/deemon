@@ -1,5 +1,4 @@
 from deezer import Deezer
-from pathlib import Path
 from argparse import ArgumentParser, HelpFormatter
 from deemon.app.db import DB
 from deemon.app.notify import EmailNotification
@@ -13,12 +12,16 @@ import os
 
 logger = logging.getLogger("deemon")
 
+
 def parse_args():
 
     formatter = lambda prog: HelpFormatter(prog, max_help_position=35)
     parser = ArgumentParser(formatter_class=formatter)
-    parser.add_argument('-a', '--artists', dest='file', type=str, metavar='<file>',
-                        help='file or directory containing artists', required=True)
+    mutex_commands = parser.add_mutually_exclusive_group(required=True)
+    mutex_commands.add_argument('-a', '--artists', dest='file', type=str, metavar='<file>',
+                        help='file or directory containing artists')
+    mutex_commands.add_argument('--test-email', dest="smtp_test", action="store_true",
+                        help='test smtp settings')
     parser.add_argument('-m', '--music', dest='download_path', type=str, metavar='<path>',
                         help='path to music directory')
     parser.add_argument('-c', '--config', dest='config_path', type=str, metavar='<path>',
@@ -31,8 +34,6 @@ def parse_args():
                         choices=['album', 'single'], help='choose record type: %(choices)s')
     parser.add_argument('-D', '--download-all', dest="download_all", action="store_true",
                         help='download all tracks by newly added artists')
-    parser.add_argument('--smtp-test', dest="smtp_test", action="store_true",
-                        help='test smtp settings')
     parser.add_argument('-V', '--version', action='version', version=f'%(prog)s-{__version__}',
                         help='show version information')
     parser.print_usage = parser.print_help
@@ -44,6 +45,7 @@ class Deemon:
 
     def __init__(self):
         args = parse_args()
+        logger.debug(f"Args used: {args}")
         self.artists = args.file
         self.custom_download_path = args.download_path
         # TODO rename args.db_path
@@ -166,6 +168,7 @@ class Deemon:
         logger.info("----------------------------")
         logger.info("Checking for new releases...")
         logger.info("----------------------------")
+        # TODO move this to function and add validation and error checking
         for line in self.import_artists(self.artists):
             try:
                 artist = self.dz.api.search_artist(line, limit=1)['data'][0]

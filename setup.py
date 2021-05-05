@@ -10,7 +10,6 @@ setup(
     name="deemon",
     version=__version__,
     author="digitalec",
-    author_email="digitalec@gradiian.io",
     description=DESCRIPTION,
     long_description=README,
     long_description_content_type="text/markdown",

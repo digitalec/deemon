@@ -31,6 +31,17 @@ You may want to add an entry in your crontab to run this weekly _(e.g. every Fri
 
 ```0    6   *   *   5   /home/USER/.local/bin/deemon -a artists.txt -m /plex/music```
 
+
+### Configuration
+Starting with version 0.4.0, deemon now uses a config.json file to store configuration settings.
+
+* **Windows:** %appdata%/deemon
+
+* **Mac:** /Users/<user>/Library/Application Support/deemon
+
+* **Linux:** /home/<user>/.config/deemon
+
+
 ### Usage
 ```
 $ deemon --artists <file|dir\> [ --music <dir\> ] [ --config <dir\> ] [ --bitrate < 1 | 3 | 9 > ]
@@ -81,7 +92,7 @@ provided by deemix to make getting started easier.
     * ***Optional*** - Only monitor for either 'album' or 'single'
 
 
-* **--smtp-test**
+* **--email-test**
 
     * Send test notification to verify SMTP settings
 
