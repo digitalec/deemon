@@ -41,6 +41,10 @@ Starting with version 0.4.0, deemon now uses a config.json file to store configu
 
 * **Linux:** /home/<user>/.config/deemon
 
+To configure email notifications you'll need to edit config.json and provide your SMTP server settings.
+
+_smtp\_sender\_email_ will likely need to be the same address used as _smtp\_username_
+
 
 ### Usage
 ```
