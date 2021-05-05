@@ -92,7 +92,7 @@ provided by deemix to make getting started easier.
     * ***Optional*** - Only monitor for either 'album' or 'single'
 
 
-* **--email-test**
+* **--test-email**
 
     * Send test notification to verify SMTP settings
 
