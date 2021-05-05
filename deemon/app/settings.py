@@ -83,7 +83,7 @@ class Settings:
         logger.addHandler(fh)
 
         ch = logging.StreamHandler()
-        ch.setLevel(logging.DEBUG)
+        ch.setLevel(logging.INFO)
         ch.setFormatter(logging.Formatter("%(message)s"))
         logger.addHandler(ch)
 
