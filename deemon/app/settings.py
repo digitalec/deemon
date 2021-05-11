@@ -8,7 +8,7 @@ import sys
 import os
 
 logger = logging.getLogger("deemon")
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 logger.propagate = False
 
 home_dir = Path.home()
@@ -29,6 +29,7 @@ def get_appdata_dir():
 
 
 DEFAULT_CONFIG = {
+    "bitrate": 3,
     "smtp_server": "",
     "smtp_port": 465,
     "smtp_username": "",
@@ -83,11 +84,11 @@ class Settings:
         logger.addHandler(fh)
 
         ch = logging.StreamHandler()
-        ch.setLevel(logging.INFO)
+        ch.setLevel(logging.DEBUG)
         ch.setFormatter(logging.Formatter("%(message)s"))
         logger.addHandler(ch)
 
-        logger.info(f"Starting deemon {__version__}...")
+        logger.debug(f"deemon version {__version__}")
         logger.debug(f"Python version {platform.python_version()}")
 
         # circulating log
