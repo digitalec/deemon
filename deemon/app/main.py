@@ -2,10 +2,12 @@ from deemon.app.db import DB
 from deemon.app.notify import EmailNotification
 from deemon.app.dmi import DeemixInterface
 from deemon.app import settings
+from datetime import datetime
 from deemon import __version__
 from packaging.version import parse as parse_version
 from pathlib import Path
 import deezer
+import tarfile
 import requests
 import argparse
 import logging
@@ -43,7 +45,7 @@ class CustomHelpFormatter(argparse.HelpFormatter):
 class Deemon:
 
     def __init__(self):
-        self.parser = argparse.ArgumentParser(usage="%(prog)s <command>", add_help=False,
+        self.parser = argparse.ArgumentParser(usage="%(prog)s", add_help=False,
                                               formatter_class=CustomHelpFormatter)
         self.parser._positionals.title = "commands"
         self.parser._optionals.title = "options"
@@ -57,6 +59,7 @@ class Deemon:
 
         # Monitor
         parser_monitor = self.subparser.add_parser('monitor', help='monitor artist by name or id', add_help=False)
+        parser_monitor._positionals.title = "commands"
         parser_monitor._optionals.title = "options"
         parser_monitor.add_argument('artist', nargs='*', help="artist id or artist name to monitor")
         parser_monitor.add_argument('--remove', action='store_true', default=False,
@@ -65,8 +68,13 @@ class Deemon:
                                     help='options: 1 (MP3 128k), 3 (MP3 320k), 9 (FLAC)', default=3)
         parser_monitor.add_argument('--record-type', metavar='TYPE', choices=['album', 'single', 'all'],
                                     default='all', help="specify record type (default: all | album, single)")
-        parser_monitor.add_argument('--no-alerts', dest='alerts', action='store_true', default=None,
+        parser_monitor.add_argument('--alerts', dest='alerts', action='store_true', default=False,
                                     help='disable new release alerts for artist')
+
+        # Refresh
+        parser_refresh = self.subparser.add_parser('refresh', help='check for new releases', add_help=False)
+        parser_refresh.add_argument('--no-download', action='store_true', default=False,
+                                    help='only update database, do not download releases')
 
         # Download
         parser_download = self.subparser.add_parser('download', help='download specific artist or artist/album id',
@@ -103,14 +111,13 @@ class Deemon:
                                          help='disable notifications')
 
         # Import
-        parser_import = self.subparser.add_parser('import', help='import list of artists from text, csv or directory',
+        parser_import = self.subparser.add_parser('import',
+                                                  help='import list of artists from text list, csv or a directory',
                                                   add_help=False)
+        parser_import._positionals.title = "commands"
         parser_import._optionals.title = "options"
-        parser_import_mutex = parser_import.add_mutually_exclusive_group(required=True)
-        parser_import_mutex.add_argument('--file', type=str, metavar='PATH',
-                                         help='list of artists stored as text list or csv')
-        parser_import_mutex.add_argument('--dir', type=str, metavar='PATH',
-                                         help='parent directory containing individual artist directories')
+        parser_import.add_argument('path', metavar='PATH',
+                                         help='list of artists stored as text list, csv or a directory')
 
         # Export
         parser_export = self.subparser.add_parser('export', help='export list of artists to csv', add_help=False)
@@ -119,12 +126,7 @@ class Deemon:
                                    help='export to specified path')
 
         # Backup
-        parser_backup = self.subparser.add_parser('backup', help='perform various backup operations', add_help=False)
-        parser_backup._optionals.title = "options"
-        parser_backup.add_argument('--config', action="store_true",
-                                   help='backup configuration', default=self.backup_path())
-        parser_backup.add_argument('--database', action="store_true",
-                                   help='backup database', default=self.backup_path())
+        parser_backup = self.subparser.add_parser('backup', help='backup config and database', add_help=False)
 
         # Config
         parser_config = self.subparser.add_parser('config', help='view and modify configuration', add_help=False)
@@ -161,24 +163,15 @@ class Deemon:
             logger.critical("ARL verification failed. ")
             exit(1)
 
-    def monitor(self):
+    def monitor(self, artist, remove, bitrate, record_type, alerts, loop=False):
         '''
         Adds artists to database to be monitored
         Supports comma separated list or individual artist names
         :return: None
         '''
-        artist = self.args.artist
-        remove = self.args.remove
-        bitrate = self.args.bitrate
-        record_type = self.args.record_type
-        no_alerts = self.args.alerts
 
-        if no_alerts:
-            alerts = 0
-        else:
-            alerts = 1
-
-        artist = " ".join(artist)
+        alerts = int(alerts)
+        artist = " ".join(list(artist))
         artist = artist.split(",")
 
         logger.info(f"Processing artists: {artist}")
@@ -197,6 +190,7 @@ class Deemon:
                     api_artist = self.dz.api.search_artist(_artist, limit=1)['data'][0]
                 except IndexError:
                     logger.warning(f"WARNING: Artist '{_artist}' was not found")
+                    continue
 
             artist = api_artist["name"]
             artist_id = api_artist["id"]
@@ -206,8 +200,9 @@ class Deemon:
             elif not self.db.is_monitored(artist_id):
                 self.db.start_monitoring(artist_id, artist, bitrate, record_type, alerts)
 
-        self.db.commit_and_close()
-        sys.exit(0)
+        if not loop:
+            self.db.commit_and_close()
+            sys.exit(0)
 
     def do_nothing(self):
         pass
@@ -296,16 +291,140 @@ class Deemon:
 
         sys.exit(0)
 
+    def backup(self):
+        backup_tar = datetime.today().strftime('%Y%m%d-%H%M%S') + ".tar"
+        backup_path = Path(self.backup_path() / "backups")
+
+        if not backup_path.is_dir():
+            logger.debug(f"creating backup directory at {backup_path}")
+            # TODO needs error handling
+            Path(backup_path).mkdir(exist_ok=True)
+
+        with tarfile.open(backup_path / backup_tar, "w") as tar:
+                tar.add(self.config.config_path, "deemon/")
+                tar.add(self.config.db_path, "deemon/")
+                logger.info(f"Backed up to {backup_path / backup_tar}")
+
+
+
     def import_artists(self):
 
-        import_file = self.args.file
-        import_dir = self.args.dir
+        import_artists = self.args.path
+        bitrate = self.config.config["bitrate"]
+        record_type = self.config.config["record_type"]
+        alerts = int(self.config.config["alerts_enabled"])
+        # TODO check db for existing artist
+        if import_artists:
+            if Path(import_artists).is_file():
+                with open(import_artists) as f:
+                    import_list = f.read().splitlines()
+            elif Path(import_artists).is_dir():
+                import_list = os.listdir(import_artists)
+                print(import_list)
+            else:
+                logger.error("Unrecognized import type")
+                sys.exit(1)
 
-        if import_file:
-            if Path(import_file).is_file():
-                with open(import_file) as f:
-                    print(f.read().splitlines())
+            use_defaults = input("Use default import settings? (Y/n) ")
+            if use_defaults.lower() == "n":
 
+                # TODO move this to settings.py and use globally
+                default_choices = {
+                    "bitrate": {
+                        "128": 1,
+                        "320": 3,
+                        "FLAC": 9
+                    },
+                    "record_type": ['all', 'album', 'ep', 'single'],
+                    "alerts": {
+                        "y": 1,
+                        "n": 0
+                    }
+                }
+
+                bitrate_opts = default_choices["bitrate"]
+                bitrate_default = ([k for k, v in bitrate_opts.items() if v == bitrate][0])
+                record_type_default = record_type
+                alert_opts = default_choices["alerts"]
+                alert_default = ([k for k, v in alert_opts.items() if v == alerts][0])
+                alert_friendly = {}
+                for k, v in alert_opts.items():
+                    if v == alerts:
+                        alert_friendly[k.upper()] = v
+                    else:
+                        alert_friendly[k] = v
+
+                for artist in import_list:
+                    print(f"Artist: {artist}")
+                    user_bitrate, user_record_type, user_alerts = "", "", ""
+
+                    # BITRATE
+                    bitrate_names = ", ".join(list(bitrate_opts.keys()))
+                    while user_bitrate not in bitrate_opts:
+                        user_bitrate = input(f"Enter bitrate ({bitrate_names} "
+                                             f"[{bitrate_default}]): ").upper() or bitrate_default
+
+                    bitrate = bitrate_opts[user_bitrate]
+
+                    # RECORD TYPE
+                    record_type_opts = ", ".join(default_choices["record_type"])
+                    while user_record_type.lower() not in default_choices["record_type"]:
+                        user_record_type = input(f"Enter record type ({record_type_opts} "
+                                                 f"[{record_type_default}]): ") or record_type_default
+                    record_type = user_record_type
+
+                    # ALERTS
+                    alert_names = "/".join(list(alert_friendly.keys()))
+                    while user_alerts not in alert_opts:
+                        user_alerts = input(f"Enable new release notifications "
+                                            f"for this artist? ({alert_names}) ").lower() or alert_default
+                    alerts = alert_opts[user_alerts]
+                    self.monitor(artist=[artist], remove=False, bitrate=bitrate,
+                                 record_type=record_type, alerts=alerts, loop=True)
+                self.db.commit_and_close()
+                sys.exit(0)
+            else:
+                for artist in import_list:
+                    self.monitor(artist=[artist], remove=False, bitrate=bitrate,
+                                 record_type=record_type, alerts=alerts, loop=True)
+
+        sys.exit(0)
+
+    def refresh(self, skip_download=False):
+        self.deemix_login()
+        monitored_artists = self.db.get_all_artists()
+        new_release_counter = 0
+        new_artist = False
+
+        if not len(monitored_artists) > 0:
+            logger.error("No artists are currently being monitored")
+            sys.exit(0)
+
+        for _artist in monitored_artists:
+            artist = {"id": _artist[0], "name": _artist[1], "bitrate": _artist[2]}
+            record_type = _artist[3]
+            alerts = _artist[4]
+            artist_exists = self.db.check_exists(artist_id=artist["id"])
+            if not artist_exists:
+                new_artist = True
+                logger.info(f"New artist detected: {artist['name']}, future releases will be downloaded")
+
+            albums = self.dz.api.get_artist_albums(artist["id"])
+            for album in albums["data"]:
+                already_exists = self.db.check_exists(album_id=album["id"])
+
+                if already_exists or skip_download or new_artist:
+                    continue
+
+                new_release_counter += 1
+                self.db.add_new_release(artist["id"], album["id"], album["release_date"])
+
+                if (record_type == album["record_type"]) or (record_type == "all"):
+                    logger.debug(f"queue: added {artist['name']} - {album['title']} to the queue")
+                    self.queue_list.append(QueueItem(artist, album))
+
+        self.download_queue(self.queue_list)
+        self.db.commit_and_close()
         sys.exit(0)
 
     def main(self):
@@ -318,7 +437,15 @@ class Deemon:
             sys.exit(0)
 
         if self.args.command == "monitor":
-            self.monitor()
+            if not self.args.artist:
+                self.subparser.choices["monitor"].print_help()
+                sys.exit(1)
+            else:
+                self.monitor(self.args.artist, self.args.remove,
+                             self.args.bitrate, self.args.record_type, self.args.alerts)
+
+        if self.args.command == "refresh":
+            self.refresh(skip_download=self.args.no_download)
 
         if self.args.command == "download":
             self.download()
@@ -334,8 +461,10 @@ class Deemon:
 
         if self.args.command == "export":
             print(self.args)
-        elif self.args.command == "backup":
-            print(self.args)
+
+        if self.args.command == "backup":
+            self.backup()
+
         elif self.args.command == "config":
             print(self.args)
         else:
@@ -348,7 +477,7 @@ class Deemon:
             logger.info("Sending " + str(num_queued) + " release(s) to deemix for download:")
             for q in queue:
                 logger.info(f"Downloading {q.artist_name} - {q.album_title}... ")
-                self.di.download_url([q.url], self.config.config["bitrate"])
+                self.di.download_url([q.url], q.bitrate)
 
     @staticmethod
     def backup_path():
@@ -360,6 +489,7 @@ class QueueItem:
 
     def __init__(self, artist: dict, album: dict):
         self.artist_name = artist["name"]
+        self.bitrate = artist["bitrate"]
         self.album_id = album["id"]
         self.album_title = album["title"]
         self.url = album["link"]

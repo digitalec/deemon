@@ -8,7 +8,7 @@ import sys
 import os
 
 logger = logging.getLogger("deemon")
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
 logger.propagate = False
 
 home_dir = Path.home()
@@ -30,6 +30,8 @@ def get_appdata_dir():
 
 DEFAULT_CONFIG = {
     "bitrate": 3,
+    "record_type": "all",
+    "alerts_enabled": 0,
     "smtp_server": "",
     "smtp_port": 465,
     "smtp_username": "",
@@ -68,7 +70,7 @@ class Settings:
 
         for opt in DEFAULT_CONFIG:
             if opt not in self.config or not isinstance(self.config[opt], type(DEFAULT_CONFIG[opt])):
-                logger.debug(f"config: {self.config[opt]} / default: {DEFAULT_CONFIG[opt]}")
+                logger.debug(f"opt: {opt} / config: {self.config[opt]} / default: {DEFAULT_CONFIG[opt]}")
                 self.config[opt] = DEFAULT_CONFIG[opt]
 
     def init_log(self):
@@ -83,7 +85,7 @@ class Settings:
         fh.setFormatter(logging.Formatter("%(asctime)s - [%(levelname)s] %(message)s", "%Y-%m-%d %H:%M:%S"))
         logger.addHandler(fh)
 
-        ch = logging.StreamHandler()
+        ch = logging.StreamHandler(sys.stdout)
         ch.setLevel(logging.DEBUG)
         ch.setFormatter(logging.Formatter("%(message)s"))
         logger.addHandler(ch)

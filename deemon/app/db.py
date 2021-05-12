@@ -1,5 +1,6 @@
 import logging
 import sqlite3
+import time
 from deemon import __version__
 from packaging.version import parse as parse_version
 
@@ -59,7 +60,7 @@ class DB:
             self.setup_db()
 
     def query(self, query: str):
-        logger.debug(f"SQL: {query}")
+        # logger.debug(f"SQL: {query}")
         result = self.cursor.execute(query)
         return result
 
@@ -81,14 +82,15 @@ class DB:
         artists = set(x for x in result)
         return sorted(artists, key=lambda x: x[1])
 
-    def add_new_release(self, artist_id: int, album_id: int):
+    def add_new_release(self, artist_id: int, album_id: int, release_date: str):
         '''
         Add new release to database
         :param artist_id: int
         :param album_id: int
         :return:
         '''
-        self.query(f"INSERT INTO releases VALUES({artist_id}, {album_id})")
+
+        self.query(f"INSERT INTO releases VALUES({artist_id}, {album_id}, '{release_date}', '{time.time()}')")
 
     def purge_unmonitored_artists(self, active_artists):
         db_artists = self.get_all_artists()
@@ -99,9 +101,9 @@ class DB:
             return nb_artists
 
     def is_monitored(self, artist_id):
-        result = self.query(f"SELECT artist_id FROM monitor WHERE artist_id = {artist_id}").fetchone()
+        result = self.query(f"SELECT artist_id, artist_name FROM monitor WHERE artist_id = {artist_id}").fetchone()
         if result:
-            logger.info(f"Artist {artist_id} is already being monitored")
+            logger.info(f"Artist {result[1]} ({result[0]}) is already being monitored")
             return True
 
     def start_monitoring(self, artist_id, artist_name, bitrate, record_type, alerts):

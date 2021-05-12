@@ -3,6 +3,8 @@ from deemix.app import deemix
 from deemon.app.settings import Settings
 import logging
 
+logger = logging.getLogger("deemon")
+
 class DeemixInterface(deemix):
     def __init__(self, download_path, config_dir=None):
 
@@ -12,6 +14,7 @@ class DeemixInterface(deemix):
         super().__init__(config_dir, overwriteDownloadFolder=download_path)
 
     def download_url(self, url, bitrate=None):
+        logger.debug(url)
         for link in url:
             if ';' in link:
                 for l in link.split(";"):
