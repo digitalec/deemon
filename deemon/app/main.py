@@ -121,9 +121,9 @@ class Deemon:
 
         # Export
         parser_export = self.subparser.add_parser('export', help='export list of artists to csv', add_help=False)
+        parser_export._positionals.title = "commands"
         parser_export._optionals.title = "options"
-        parser_export.add_argument('--output', type=str, metavar='PATH',
-                                   help='export to specified path')
+        parser_export.add_argument('path', type=str, metavar='PATH', help='export to specified path')
 
         # Backup
         parser_backup = self.subparser.add_parser('backup', help='backup config and database', add_help=False)
@@ -305,6 +305,13 @@ class Deemon:
                 tar.add(self.config.db_path, "deemon/")
                 logger.info(f"Backed up to {backup_path / backup_tar}")
 
+    def export_artists(self, export_path):
+        export_file = Path(export_path / "deemon-artists.csv")
+        with open(export_file, "w"):
+            artist_dump = self.db.get_all_artists()
+            for line in artist_dump:
+                print(line)
+        sys.exit(0)
 
 
     def import_artists(self):
@@ -460,7 +467,7 @@ class Deemon:
             self.import_artists()
 
         if self.args.command == "export":
-            print(self.args)
+            self.export_artists(self.args.path)
 
         if self.args.command == "backup":
             self.backup()
