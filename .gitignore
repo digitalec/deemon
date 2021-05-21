@@ -3,3 +3,4 @@ __pycache__/
 build
 deemon.egg-info
 dist
+venv
