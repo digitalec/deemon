@@ -8,7 +8,7 @@ import sys
 import os
 
 logger = logging.getLogger("deemon")
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 logger.propagate = False
 
 home_dir = Path.home()

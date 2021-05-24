@@ -141,21 +141,28 @@ class Deemon:
         parser_config_mutex.add_argument('--reset', action='store_true', default=False,
                                          help='reset configuration to defaults')
 
+        # Switches
+        self.parser.add_argument('-v', '--verbose', action='store_true', default=False, help='enable verbose output')
+        self.parser.add_argument('--upgrade', action='store_true', default=False, help=argparse.SUPPRESS)
+
         # if len(sys.argv) == 1:
         #     self.parser.print_help()
         #     sys.exit(0)
 
         self.args = self.parser.parse_args()
+        if self.args.verbose:
+            logger.setLevel(logging.DEBUG)
         self.config = settings.Settings()
-        logger.debug(f"Args: {self.args}")
         self.queue_list = []
         self.custom_download_path = None
         self.custom_deemix_path = None
         self.appdata_dir = settings.get_appdata_dir()
         self.notify = EmailNotification(self.config.config)
-        self.db = DB(self.config.db_path)
         self.dz = deezer.Deezer()
+        self.db = DB(self.config.db_path)
         self.di = DeemixInterface(self.custom_download_path, self.custom_deemix_path)
+        logger.debug(f"Args: {self.args}")
+        self.upgrade_database()
 
     def deemix_login(self):
         logger.info("Verifying ARL...")
@@ -163,7 +170,7 @@ class Deemon:
             logger.critical("ARL verification failed. ")
             exit(1)
 
-    def monitor(self, artist, remove, bitrate, record_type, alerts, loop=False):
+    def monitor(self, artist, bitrate, record_type, alerts, remove=False, loop=False, quiet=False):
         '''
         Adds artists to database to be monitored
         Supports comma separated list or individual artist names
@@ -174,7 +181,7 @@ class Deemon:
         artist = " ".join(list(artist))
         artist = artist.split(",")
 
-        logger.info(f"Processing artists: {artist}")
+        logger.debug(f"Processing artist(s): {artist}")
 
         for _artist in artist:
 
@@ -198,7 +205,7 @@ class Deemon:
             if remove:
                 self.db.stop_monitoring(artist)
             elif not self.db.is_monitored(artist_id):
-                self.db.start_monitoring(artist_id, artist, bitrate, record_type, alerts)
+                self.db.start_monitoring(artist_id, artist, bitrate, record_type, alerts, quiet)
 
         if not loop:
             self.db.commit_and_close()
@@ -313,9 +320,7 @@ class Deemon:
                 print(line)
         sys.exit(0)
 
-
     def import_artists(self):
-
         import_artists = self.args.path
         bitrate = self.config.config["bitrate"]
         record_type = self.config.config["record_type"]
@@ -490,6 +495,45 @@ class Deemon:
     def backup_path():
         appdata_path = Path("/home/seggleston/.config/deemon")
         return appdata_path
+
+    def upgrade_database(self):
+        if parse_version(self.db.db_app_version) < parse_version('1.0.0'):
+
+            if not self.args.upgrade:
+                print("Database upgrade is required.\n"
+                      "Please confirm configuration and run again using --upgrade.")
+                sys.exit(0)
+
+            print("*" * 36)
+            logger.info(f"!!! DATABASE UPGRADE IN PROGRESS !!!")
+            print("*" * 36)
+            self.db.create_new_database()
+            self.db.query('ALTER TABLE releases ADD COLUMN album_release TEXT')
+            self.db.query('ALTER TABLE releases ADD COLUMN album_added TEXT')
+
+            logger.debug("Updating releases table")
+
+            result = self.db.query("SELECT album_id FROM 'releases'").fetchall()
+            album_id = [x[0] for x in result]
+            print("Migrating data, please wait", end="")
+            for i in album_id:
+                print(".", end="")
+                logger.debug(f"getting release date for {i}")
+                release_date = self.dz.api.get_album(f'{i}')
+
+            # logger.debug("Updating monitor table")
+
+            result = self.db.query('SELECT DISTINCT artist_id FROM releases').fetchall()
+            artist_id = [x[0] for x in result]
+            for i in artist_id:
+                print(".", end="")
+                self.monitor(artist=[str(i)], bitrate=self.config.config["bitrate"],
+                             record_type=self.config.config["record_type"],
+                             alerts=self.config.config["alerts_enabled"],
+                             loop=True, quiet=True)
+            print(" done!")
+            self.db.commit_and_close()
+            sys.exit(0)
 
 
 class QueueItem:

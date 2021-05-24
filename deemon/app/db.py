@@ -1,63 +1,64 @@
 import logging
 import sqlite3
 import time
+from pathlib import Path
 from deemon import __version__
-from packaging.version import parse as parse_version
 
 logger = logging.getLogger("deemon")
 
 
 class DB:
 
-    def __init__(self, db_path: object):
-        self.db_app_version = ""
+    def __init__(self, db_path, first_run=True):
+
+        if Path(db_path).exists():
+            first_run = False
+
+        self.conn = self.connect(db_path)
+        self.cursor = self.conn.cursor()
+
+        if first_run:
+            self.create_new_database()
+
+        self.db_app_version = self.get_db_version()
+
+        logger.debug(f"Using db: {db_path}")
+
+    def connect(self, db_path):
         try:
-            self.conn = sqlite3.connect(db_path)
-            self.cursor = self.conn.cursor()
-            self.check_db_version()
-            logger.debug(f"Using db: {db_path}")
+            conn = sqlite3.connect(db_path)
+            return conn
         except sqlite3.OperationalError as e:
             logger.error(f"Error opening database: {e}")
             exit(1)
 
-    def setup_db(self):
-        '''Check if tables exist, otherwise create them'''
-        tables = {
-            'deemon': {
-                'struct': 'property STRING, value STRING',
-                'data': f"'version', '{__version__}'"
-            },
-            'releases': {
-                'struct': 'artist_id INTEGER, album_id INTEGER, album_release STRING, album_added STRING'
-            },
-            'monitor': {
-                'struct': 'artist_id INTEGER, artist_name STRING, bitrate INTEGER, '
-                          'record_type STRING, alerts INTEGER'
-            }
-        }
+    def create_new_database(self):
+        logger.debug("Building database structure")
 
-        for tbl in tables:
-            self.query(f"CREATE TABLE IF NOT EXISTS '{tbl}' ({tables[tbl]['struct']})")
-            if 'data' in tables[tbl]:
-                self.query(f"INSERT INTO '{tbl}' VALUES ({tables[tbl]['data']})")
+        sql_monitor = ("CREATE TABLE IF NOT EXISTS 'monitor' "
+                       "('artist_id' INTEGER, 'artist_name' TEXT, 'bitrate' INTEGER, "
+                       "'record_type' TEXT, 'alerts' INTEGER)")
+
+        sql_releases = ("CREATE TABLE IF NOT EXISTS 'releases' "
+                        "('artist_id' INTEGER, 'album_id' INTEGER, "
+                        "'album_release' TEXT, 'album_added' TEXT)")
+
+        self.query(sql_monitor)
+        self.query(sql_releases)
+        self.query("CREATE TABLE IF NOT EXISTS 'deemon' ('property' TEXT, 'value' TEXT)")
+        self.query("CREATE UNIQUE INDEX 'idx_property' ON 'deemon' ('property')")
+        self.query(f"INSERT INTO 'deemon' ('property', 'value') VALUES ('version', '{__version__}')")
 
         self.commit()
 
-    def check_db_version(self):
+    def get_db_version(self):
         try:
-            self.db_app_version = self.query(f"SELECT value FROM deemon WHERE property = 'version'").fetchone()[0]
-        except Exception as e:
-            self.db_app_version = '< 1.0.0'
+            version = self.query(f"SELECT value FROM deemon WHERE property = 'version'").fetchone()[0]
+        except Exception:
+            version = '0.0.0'
 
-        if parse_version(self.db_app_version) < parse_version(__version__):
-            logger.debug(f"DB version is {self.db_app_version}, upgrading to {__version__}")
-            self.upgrade_db()
-
-    def upgrade_db(self):
-        if self.db_app_version == '< 1.0.0':
-            self.query('ALTER TABLE releases ADD COLUMN album_release STRING')
-            self.query('ALTER TABLE releases ADD COLUMN album_added STRING')
-            self.setup_db()
+        logger.debug(f"Database version {version}")
+        return version
 
     def query(self, query: str):
         # logger.debug(f"SQL: {query}")
@@ -106,10 +107,13 @@ class DB:
             logger.info(f"Artist {result[1]} ({result[0]}) is already being monitored")
             return True
 
-    def start_monitoring(self, artist_id, artist_name, bitrate, record_type, alerts):
+    def start_monitoring(self, artist_id, artist_name, bitrate, record_type, alerts, quiet=False):
         result = self.query(f"INSERT INTO monitor (artist_id, artist_name, bitrate, record_type, alerts) "
                                f"VALUES ({artist_id}, '{artist_name}', {bitrate}, '{record_type}', {alerts})")
-        logger.info(f"Now monitoring {artist_name}")
+        if not quiet:
+            logger.info(f"Now monitoring {artist_name}")
+        else:
+            logger.debug(f"Now monitoring {artist_name}")
 
     def stop_monitoring(self, artist_name):
         result = self.query(f"DELETE FROM monitor WHERE artist_name = '{artist_name}'")
