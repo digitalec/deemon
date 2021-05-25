@@ -46,6 +46,23 @@ class CustomHelpFormatter(argparse.HelpFormatter):
 class Deemon:
 
     def __init__(self):
+        self.args = self.cli()
+        if self.args.verbose:
+            logger.setLevel(logging.DEBUG)
+        self.config = settings.Settings()
+        self.queue_list = []
+        self.custom_download_path = None
+        self.custom_deemix_path = None
+        self.appdata_dir = settings.get_appdata_dir()
+        self.notify = EmailNotification(self.config.config)
+        self.dz = deezer.Deezer()
+        self.db = DB(self.config.db_path)
+        # TODO move DMI to be called on an as needed basis to improve performance
+        self.di = DeemixInterface(self.custom_download_path, self.custom_deemix_path)
+        logger.debug(f"Args: {self.args}")
+        self.upgrade_database()
+
+    def cli(self):
         self.parser = argparse.ArgumentParser(usage="%(prog)s", add_help=False,
                                               formatter_class=CustomHelpFormatter)
         self.parser._positionals.title = "commands"
@@ -146,25 +163,10 @@ class Deemon:
         self.parser.add_argument('-v', '--verbose', action='store_true', default=False, help='enable verbose output')
         self.parser.add_argument('--upgrade', action='store_true', default=False, help=argparse.SUPPRESS)
 
+        return self.parser.parse_args()
         # if len(sys.argv) == 1:
         #     self.parser.print_help()
         #     sys.exit(0)
-
-        self.args = self.parser.parse_args()
-        if self.args.verbose:
-            logger.setLevel(logging.DEBUG)
-        self.config = settings.Settings()
-        self.queue_list = []
-        self.custom_download_path = None
-        self.custom_deemix_path = None
-        self.appdata_dir = settings.get_appdata_dir()
-        self.notify = EmailNotification(self.config.config)
-        self.dz = deezer.Deezer()
-        self.db = DB(self.config.db_path)
-        # TODO move DMI to be called on an as needed basis to improve performance
-        self.di = DeemixInterface(self.custom_download_path, self.custom_deemix_path)
-        logger.debug(f"Args: {self.args}")
-        self.upgrade_database()
 
     def deemix_login(self):
         logger.info("Verifying ARL...")
