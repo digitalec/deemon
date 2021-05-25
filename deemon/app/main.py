@@ -215,9 +215,6 @@ class Deemon:
             self.db.commit_and_close()
             sys.exit(0)
 
-    def do_nothing(self):
-        pass
-
     def show(self):
         if self.args.artists:
             monitored = self.db.get_all_artists()
