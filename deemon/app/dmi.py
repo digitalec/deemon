@@ -7,7 +7,7 @@ logger = logging.getLogger("deemon")
 
 class DeemixInterface(deemix):
     def __init__(self, download_path, config_dir=None):
-
+        logger.debug("Initializing deemix library")
         dm_logger = logging.getLogger("deemix")
         dm_logger.setLevel(logging.WARN)
 

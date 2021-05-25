@@ -40,8 +40,8 @@ class DB:
                        "'record_type' TEXT, 'alerts' INTEGER)")
 
         sql_releases = ("CREATE TABLE IF NOT EXISTS 'releases' "
-                        "('artist_id' INTEGER, 'album_id' INTEGER, "
-                        "'album_release' TEXT, 'album_added' TEXT)")
+                        "('artist_id' INTEGER, 'artist_name' TEXT, 'album_id' INTEGER, "
+                        "'album_name' TEXT, 'album_release' TEXT, 'album_added' INTEGER)")
 
         self.query(sql_monitor)
         self.query(sql_releases)
@@ -61,8 +61,13 @@ class DB:
         return version
 
     def query(self, query: str):
-        # logger.debug(f"SQL: {query}")
+        logger.debug(f"SQL: {query}")
         result = self.cursor.execute(query)
+        return result
+
+    def safe_query(self, query: str, vals: dict):
+        logger.debug(f"Safe SQL: {query}")
+        result = self.cursor.execute(query, vals)
         return result
 
     def check_exists(self, artist_id: int = None, album_id: int = None):
@@ -83,23 +88,16 @@ class DB:
         artists = set(x for x in result)
         return sorted(artists, key=lambda x: x[1])
 
-    def add_new_release(self, artist_id: int, album_id: int, release_date: str):
-        '''
-        Add new release to database
-        :param artist_id: int
-        :param album_id: int
-        :return:
-        '''
+    def add_new_release(self, artist_id: int, artist_name: str, album_id: int,
+                        album_name: str, release_date: str):
+        timestamp = int(time.time())
 
-        self.query(f"INSERT INTO releases VALUES({artist_id}, {album_id}, '{release_date}', '{time.time()}')")
+        sql = (f"INSERT INTO releases ('artist_id', 'artist_name', 'album_id', "
+               f"'album_name', 'album_release', 'album_added') "
+               f"VALUES ({artist_id}, '{artist_name}', {album_id}, '{album_name}', "
+               f"'{release_date}', {timestamp}")
 
-    def purge_unmonitored_artists(self, active_artists):
-        db_artists = self.get_all_artists()
-        purge_list = [x for x in db_artists if x not in active_artists]
-        nb_artists = len(purge_list)
-        if nb_artists > 0:
-            self.query(f"DELETE FROM releases WHERE artist_id IN ({str(purge_list).strip('[]')})")
-            return nb_artists
+        self.query(sql)
 
     def is_monitored(self, artist_id):
         result = self.query(f"SELECT artist_id, artist_name FROM monitor WHERE artist_id = {artist_id}").fetchone()
@@ -108,8 +106,16 @@ class DB:
             return True
 
     def start_monitoring(self, artist_id, artist_name, bitrate, record_type, alerts, quiet=False):
-        result = self.query(f"INSERT INTO monitor (artist_id, artist_name, bitrate, record_type, alerts) "
-                               f"VALUES ({artist_id}, '{artist_name}', {bitrate}, '{record_type}', {alerts})")
+        sql = ("INSERT INTO monitor (artist_id, artist_name, bitrate, record_type, alerts) "
+               "VALUES (:artist_id, :artist_name, :bitrate, :record_type, :alerts)")
+        values = {
+            'artist_id': artist_id,
+            'artist_name': artist_name,
+            'bitrate': bitrate,
+            'record_type': record_type,
+            'alerts': alerts
+        }
+        result = self.safe_query(sql, values)
         if not quiet:
             logger.info(f"Now monitoring {artist_name}")
         else:
@@ -121,6 +127,10 @@ class DB:
             logger.info(f"No longer monitoring {artist_name}")
         else:
             logger.info(f"Artist '{artist_name}' is not being monitored")
+
+    def show_new_releases(self, from_date):
+        result = self.query(f"SELECT * FROM 'releases' WHERE album_added >= {from_date}")
+        return result
 
     def commit(self):
         self.conn.commit()

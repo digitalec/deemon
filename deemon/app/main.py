@@ -13,6 +13,7 @@ import argparse
 import logging
 import os
 import sys
+import time
 
 logger = logging.getLogger("deemon")
 
@@ -94,7 +95,7 @@ class Deemon:
         parser_show_mutex = parser_show.add_mutually_exclusive_group(required=True)
         parser_show_mutex.add_argument('--artists', action="store_true",
                                        help='show list of artists currently being monitored')
-        parser_show_mutex.add_argument('--new-releases', nargs='?', metavar="N", type=int, default="30",
+        parser_show_mutex.add_argument('--new-releases', metavar="N", type=int, default="30",
                                        help='show list of new releases from last N days (default: 30)')
 
         # Alerts
@@ -160,6 +161,7 @@ class Deemon:
         self.notify = EmailNotification(self.config.config)
         self.dz = deezer.Deezer()
         self.db = DB(self.config.db_path)
+        # TODO move DMI to be called on an as needed basis to improve performance
         self.di = DeemixInterface(self.custom_download_path, self.custom_deemix_path)
         logger.debug(f"Args: {self.args}")
         self.upgrade_database()
@@ -222,7 +224,7 @@ class Deemon:
             else:
                 artist_data = []
                 for m in monitored:
-                    artist = m[1]
+                    artist = m[1][:16]
                     bitrate = m[2]
                     record_type = m[3]
                     alerts = m[4]
@@ -250,18 +252,27 @@ class Deemon:
 
                     artist_data.append(f"{artist} [{bitrate}, {record_type}, {alerts}]")
 
-                print("Monitored Artists\n\n")
+                logger.info("Viewing: Monitored Artists\n\n")
 
                 if len(artist_data) > 3:
-                    for a, b, c in zip(artist_data[::3], artist_data[1::3], artist_data[2::3]):
-                        print('{:<30}{:<30}{:<}'.format(a, b, c))
+                    for a, b in zip(artist_data[::2], artist_data[1::2]):
+                        print('{:<40}{:<}'.format(a, b))
                 else:
                     for d in artist_data:
                         print(d)
 
-                print("\n\nLegend: [bitrate, type, alerts]")
-        else:
-            print("Check releases for last N days")
+                print("\n\nLegend: [bitrate, album type, alerts]")
+        elif self.args.new_releases:
+            days = self.args.new_releases
+            days_in_seconds = (days * 86400)
+            now = int(time.time())
+            get_time = (now - days_in_seconds)
+            releases = self.db.show_new_releases(get_time)
+            logger.info(f"New releases found within last {days} day(s):")
+            print("")
+            for release in releases:
+                logger.info(f"{release[2]} - {release[3]}")
+
         sys.exit(0)
 
     def download(self):
@@ -313,6 +324,7 @@ class Deemon:
                 logger.info(f"Backed up to {backup_path / backup_tar}")
 
     def export_artists(self, export_path):
+        export_path = Path(export_path)
         export_file = Path(export_path / "deemon-artists.csv")
         with open(export_file, "w"):
             artist_dump = self.db.get_all_artists()
@@ -447,36 +459,27 @@ class Deemon:
             else:
                 self.parser.print_help()
             sys.exit(0)
-
-        if self.args.command == "monitor":
+        elif self.args.command == "monitor":
             if not self.args.artist:
                 self.subparser.choices["monitor"].print_help()
                 sys.exit(1)
             else:
-                self.monitor(self.args.artist, self.args.remove,
-                             self.args.bitrate, self.args.record_type, self.args.alerts)
-
-        if self.args.command == "refresh":
+                self.monitor(self.args.artist, self.args.bitrate, self.args.record_type,
+                             self.args.alerts, self.args.remove)
+        elif self.args.command == "refresh":
             self.refresh(skip_download=self.args.no_download)
-
-        if self.args.command == "download":
+        elif self.args.command == "download":
             self.download()
-
-        if self.args.command == "show":
+        elif self.args.command == "show":
             self.show()
-
-        if self.args.command == "alerts":
+        elif self.args.command == "alerts":
             print(self.args)
-
-        if self.args.command == "import":
+        elif self.args.command == "import":
             self.import_artists()
-
-        if self.args.command == "export":
+        elif self.args.command == "export":
             self.export_artists(self.args.path)
-
-        if self.args.command == "backup":
+        elif self.args.command == "backup":
             self.backup()
-
         elif self.args.command == "config":
             print(self.args)
         else:
@@ -504,24 +507,17 @@ class Deemon:
                       "Please confirm configuration and run again using --upgrade.")
                 sys.exit(0)
 
+            # TODO - verify config here with an input()
             print("*" * 36)
             logger.info(f"!!! DATABASE UPGRADE IN PROGRESS !!!")
             print("*" * 36)
             self.db.create_new_database()
+            self.db.query('ALTER TABLE releases ADD COLUMN artist_name TEXT')
+            self.db.query('ALTER TABLE releases ADD COLUMN album_name TEXT')
             self.db.query('ALTER TABLE releases ADD COLUMN album_release TEXT')
-            self.db.query('ALTER TABLE releases ADD COLUMN album_added TEXT')
+            self.db.query('ALTER TABLE releases ADD COLUMN album_added INTEGER')
 
-            logger.debug("Updating releases table")
-
-            result = self.db.query("SELECT album_id FROM 'releases'").fetchall()
-            album_id = [x[0] for x in result]
-            print("Migrating data, please wait", end="")
-            for i in album_id:
-                print(".", end="")
-                logger.debug(f"getting release date for {i}")
-                release_date = self.dz.api.get_album(f'{i}')
-
-            # logger.debug("Updating monitor table")
+            logger.info("Updating monitor table, please wait as this can take a few minutes...")
 
             result = self.db.query('SELECT DISTINCT artist_id FROM releases').fetchall()
             artist_id = [x[0] for x in result]
@@ -531,8 +527,8 @@ class Deemon:
                              record_type=self.config.config["record_type"],
                              alerts=self.config.config["alerts_enabled"],
                              loop=True, quiet=True)
+                self.db.commit()
             print(" done!")
-            self.db.commit_and_close()
             sys.exit(0)
 
 
