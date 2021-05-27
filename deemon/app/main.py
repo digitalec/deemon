@@ -105,8 +105,7 @@ class Download:
         logger.info("Refresh complete")
         if self.queue_list:
             self.download_queue(self.queue_list)
-        self.db.commit_and_close()
-        sys.exit(0)
+        self.db.commit()
 
     def download_queue(self, queue):
         self.deemix_login()
@@ -369,8 +368,8 @@ class Deemon:
                 ma.stop_monitoring()
             else:
                 ma.start_monitoring()
-                dl.refresh(artists)
 
+        dl.refresh(artists)
         sys.exit(0)
 
     def download(self):
@@ -433,6 +432,7 @@ class Deemon:
             days_in_seconds = (days * 86400)
             now = int(time.time())
             get_time = (now - days_in_seconds)
+            #TODO this should check by album release date to be more useful
             releases = self.db.show_new_releases(get_time)
             logger.info(f"New releases found within last {days} day(s):")
             print("")
@@ -569,10 +569,11 @@ class Deemon:
     def export_artists(self):
         export_path = Path(self.args.path)
         export_file = Path(export_path / "deemon-artists.csv")
-        with open(export_file, "w"):
+        with open(export_file, "w+") as f:
             artist_dump = self.db.get_all_artists()
             for line in artist_dump:
-                print(line)
+                line = ','.join(map(str, line))
+                f.write(line + "\n")
         sys.exit(0)
 
     def import_artists(self):
@@ -584,6 +585,7 @@ class Deemon:
         if import_artists:
             if Path(import_artists).is_file():
                 with open(import_artists) as f:
+                    #TODO check for CSV!
                     import_list = f.read().splitlines()
             elif Path(import_artists).is_dir():
                 import_list = os.listdir(import_artists)
