@@ -1,9 +1,9 @@
 from pathlib import Path
+from deemon.app.db import DB
 from deemon import __version__
 import logging
 import platform
 import datetime
-import json
 import sys
 import os
 
@@ -28,50 +28,19 @@ def get_appdata_dir():
     return appdata_dir
 
 
-DEFAULT_CONFIG = {
-    "bitrate": 3,
-    "record_type": "all",
-    "alerts_enabled": 0,
-    "smtp_server": "",
-    "smtp_port": 465,
-    "smtp_username": "",
-    "smtp_password": "",
-    "smtp_recipient": "",
-    "smtp_sender_email": ""
-}
-
-
 class Settings:
 
     def __init__(self, custom_path=None):
         self.config = {}
-        self.legacy_path = Path(Path.home() / ".config/deemon")
         self.config_path = Path(custom_path or get_appdata_dir())
         self.db_path = Path(self.config_path / 'releases.db')
+        self.load_config()
 
-        os.makedirs(self.config_path, exist_ok=True)
-        self.init_log()
-
-        # Migrate database file to correct path on non-Linux OSes
-        if (self.legacy_path != self.config_path) and Path(self.legacy_path / 'releases.db').exists():
-            logger.info(f"Migrating database to new path at: {self.config_path}")
-            Path(self.legacy_path / 'releases.db').rename(self.config_path / 'releases.db')
-            try:
-                Path(self.legacy_path).rmdir()
-            except Exception:
-                logger.error(f"Unable to remove old appdata directory: {self.legacy_path}")
-
-        if not (self.config_path / 'config.json').exists():
-            with open(self.config_path / 'config.json', 'w') as f:
-                json.dump(DEFAULT_CONFIG, f, indent=4)
-
-        with open(self.config_path / 'config.json') as f:
-            self.config = json.load(f)
-
-        for opt in DEFAULT_CONFIG:
-            if opt not in self.config or not isinstance(self.config[opt], type(DEFAULT_CONFIG[opt])):
-                logger.debug(f"opt: {opt} / config: {self.config[opt]} / default: {DEFAULT_CONFIG[opt]}")
-                self.config[opt] = DEFAULT_CONFIG[opt]
+    def load_config(self):
+        db = DB(self.db_path)
+        result = db.query("SELECT * FROM config")
+        for row in result:
+            self.config[row[0]] = row[1]
 
     def init_log(self):
         log_path = self.config_path / 'logs'

@@ -5,3 +5,4 @@ deemon.egg-info
 dist
 test.txt
 venv
+.cache

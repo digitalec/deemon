@@ -5,6 +5,7 @@ import logging
 
 logger = logging.getLogger("deemon")
 
+
 class DeemixInterface(deemix):
     def __init__(self, download_path, config_dir=None):
         logger.debug("Initializing deemix library")
