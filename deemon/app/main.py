@@ -229,8 +229,6 @@ class Deemon:
         self.appdata_dir = settings.get_appdata_dir()
         self.dz = deezer.Deezer()
         self.db = DB(self.settings.db_path)
-        # TODO move DMI to be called on an as needed basis to improve performance
-        # self.
         logger.debug(f"Args: {self.args}")
         self.args.func()
 
@@ -433,7 +431,7 @@ class Deemon:
             now = int(time.time())
             get_time = (now - days_in_seconds)
             #TODO this should check by album release date to be more useful
-            releases = self.db.show_new_releases(get_time)
+            releases = self.db.show_new_releases(get_time, now)
             logger.info(f"New releases found within last {days} day(s):")
             print("")
             for release in releases:

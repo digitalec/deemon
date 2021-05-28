@@ -1,3 +1,4 @@
+from datetime import datetime
 import logging
 import sqlite3
 import time
@@ -121,8 +122,10 @@ class DB:
             logger.info(f"Artist {result[1]} ({result[0]}) is already being monitored")
             return True
 
-    def show_new_releases(self, from_date):
-        result = self.query(f"SELECT * FROM 'releases' WHERE album_added >= {from_date}")
+    def show_new_releases(self, from_date_ts, now_ts):
+        today_date = datetime.utcfromtimestamp(now_ts).strftime('%Y-%m-%d')
+        from_date = datetime.utcfromtimestamp(from_date_ts).strftime('%Y-%m-%d')
+        result = self.query(f"SELECT * FROM 'releases' WHERE album_release >= '{from_date}' AND album_release <= '{today_date}'")
         return result
 
     def commit(self):
