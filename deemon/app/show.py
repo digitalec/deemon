@@ -1,5 +1,6 @@
 from deemon.app import settings, db
 from deemon.app import Deemon
+from operator import itemgetter
 import logging
 import time
 import sys
@@ -33,11 +34,13 @@ class ShowStats(Deemon):
         now = int(time.time())
         back_date = (now - days_in_seconds)
         releases = self.db.show_new_releases(back_date, now)
-        if releases.rowcount > 0:
+        release_list = [x for x in releases]
+        if len(release_list) > 0:
             logger.info(f"New releases found within last {days} day(s):")
-            print("\n")
-            for release in releases:
-                logger.info(f"{release[1]} - {release[3]}")
+            print("")
+            release_list.sort(key=itemgetter(4), reverse=True)
+            for release in release_list:
+                print('+ [%-10s] %-20s - %s' % (release[4], release[1], release[3]))
         else:
             logger.info(f"No releases found in that timeframe")
 
