@@ -4,3 +4,4 @@ build
 deemon.egg-info
 dist
 venv
+deemon/app/.cache
