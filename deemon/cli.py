@@ -1,5 +1,6 @@
 from deemon.app import settings, monitor, download
 from deemon.app.show import ShowStats
+from deemon.app.batch import BatchJobs
 from deemon.app.logger import setup_logger
 from deemon import __version__
 from datetime import datetime
@@ -109,7 +110,8 @@ def import_cmd(path):
 @click.argument('path')
 def export(path):
     """Export all artists"""
-
+    batch = BatchJobs()
+    batch.export_artists(path)
 
 @run.command()
 @click.option('--include-logs', is_flag=True, help='include log files in backup')
