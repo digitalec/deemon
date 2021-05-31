@@ -28,6 +28,9 @@ class BatchJobs(Deemon):
                 with open(import_artists) as f:
                     # TODO check for CSV!
                     import_list = f.read().splitlines()
+                    # TODO clean this up and merge with lines 36:37
+                    num_to_import = len(import_list)
+                    logger.info(f"Importing {num_to_import} artist(s)...")
             elif Path(import_artists).is_dir():
                 import_list = os.listdir(import_artists)
                 num_to_import = len(import_list)
