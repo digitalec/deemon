@@ -1,5 +1,8 @@
+import time
+
 from deemon.app import settings, dmi, db, notify
 from deemon.app import Deemon
+import progressbar
 import logging
 import deezer
 import sys
@@ -26,12 +29,12 @@ class Download(Deemon):
             num_queued = len(queue)
             logger.info("----------------------------")
             logger.info("Sending " + str(num_queued) + " release(s) to deemix for download:")
+
             for q in queue:
                 logger.info(f"Downloading {q.artist_name} - {q.album_title}... ")
                 self.di.download_url([q.url], q.bitrate)
 
     def download(self, opt: dict):
-
         logger.debug("download called with options: " + str(opt))
 
         if opt["url"]:
@@ -60,20 +63,22 @@ class Download(Deemon):
 
             self.download_queue(self.queue_list)
 
-    def refresh(self, artist=None, skip_download=False):
-        logger.info("Refreshing artists...")
-        if artist is None:
+    def refresh(self, artists=None, skip_download=False):
+        if artists is None:
             monitored_artists = self.db.get_all_artists()
         else:
-            monitored_artists = self.db.get_specified_artist(artist)
+            monitored_artists = self.db.get_specified_artists(artists)
+            if len(monitored_artists) == 0:
+                sys.exit(0)
+
         new_release_counter = 0
         new_artist = False
 
-        if not len(monitored_artists) > 0:
-            logger.warning("No artists currently being monitored")
-            sys.exit(0)
-
-        for _artist in monitored_artists:
+        logger.info("Refreshing artists, this may take some time...")
+        bar = progressbar.ProgressBar(maxval=len(monitored_artists),
+                                      widgets=[progressbar.Bar('=', '[', ']'), ' ', progressbar.Percentage()])
+        bar.start()
+        for idx, _artist in enumerate(monitored_artists):
             artist = {"id": _artist[0], "name": _artist[1], "bitrate": _artist[2]}
             record_type = _artist[3]
             alerts = _artist[4]
@@ -97,6 +102,8 @@ class Download(Deemon):
                 if (record_type == album["record_type"]) or (record_type == "all"):
                     logger.debug(f"queue: added {artist['name']} - {album['title']} to the queue")
                     self.queue_list.append(QueueItem(artist, album))
+            bar.update(idx)
+        bar.finish()
         logger.info("Refresh complete")
         if self.queue_list:
             self.download_queue(self.queue_list)

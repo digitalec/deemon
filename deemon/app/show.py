@@ -1,6 +1,7 @@
 from deemon.app import settings, db
 from deemon.app import Deemon
 import logging
+import time
 import sys
 
 logger = logging.getLogger(__name__)
@@ -26,8 +27,19 @@ class ShowStats(Deemon):
             for artist in artist_data:
                 print(artist)
 
-    def releases(self, limit=None):
-        pass
+    def releases(self, days):
+        seconds_per_day = 86400
+        days_in_seconds = (days * seconds_per_day)
+        now = int(time.time())
+        back_date = (now - days_in_seconds)
+        releases = self.db.show_new_releases(back_date, now)
+        if releases.rowcount > 0:
+            logger.info(f"New releases found within last {days} day(s):")
+            print("\n")
+            for release in releases:
+                logger.info(f"{release[1]} - {release[3]}")
+        else:
+            logger.info(f"No releases found in that timeframe")
 
     def stats(self):
         pass

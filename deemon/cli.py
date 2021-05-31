@@ -54,22 +54,25 @@ def download_command(artist, artist_id, album_id, url, bitrate, record_type):
     dl.download(params)
 
 
-@run.command(name='monitor')
-@click.argument('artist')
+@run.command(name='monitor', context_settings={"ignore_unknown_options": True})
+@click.argument('artist', nargs=-1)
 @click.option('-R', '--remove', is_flag=True, help='Stop montioring an artist')
 def monitor_command(artist, remove):
     """Monitor ARTIST for new releases"""
 
-    ma = monitor.Monitor()
-    ma.artist = artist
+    artist_csv = ' '.join(artist).split(',')
+    artist_csv = [x.lstrip() for x in artist_csv]
 
-    if remove:
-        ma.stop_monitoring()
-    else:
-        monitoring = ma.start_monitoring()
-        if monitoring:
-            dl = download.Download(login=False)
-            dl.refresh(artist)
+    for artist in artist_csv:
+        ma = monitor.Monitor()
+        ma.artist = artist
+
+        if remove:
+            ma.stop_monitoring()
+        else:
+            ma.start_monitoring()
+    dl = download.Download(login=False)
+    dl.refresh(artist_csv)
 
 
 @run.command()
@@ -81,7 +84,7 @@ def refresh():
 
 @run.command(name='show')
 @click.option('-a', '--artists', is_flag=True, help='Show artists currently being monitored')
-@click.option('-n', '--new-releases', metavar='N', type=int, default=30, help='Show new releases from last N days')
+@click.option('-n', '--new-releases', metavar='N', type=int, help='Show new releases from last N days')
 @click.option('-s', '--stats', is_flag=True, help='Show various usage stats')
 def show_command(artists, new_releases, stats):
     """

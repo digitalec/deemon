@@ -1,20 +1,13 @@
-from deemon.app import settings, dmi, db, notify
 from deemix.app import deemix
 from pathlib import Path
 import logging
-import deezer
-import sys
 
 logger = logging.getLogger(__name__)
-deemix_logger = logging.getLogger("deemix")
-deemix_logger.setLevel(logging.WARN)
 
 
 class DeemixInterface(deemix):
     def __init__(self, download_path, config_dir=None):
         logger.debug("Initializing deemix library")
-        self.deemix_logger = logging.getLogger("deemix")
-        self.deemix_logger.setLevel(logging.WARN)
         super().__init__(config_dir, overwriteDownloadFolder=download_path)
 
     def download_url(self, urls: list, bitrate: int):

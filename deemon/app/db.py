@@ -71,7 +71,7 @@ class DBHelper:
         return version
 
     def query(self, query: str, values=None):
-        logger.debug(f"query: {query}")
+        # logger.debug(f"query: {query}")
         if values is None:
             values = {}
         else:
@@ -97,11 +97,13 @@ class DBHelper:
         artists = set(x for x in result)
         return sorted(artists, key=lambda x: x[1])
 
-    def get_specified_artist(self, artist):
-        values = {'artist': artist}
-        result = self.query("SELECT * FROM monitor WHERE artist_name = :artist COLLATE NOCASE", values)
-        artists = set(x for x in result)
-        return sorted(artists, key=lambda x: x[1])
+    def get_specified_artists(self, artists):
+        all_artists = []
+        for artist in artists:
+            values = {'artist': artist}
+            result = self.query("SELECT * FROM monitor WHERE artist_name = :artist COLLATE NOCASE", values).fetchall()
+            [all_artists.append(x) for x in result]
+        return all_artists
 
     def add_new_release(self, artist_id, artist_name, album_id, album_name, release_date):
         timestamp = int(time.time())
@@ -123,7 +125,9 @@ class DBHelper:
     def show_new_releases(self, from_date_ts, now_ts):
         today_date = datetime.utcfromtimestamp(now_ts).strftime('%Y-%m-%d')
         from_date = datetime.utcfromtimestamp(from_date_ts).strftime('%Y-%m-%d')
-        result = self.query(f"SELECT * FROM 'releases' WHERE album_release >= '{from_date}' AND album_release <= '{today_date}'")
+        values = {'from': from_date, 'today': today_date}
+        sql = "SELECT * FROM 'releases' WHERE album_release >= :from AND album_release <= :today"
+        result = self.query(sql, values)
         return result
 
     def commit(self):
