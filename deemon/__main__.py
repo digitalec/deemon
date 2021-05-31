@@ -1,9 +1,4 @@
-from deemon.app.main import Deemon
-
-
-def main():
-    Deemon().main()
-
+from deemon import cli
 
 if __name__ == "__main__":
-    main()
+    cli = cli.run()

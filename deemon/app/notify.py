@@ -4,10 +4,10 @@ import logging
 from email.utils import formataddr
 from email.message import EmailMessage
 
+logger = logging.getLogger(__name__)
+
 
 class EmailNotification:
-
-    logger = logging.getLogger("deemon")
 
     def __init__(self, config):
         self.config = config

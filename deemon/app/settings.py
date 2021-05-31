@@ -1,71 +1,63 @@
+from deemon.app import utils
 from pathlib import Path
-from deemon.app.db import DB
-from deemon import __version__
 import logging
-import platform
-import datetime
-import sys
-import os
+import json
 
-logger = logging.getLogger("deemon")
-logger.setLevel(logging.INFO)
-logger.propagate = False
+logger = logging.getLogger(__name__)
 
-home_dir = Path.home()
-appdata_dir = ""
+BITRATE = {
+    "MP3_128": 1,
+    "MP3_320": 3,
+    "FLAC": 9
+}
 
-if os.getenv("XDG_CONFIG_HOME"):
-    appdata_dir = Path(os.getenv("XDG_CONFIG_HOME")) / 'deemon'
-elif os.getenv("APPDATA"):
-    appdata_dir = Path(os.getenv("APPDATA")) / "deemon"
-elif sys.platform.startswith('darwin'):
-    appdata_dir = home_dir / 'Library' / 'Application Support' / 'deemon'
-else:
-    appdata_dir = home_dir / '.config' / 'deemon'
-
-
-def get_appdata_dir():
-    return appdata_dir
+DEFAULT_SETTINGS = {
+    "download_path": "",
+    "deemix_path": "",
+    "bitrate": "320",
+    "alerts": 0,
+    "record_type": "all",
+    "smtp_server": "",
+    "smtp_port": 465,
+    "smtp_user": "",
+    "smtp_pass": "",
+    "smtp_recipient": ""
+}
 
 
 class Settings:
 
     def __init__(self, custom_path=None):
-        self.config = {}
-        self.config_path = Path(custom_path or get_appdata_dir())
-        self.db_path = Path(self.config_path / 'releases.db')
-        self.load_config()
+        self.config_file = 'config.json'
+        self.db_file = 'deemon.db'
+        self.legacy_path = Path(Path.home() / ".config/deemon")
+        # TODO redundant
+        self.config_path = Path(utils.get_appdata_dir())
+        self.db_path = Path(self.config_path / self.db_file)
+
+        if self.legacy_path != self.config_path:
+            if Path(self.legacy_path / self.db_file).exists():
+                self.migrate_legacy_versions()
+
+        if not Path(self.config_path / self.config_file).exists():
+            self.create_default_config()
+
+        self.config = self.load_config()
+        self.verify_config()
+
+    def create_default_config(self):
+        with open(self.config_path / 'config.json', 'w') as f:
+            json.dump(DEFAULT_SETTINGS, f, indent=4)
 
     def load_config(self):
-        db = DB(self.db_path)
-        result = db.query("SELECT * FROM config")
-        for row in result:
-            self.config[row[0]] = row[1]
+        with open(Path(self.config_path / self.config_file)) as f:
+            return json.load(f)
 
-    def init_log(self):
-        log_path = self.config_path / 'logs'
-        now = datetime.datetime.now()
-        log_file = now.strftime("%Y-%m-%d_%H%M%S") + ".log"
+    def verify_config(self):
+        for group in DEFAULT_SETTINGS:
+            if group not in self.config:
+                self.config[group] = DEFAULT_SETTINGS[group]
 
-        os.makedirs(log_path, exist_ok=True)
-
-        fh = logging.FileHandler(log_path / log_file, 'w', 'utf-8')
-        fh.setLevel(logging.DEBUG)
-        fh.setFormatter(logging.Formatter("%(asctime)s - [%(levelname)s] %(message)s", "%Y-%m-%d %H:%M:%S"))
-        logger.addHandler(fh)
-
-        ch = logging.StreamHandler(sys.stdout)
-        ch.setLevel(logging.DEBUG)
-        ch.setFormatter(logging.Formatter("%(message)s"))
-        logger.addHandler(ch)
-
-        logger.debug(f"deemon version {__version__}")
-        logger.debug(f"Python version {platform.python_version()}")
-
-        # circulating log
-        max_log_files = 7
-        log_list = os.listdir(log_path)
-        log_list.sort()
-        if len(log_list) > max_log_files:
-            for i in range(len(log_list) - max_log_files):
-                (log_path / log_list[i]).unlink()
+    def migrate_legacy_versions(self):
+        Path(self.legacy_path / self.db_file).rename(self.config_path / self.db_file)
+        Path(self.legacy_path).rmdir()
