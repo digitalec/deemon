@@ -74,7 +74,7 @@ class Download(Deemon):
         new_release_counter = 0
         new_artist = False
 
-        logger.info("Refreshing artists, this may take some time...")
+        logger.info("\nRefreshing artists, this may take some time...")
         bar = progressbar.ProgressBar(maxval=len(monitored_artists),
                                       widgets=[progressbar.Bar('=', '[', ']'), ' ', progressbar.Percentage()])
         bar.start()

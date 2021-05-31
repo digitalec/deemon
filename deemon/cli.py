@@ -104,6 +104,8 @@ def show_command(artists, new_releases, stats):
 @click.argument('path')
 def import_cmd(path):
     """Import artists from CSV, text file or directory"""
+    batch = BatchJobs()
+    batch.import_artists(path)
 
 
 @run.command()
@@ -112,6 +114,7 @@ def export(path):
     """Export all artists"""
     batch = BatchJobs()
     batch.export_artists(path)
+
 
 @run.command()
 @click.option('--include-logs', is_flag=True, help='include log files in backup')
