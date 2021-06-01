@@ -58,7 +58,7 @@ def download_command(artist, artist_id, album_id, url, bitrate, record_type):
 @run.command(name='monitor', context_settings={"ignore_unknown_options": True})
 @click.argument('artist', nargs=-1)
 @click.option('-R', '--remove', is_flag=True, help='Stop montioring an artist')
-@click.option('-u', '--url', metavar='URL', help='Download by URL of artist/album/track')
+@click.option('-u', '--url', metavar='URL', help='Monitor by URL of artist/album/track')
 def monitor_command(artist, remove, url):
     """Monitor ARTIST for new releases"""
 
