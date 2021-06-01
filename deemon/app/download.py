@@ -1,6 +1,5 @@
-import time
-
 from deemon.app import settings, dmi, db, notify
+from plexapi.server import PlexServer
 from deemon.app import Deemon
 import progressbar
 import logging
@@ -24,8 +23,16 @@ class Download(Deemon):
                 logger.error("ARL is invalid, expired or missing")
                 sys.exit(1)
 
+    def get_plex_server(self):
+        baseurl = self.config["plex_baseurl"]
+        token = self.config["plex_token"]
+        if (baseurl != "") and (token != ""):
+            plex_server = PlexServer(baseurl, token)
+            return plex_server
+
     def download_queue(self, queue):
         if queue:
+            plex = self.get_plex_server()
             num_queued = len(queue)
             logger.info("----------------------------")
             logger.info("Sending " + str(num_queued) + " release(s) to deemix for download:")
@@ -33,6 +40,9 @@ class Download(Deemon):
             for q in queue:
                 logger.info(f"Downloading {q.artist_name} - {q.album_title}... ")
                 self.di.download_url([q.url], q.bitrate)
+
+            if plex:
+                plex.library.section(self.config["plex_library"]).update()
 
     def download(self, opt: dict):
         logger.debug("download called with options: " + str(opt))

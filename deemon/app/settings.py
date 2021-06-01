@@ -12,6 +12,9 @@ BITRATE = {
 }
 
 DEFAULT_SETTINGS = {
+    "plex_baseurl": "",
+    "plex_token": "",
+    "plex_library": "",
     "download_path": "",
     "deemix_path": "",
     "bitrate": "320",
