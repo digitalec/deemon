@@ -7,7 +7,7 @@ LOG_FORMATS = {
     'INFO': '%(message)s',
 }
 
-LOG_DATE = '%Y-%m-%d %H:%M'
+LOG_DATE = '%Y-%m-%d %H:%M:%S'
 
 
 def setup_logger(log_level='DEBUG', log_file=None):
