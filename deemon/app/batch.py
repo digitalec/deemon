@@ -12,12 +12,18 @@ class BatchJobs(Deemon):
     def export_artists(self, path):
         export_path = Path(path)
         export_file = Path(export_path / "deemon-artists.csv")
-        with open(export_file, "w+") as f:
-            artist_dump = self.db.get_all_monitored_artists()
-            for line in artist_dump:
-                line = ','.join(map(str, line))
-                f.write(line + "\n")
-        logger.info(f"Artists have been exported to {export_file}")
+        try:
+            with open(export_file, "w+") as f:
+                artist_dump = self.db.get_all_monitored_artists()
+                for line in artist_dump:
+                    line = ','.join(map(str, line))
+                    f.write(line + "\n")
+        except FileNotFoundError as e:
+            logger.error(f"Invalid path - {export_path} does not exist")
+        except PermissionError as e:
+            logger.error(f"Insufficient permissions to access {export_path}")
+        else:
+            logger.info(f"Artists have been exported to {export_file}")
 
     @staticmethod
     def import_artists(path):

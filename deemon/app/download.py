@@ -1,4 +1,4 @@
-from deemon.app import settings, dmi, db, notify, utils
+from deemon.app import dmi, notify, utils
 from requests.exceptions import ConnectionError
 from plexapi.server import PlexServer
 from deemon.app import Deemon

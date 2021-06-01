@@ -9,6 +9,7 @@ from pathlib import Path
 import tarfile
 import logging
 import click
+import sys
 
 logger = logging.getLogger(__name__)
 
@@ -75,7 +76,11 @@ def monitor_command(artist, artist_id, remove, url):
 
     if url:
         id_from_url = url.split('/artist/')
-        artist_id = int(id_from_url[1])
+        try:
+            artist_id = int(id_from_url[1])
+        except (IndexError, ValueError):
+            logger.error(f"Invalid URL -- {url}")
+            sys.exit(1)
 
     if artist_id:
         mon.artist_id = artist_id
