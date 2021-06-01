@@ -75,7 +75,13 @@ class DBHelper:
         result = self.cursor.execute(query, values)
         return result
 
-    def get_all_artists(self):
+    def reset_future(self, album_id):
+        logger.debug("Clearing future_release flag from " + str(album_id))
+        values = {'album_id': album_id}
+        sql = "UPDATE 'releases' SET future_release = 0 WHERE album_id = :album_id"
+        result = self.query(sql, values)
+
+    def get_all_monitored_artists(self):
         '''
         Get unique set of artists stored in database
 
@@ -103,7 +109,6 @@ class DBHelper:
                f"'album_name', 'album_release', 'album_added', 'future_release') "
                f"VALUES (:artist_id, :artist_name, :album_id, :album_name, "
                f":release_date, {timestamp}, :future)")
-
         self.query(sql, values)
 
     def is_monitored(self, artist_id):

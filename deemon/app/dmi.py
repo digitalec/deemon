@@ -19,7 +19,7 @@ class DeemixInterface(deemix):
                 self.qm.addToQueue(self.dz, url, self.set.settings, bitrate)
 
     def login(self):
-        logger.info("Verifying ARL, please wait...")
+        logger.info("Verifying ARL is valid, please wait...")
         config_dir = Path(self.set.configFolder)
         if Path(config_dir).is_dir():
             if Path(config_dir / '.arl').is_file():

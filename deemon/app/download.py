@@ -1,4 +1,5 @@
 from deemon.app import settings, dmi, db, notify, utils
+from requests.exceptions import ConnectionError
 from plexapi.server import PlexServer
 from deemon.app import Deemon
 import progressbar
@@ -20,15 +21,21 @@ class Download(Deemon):
 
         if login:
             if not self.di.login():
-                logger.error("ARL is invalid, expired or missing")
+                logger.error("Error: ARL is invalid, expired or missing")
                 sys.exit(1)
 
     def get_plex_server(self):
         baseurl = self.config["plex_baseurl"]
         token = self.config["plex_token"]
         if (baseurl != "") and (token != ""):
-            plex_server = PlexServer(baseurl, token)
-            return plex_server
+            try:
+                logger.info("----------------------------")
+                logger.info("Plex settings found! Trying to connect...")
+                plex_server = PlexServer(baseurl, token, timeout=10)
+                return plex_server
+            except ConnectionError:
+                logger.error("Error: Unable to reach Plex server, please refresh manually.")
+                return False
 
     def download_queue(self, queue):
         if queue:
@@ -38,9 +45,11 @@ class Download(Deemon):
             logger.info("Sending " + str(num_queued) + " release(s) to deemix for download:")
 
             for q in queue:
-                logger.info(f"Downloading {q.artist_name} - {q.album_title}... ")
+                logger.info(f"+ {q.artist_name} - {q.album_title}... ")
                 self.di.download_url([q.url], q.bitrate)
 
+            print("")
+            logger.info("Downloads complete!")
             if plex:
                 plex.library.section(self.config["plex_library"]).update()
 
@@ -83,19 +92,22 @@ class Download(Deemon):
                 return 0
 
         if artist is None:
-            monitored_artists = self.db.get_all_artists()
+            monitored_artists = self.db.get_all_monitored_artists()
         else:
             monitored_artists = [self.db.get_specified_artist(artist)]
 
-        if len(monitored_artists) == 0:
-            sys.exit(0)
-
         new_release_counter = 0
+        num_of_monitored = len(monitored_artists)
 
-        if len(monitored_artists) > 1:
-            logger.info("\nRefreshing artists, this may take some time...")
+        if num_of_monitored == 1:
+            print("")
+            logger.info("Updating artist releases...")
+        elif num_of_monitored > 1:
+            print("")
+            logger.info("Refreshing artists, this may take some time...")
         else:
-            logger.info("\nUpdating artist releases...")
+            logger.debug("No artists to refresh, skipping...")
+            sys.exit(0)
 
         bar = progressbar.ProgressBar(maxval=len(monitored_artists),
                                       widgets=[progressbar.Bar('=', '[', ']'), ' ', progressbar.Percentage()])
@@ -113,10 +125,27 @@ class Download(Deemon):
             albums = self.dz.api.get_artist_albums(artist["id"])
             if new_artist:
                 if len(albums["data"]) == 0:
-                    logger.debug("Artist exists but no releases were found. This is likely a problem with Deezer.")
+                    logger.debug(f"Artist {artist['name']} setup for monitoring but no releases were found.")
+
             for album in albums["data"]:
                 already_exists = self.db.get_album_by_id(album_id=album["id"])
-                if not already_exists:
+
+                if already_exists:
+                    release = [x for x in already_exists]
+                    todays_date = utils.get_todays_date()
+                    release_date = release[4]
+                    future = release[6]
+
+                    logger.debug(release)
+                    logger.debug(f"rd:{release_date} | td:{todays_date} | fu:{future}")
+
+                    if future and (release_date <= todays_date):
+                        logger.debug(f"Pre-release has now been released and will be downloaded: "
+                                     f"{release[1]} - {release[3]}")
+                        self.db.reset_future(release[2])
+                    else:
+                        continue
+                else:
                     self.db.add_new_release(
                         artist["id"],
                         artist["name"],
@@ -125,17 +154,6 @@ class Download(Deemon):
                         album["release_date"],
                         future_release=future_release(album["release_date"])
                     )
-
-                if already_exists:
-                    release = [x for x in already_exists]
-                    todays_date = utils.get_todays_date()
-                    release_date = release[4]
-                    future = release[6]
-                    if future and (release_date <= todays_date):
-                        logger.debug(f"Pre-release has now been released and will be downloaded: "
-                                     f"{release[1]} - {release[3]}")
-                    else:
-                        continue
 
                 if skip_download or new_artist:
                     continue

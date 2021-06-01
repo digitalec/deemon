@@ -31,7 +31,6 @@ def run(verbose, test_alerts):
     """
     setup_logger(log_level='DEBUG' if verbose else 'INFO', log_file=utils.get_log_file())
 
-
 @run.command(name='download')
 @click.option('-a', '--artist', metavar='NAME', help='Download all by artist name')
 @click.option('-i', '--artist-id', metavar='ID', type=int, help='Download all by artist ID')

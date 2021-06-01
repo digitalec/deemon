@@ -13,7 +13,7 @@ class BatchJobs(Deemon):
         export_path = Path(path)
         export_file = Path(export_path / "deemon-artists.csv")
         with open(export_file, "w+") as f:
-            artist_dump = self.db.get_all_artists()
+            artist_dump = self.db.get_all_monitored_artists()
             for line in artist_dump:
                 line = ','.join(map(str, line))
                 f.write(line + "\n")

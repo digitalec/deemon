@@ -14,7 +14,7 @@ class ShowStats(Deemon):
         super().__init__()
 
     def artists(self):
-        monitored_artists = self.db.get_all_artists()
+        monitored_artists = self.db.get_all_monitored_artists()
         if len(monitored_artists) == 0:
             logger.info("No artists are being monitored")
             sys.exit(0)
