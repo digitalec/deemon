@@ -97,17 +97,13 @@ class DBHelper:
         artists = set(x for x in result)
         return sorted(artists, key=lambda x: x[1])
 
-    def get_specified_artists(self, artists):
-        all_artists = []
-        for artist in artists:
+    def get_specified_artist(self, artist):
+        if type(artist) is int:
             values = {'artist': artist}
-            result = self.query("SELECT * FROM monitor WHERE artist_name = :artist COLLATE NOCASE", values).fetchall()
-            [all_artists.append(x) for x in result]
-        return all_artists
-
-    def get_specified_artist_from_id(self, artist_id):
-        values = {'artist_id': artist_id}
-        result = self.query("SELECT * FROM monitor WHERE artist_id = :artist_id", values).fetchone()
+            result = self.query("SELECT * FROM monitor WHERE artist_id = :artist", values).fetchone()
+        else:
+            values = {'artist': artist}
+            result = self.query("SELECT * FROM monitor WHERE artist_name = :artist COLLATE NOCASE", values).fetchone()
         return result
 
     def add_new_release(self, artist_id, artist_name, album_id, album_name, release_date):

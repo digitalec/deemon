@@ -73,15 +73,14 @@ class Download(Deemon):
 
             self.download_queue(self.queue_list)
 
-    def refresh(self, artists=None, skip_download=False):
-        if artists is None:
+    def refresh(self, artist=None, skip_download=False):
+        if artist is None:
             monitored_artists = self.db.get_all_artists()
-        elif type(artists) is int:
-            monitored_artists = [self.db.get_specified_artist_from_id(artists)]
         else:
-            monitored_artists = self.db.get_specified_artists(artists)
-            if len(monitored_artists) == 0:
-                sys.exit(0)
+            monitored_artists = [self.db.get_specified_artist(artist)]
+
+        if len(monitored_artists) == 0:
+            sys.exit(0)
 
         new_release_counter = 0
         new_artist = False

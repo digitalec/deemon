@@ -22,8 +22,8 @@ class Monitor:
                 artist = self.dz.api.get_artist(self.artist_id)
                 self.artist = artist["name"]
                 return True
-            except deezer.api.DataException as e:
-                logger.error(f"Artist ID '{self.artist_id}' not found: {e}")
+            except deezer.api.DataException:
+                logger.error(f"Artist ID '{self.artist_id}' not found.")
 
         if self.artist:
             try:
@@ -61,9 +61,16 @@ class Monitor:
             return True
 
     def stop_monitoring(self):
-        values = {'name': self.artist}
-        sql_releases = "DELETE FROM 'releases' WHERE artist_name = :name COLLATE NOCASE"
-        sql_monitor = "DELETE FROM 'monitor' WHERE artist_name = :name COLLATE NOCASE"
+        self.get_artist_info()
+        if self.artist_id:
+            values = {'artist_id': self.artist_id}
+            sql_releases = "DELETE FROM 'releases' WHERE artist_id = :artist_id"
+            sql_monitor = "DELETE FROM 'monitor' WHERE artist_id = :artist_id"
+        else:
+            values = {'artist': self.artist}
+            sql_releases = "DELETE FROM 'releases' WHERE artist_name = :artist COLLATE NOCASE"
+            sql_monitor = "DELETE FROM 'monitor' WHERE artist_name = :artist COLLATE NOCASE"
+
         result = self.db.query(sql_monitor, values)
         if result.rowcount > 0:
             logger.info("No longer monitoring " + self.artist)

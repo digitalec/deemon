@@ -34,8 +34,7 @@ class Settings:
         self.config_file = 'config.json'
         self.db_file = 'deemon.db'
         self.legacy_path = Path(Path.home() / ".config/deemon")
-        # TODO redundant
-        self.config_path = Path(utils.get_appdata_dir())
+        self.config_path = utils.get_appdata_dir()
         self.db_path = Path(self.config_path / self.db_file)
 
         if self.legacy_path != self.config_path:

@@ -57,37 +57,37 @@ def download_command(artist, artist_id, album_id, url, bitrate, record_type):
 
 @run.command(name='monitor', context_settings={"ignore_unknown_options": True})
 @click.argument('artist', nargs=-1)
+@click.option('-i', '--artist-id', type=int, metavar="ID", help="Monitor artist by ID")
+@click.option('-u', '--url', metavar="URL", help='Monitor artist by URL')
 @click.option('-R', '--remove', is_flag=True, help='Stop montioring an artist')
-@click.option('-u', '--url', metavar='URL', help='Monitor by URL of artist/album/track')
-def monitor_command(artist, remove, url):
-    """Monitor ARTIST for new releases"""
+def monitor_command(artist, artist_id, remove, url):
+    """
+    Monitor artist for new releases by ID, URL or name.
 
-    artist_id = None
-    artist_csv = None
+    \b
+    Examples:
+        monitor Mozart
+        monitor --artist-id 100
+        monitor --url https://www.deezer.com/us/artist/000
+    """
+
+    mon = monitor.Monitor()
+    dl = download.Download(login=False)
 
     if url:
-        split_url = url.split('/artist/')
-        artist_id = int(split_url[1])
+        id_from_url = url.split('/artist/')
+        artist_id = int(id_from_url[1])
 
-        ma = monitor.Monitor()
-        ma.artist_id = artist_id
-        ma.start_monitoring()
-
+    if artist_id:
+        mon.artist_id = artist_id
     else:
-        artist_csv = ' '.join(artist).split(',')
-        artist_csv = [x.lstrip() for x in artist_csv]
+        mon.artist = artist
 
-        for artist in artist_csv:
-            ma = monitor.Monitor()
-            ma.artist = artist
-
-            if remove:
-                ma.stop_monitoring()
-            else:
-                ma.start_monitoring()
-
-    dl = download.Download(login=False)
-    dl.refresh(artist_id if artist_id else artist_csv)
+    if remove:
+        mon.stop_monitoring()
+    else:
+        mon.start_monitoring()
+        dl.refresh(mon.artist)
 
 
 @run.command()
