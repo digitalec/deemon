@@ -41,7 +41,6 @@ class DBHelper:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
 
-
     def create_new_database(self):
         logger.debug("Updating database structure")
 
@@ -71,19 +70,9 @@ class DBHelper:
         return version
 
     def query(self, query: str, values=None):
-        # logger.debug(f"query: {query}")
         if values is None:
             values = {}
-        else:
-            logger.debug(f"query-values: {values}")
         result = self.cursor.execute(query, values)
-        return result
-
-    def check_exists(self, artist_id: int = None, album_id: int = None):
-        if album_id:
-            result = self.query(f"SELECT * FROM releases WHERE album_id = {album_id}").fetchone()
-        else:
-            result = self.query(f"SELECT * FROM releases WHERE artist_id = {artist_id}").fetchone()
         return result
 
     def get_all_artists(self):
@@ -106,14 +95,14 @@ class DBHelper:
             result = self.query("SELECT * FROM monitor WHERE artist_name = :artist COLLATE NOCASE", values).fetchone()
         return result
 
-    def add_new_release(self, artist_id, artist_name, album_id, album_name, release_date):
+    def add_new_release(self, artist_id, artist_name, album_id, album_name, release_date, future_release):
         timestamp = int(time.time())
-        values = {'artist_id': artist_id, 'artist_name': artist_name,
-                  'album_id': album_id, 'album_name': album_name, 'release_date': release_date}
+        values = {'artist_id': artist_id, 'artist_name': artist_name, 'album_id': album_id,
+                  'album_name': album_name, 'release_date': release_date, 'future': future_release}
         sql = (f"INSERT INTO releases ('artist_id', 'artist_name', 'album_id', "
-               f"'album_name', 'album_release', 'album_added') "
+               f"'album_name', 'album_release', 'album_added', 'future_release') "
                f"VALUES (:artist_id, :artist_name, :album_id, :album_name, "
-               f":release_date, {timestamp})")
+               f":release_date, {timestamp}, :future)")
 
         self.query(sql, values)
 
@@ -130,6 +119,19 @@ class DBHelper:
         sql = "SELECT * FROM 'releases' WHERE album_release >= :from AND album_release <= :today"
         result = self.query(sql, values)
         return result
+
+    def get_artist_by_id(self, artist_id):
+        values = {'id': artist_id}
+        sql = "SELECT * FROM 'releases' WHERE artist_id = :id"
+        result = self.query(sql, values).fetchone()
+        return result
+
+    def get_album_by_id(self, album_id):
+        values = {'id': album_id}
+        sql = "SELECT * FROM 'releases' WHERE album_id = :id"
+        result = self.query(sql, values).fetchone()
+        return result
+
 
     def commit(self):
         self.conn.commit()

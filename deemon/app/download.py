@@ -1,4 +1,4 @@
-from deemon.app import settings, dmi, db, notify
+from deemon.app import settings, dmi, db, notify, utils
 from plexapi.server import PlexServer
 from deemon.app import Deemon
 import progressbar
@@ -74,6 +74,14 @@ class Download(Deemon):
             self.download_queue(self.queue_list)
 
     def refresh(self, artist=None, skip_download=False):
+
+        def future_release(release_date):
+            today = utils.get_todays_date()
+            if release_date > today:
+                return 1
+            else:
+                return 0
+
         if artist is None:
             monitored_artists = self.db.get_all_artists()
         else:
@@ -83,29 +91,53 @@ class Download(Deemon):
             sys.exit(0)
 
         new_release_counter = 0
-        new_artist = False
 
-        logger.info("\nRefreshing artists, this may take some time...")
+        if len(monitored_artists) > 1:
+            logger.info("\nRefreshing artists, this may take some time...")
+        else:
+            logger.info("\nUpdating artist releases...")
+
         bar = progressbar.ProgressBar(maxval=len(monitored_artists),
                                       widgets=[progressbar.Bar('=', '[', ']'), ' ', progressbar.Percentage()])
         bar.start()
         for idx, _artist in enumerate(monitored_artists):
+            new_artist = False
             artist = {"id": _artist[0], "name": _artist[1], "bitrate": _artist[2]}
             record_type = _artist[3]
             alerts = _artist[4]
-            artist_exists = self.db.check_exists(artist_id=artist["id"])
+            artist_exists = self.db.get_artist_by_id(artist_id=artist["id"])
             if not artist_exists:
                 new_artist = True
                 logger.debug(f"New artist detected: {artist['name']}, future releases will be downloaded")
 
             albums = self.dz.api.get_artist_albums(artist["id"])
+            if new_artist:
+                if len(albums["data"]) == 0:
+                    logger.debug("Artist exists but no releases were found. This is likely a problem with Deezer.")
             for album in albums["data"]:
-                already_exists = self.db.check_exists(album_id=album["id"])
+                already_exists = self.db.get_album_by_id(album_id=album["id"])
                 if not already_exists:
-                    self.db.add_new_release(artist["id"], artist["name"], album["id"], album["title"],
-                                            album["release_date"])
+                    self.db.add_new_release(
+                        artist["id"],
+                        artist["name"],
+                        album["id"],
+                        album["title"],
+                        album["release_date"],
+                        future_release=future_release(album["release_date"])
+                    )
 
-                if already_exists or skip_download or new_artist:
+                if already_exists:
+                    release = [x for x in already_exists]
+                    todays_date = utils.get_todays_date()
+                    release_date = release[4]
+                    future = release[6]
+                    if future and (release_date <= todays_date):
+                        logger.debug(f"Pre-release has now been released and will be downloaded: "
+                                     f"{release[1]} - {release[3]}")
+                    else:
+                        continue
+
+                if skip_download or new_artist:
                     continue
 
                 new_release_counter += 1

@@ -23,7 +23,7 @@ class ShowStats(Deemon):
 
         if len(artist_data) > 0:
             for a, b in zip(artist_data[::2], artist_data[1::2]):
-                print('{:<30}{:<}'.format(a, b))
+                print('{:<40}{:<}'.format(a, b))
         else:
             for artist in artist_data:
                 print(artist)

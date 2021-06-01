@@ -1,4 +1,6 @@
+from datetime import datetime
 from pathlib import Path
+import time
 import sys
 import os
 
@@ -32,3 +34,9 @@ def get_log_file():
     Get path to log file
     """
     return Path(get_appdata_dir() / 'logs' / 'deemon.log')
+
+
+def get_todays_date():
+    now_ts = int(time.time())
+    today_date = datetime.utcfromtimestamp(now_ts).strftime('%Y-%m-%d')
+    return today_date
