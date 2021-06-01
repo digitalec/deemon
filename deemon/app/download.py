@@ -76,6 +76,8 @@ class Download(Deemon):
     def refresh(self, artists=None, skip_download=False):
         if artists is None:
             monitored_artists = self.db.get_all_artists()
+        elif type(artists) is int:
+            monitored_artists = [self.db.get_specified_artist_from_id(artists)]
         else:
             monitored_artists = self.db.get_specified_artists(artists)
             if len(monitored_artists) == 0:

@@ -105,6 +105,11 @@ class DBHelper:
             [all_artists.append(x) for x in result]
         return all_artists
 
+    def get_specified_artist_from_id(self, artist_id):
+        values = {'artist_id': artist_id}
+        result = self.query("SELECT * FROM monitor WHERE artist_id = :artist_id", values).fetchone()
+        return result
+
     def add_new_release(self, artist_id, artist_name, album_id, album_name, release_date):
         timestamp = int(time.time())
         values = {'artist_id': artist_id, 'artist_name': artist_name,

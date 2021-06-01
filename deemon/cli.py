@@ -58,22 +58,36 @@ def download_command(artist, artist_id, album_id, url, bitrate, record_type):
 @run.command(name='monitor', context_settings={"ignore_unknown_options": True})
 @click.argument('artist', nargs=-1)
 @click.option('-R', '--remove', is_flag=True, help='Stop montioring an artist')
-def monitor_command(artist, remove):
+@click.option('-u', '--url', metavar='URL', help='Download by URL of artist/album/track')
+def monitor_command(artist, remove, url):
     """Monitor ARTIST for new releases"""
 
-    artist_csv = ' '.join(artist).split(',')
-    artist_csv = [x.lstrip() for x in artist_csv]
+    artist_id = None
+    artist_csv = None
 
-    for artist in artist_csv:
+    if url:
+        split_url = url.split('/artist/')
+        artist_id = int(split_url[1])
+
         ma = monitor.Monitor()
-        ma.artist = artist
+        ma.artist_id = artist_id
+        ma.start_monitoring()
 
-        if remove:
-            ma.stop_monitoring()
-        else:
-            ma.start_monitoring()
+    else:
+        artist_csv = ' '.join(artist).split(',')
+        artist_csv = [x.lstrip() for x in artist_csv]
+
+        for artist in artist_csv:
+            ma = monitor.Monitor()
+            ma.artist = artist
+
+            if remove:
+                ma.stop_monitoring()
+            else:
+                ma.start_monitoring()
+
     dl = download.Download(login=False)
-    dl.refresh(artist_csv)
+    dl.refresh(artist_id if artist_id else artist_csv)
 
 
 @run.command()
