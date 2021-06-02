@@ -1,7 +1,8 @@
 from deemon.app import settings, monitor, download
-from deemon.app.show import ShowStats
-from deemon.app.batch import BatchJobs
 from deemon.app.logger import setup_logger
+from deemon.app.batch import BatchJobs
+from deemon.app.refresh import Refresh
+from deemon.app.show import ShowStats
 from deemon import __version__
 from datetime import datetime
 from deemon.app import utils
@@ -31,6 +32,7 @@ def run(verbose, test_alerts):
     please visit https://github.com/digitalec/deemon
     """
     setup_logger(log_level='DEBUG' if verbose else 'INFO', log_file=utils.get_log_file())
+
 
 @run.command(name='download')
 @click.option('-a', '--artist', metavar='NAME', help='Download all by artist name')
@@ -72,7 +74,6 @@ def monitor_command(artist, artist_id, remove, url):
     """
 
     mon = monitor.Monitor()
-    dl = download.Download(login=False)
 
     if url:
         id_from_url = url.split('/artist/')
@@ -91,14 +92,16 @@ def monitor_command(artist, artist_id, remove, url):
         mon.stop_monitoring()
     else:
         mon.start_monitoring()
-        dl.refresh(mon.artist)
+
+    refresh = Refresh()
+    refresh.refresh()
 
 
-@run.command()
-def refresh():
+@run.command(name='refresh')
+def refresh_command():
     """Check artists for new releases"""
-    dl = download.Download()
-    dl.refresh()
+    refresh = Refresh()
+    refresh.refresh()
 
 
 @run.command(name='show')

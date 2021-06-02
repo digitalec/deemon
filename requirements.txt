@@ -4,3 +4,4 @@ requests~=2.25.1
 click~=8.0.1
 setuptools~=56.2.0
 progressbar~=2.5
+PlexAPI~=4.5.2

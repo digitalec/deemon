@@ -50,7 +50,8 @@ class DBHelper:
 
         sql_releases = ("CREATE TABLE IF NOT EXISTS 'releases' "
                         "('artist_id' INTEGER, 'artist_name' TEXT, 'album_id' INTEGER, "
-                        "'album_name' TEXT, 'album_release' TEXT, 'album_added' INTEGER)")
+                        "'album_name' TEXT, 'album_release' TEXT, 'album_added' INTEGER, "
+                        "'future_release' INTEGER DEFAULT 0)")
 
         self.query(sql_monitor)
         self.query(sql_releases)
