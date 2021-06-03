@@ -27,6 +27,7 @@ class Notify(Deemon):
         self.recipient = self.config["smtp_recipient"]
         self.update = utils.check_version()
         self.subject = "New releases detected!"
+        self.preamble = self.subject
         self.releases = new_releases
 
     def send(self, body=None):
@@ -68,6 +69,7 @@ class Notify(Deemon):
         part2 = MIMEText(self.html(), 'html')
         msg.attach(part1)
         msg.attach(part2)
+        msg.preamble = self.preamble
 
         with open('../assets/images/logo.png', 'rb') as f:
             image = MIMEImage(f.read())

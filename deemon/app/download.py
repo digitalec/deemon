@@ -49,7 +49,7 @@ class Download(Deemon):
 
     def download_queue(self, queue):
         if queue:
-            # plex = self.get_plex_server()
+            plex = self.get_plex_server()
             plex = None
             num_queued = len(queue)
             logger.info("----------------------------")
@@ -57,7 +57,7 @@ class Download(Deemon):
 
             for q in queue:
                 logger.info(f"+ {q.artist_name} - {q.album_title}... ")
-                # self.di.download_url([q.url], q.bitrate)
+                self.di.download_url([q.url], q.bitrate)
 
             print("")
             logger.info("Downloads complete!")
