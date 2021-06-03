@@ -46,6 +46,7 @@ class Download(Deemon):
                 logger.error("Error: Unable to reach Plex server, please refresh manually.")
                 return False
 
+
     def download_queue(self, queue):
         if queue:
             plex = self.get_plex_server()
@@ -60,6 +61,7 @@ class Download(Deemon):
             print("")
             logger.info("Downloads complete!")
             if plex:
+                logger.debug("Sending signal to refresh Plex library")
                 plex.library.section(self.config["plex_library"]).update()
 
     def download(self, opt: dict):
@@ -90,3 +92,4 @@ class Download(Deemon):
                     self.queue_list.append(QueueItem(artist, _album))
 
             self.download_queue(self.queue_list)
+        self.db.commit_and_close()

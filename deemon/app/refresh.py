@@ -1,4 +1,4 @@
-from deemon.app import Deemon, utils, download
+from deemon.app import Deemon, utils, download, notify
 import progressbar
 import logging
 import deezer
@@ -19,6 +19,7 @@ class Refresh(Deemon):
         self.new_release_count = 0
         self.monitored_artists = []
         self.queue_list = []
+        self.new_releases = []
         self.release_date = ""
 
     def is_future_release(self):
@@ -34,6 +35,16 @@ class Refresh(Deemon):
         else:
             for artist in self.artist_id:
                 self.monitored_artists.append(self.db.get_all_specified_artist(artist))
+
+    def construct_new_release_list(self, release_date, artist, album):
+        for days in self.new_releases:
+            for key in days:
+                if key == "release_date":
+                    if release_date in days[key]:
+                        self.new_releases.append({'artist': artist, 'album': album})
+                        return
+
+        self.new_releases.append({'release_date': release_date, 'releases': [{'artist': artist, 'album': album}]})
 
     def refresh(self):
         logger.info(f"Refreshing artists, this may take some time...")
@@ -96,6 +107,7 @@ class Refresh(Deemon):
                 if (self.config["record_type"] == album["record_type"]) or (self.config["record_type"] == "all"):
                     logger.debug(f"queue: added {artist['name']} - {album['title']} to the queue")
                     self.queue_list.append(download.QueueItem(artist, album))
+                    self.construct_new_release_list(album['release_date'], artist['name'], album['title'])
             bar.update(idx)
         bar.finish()
         logger.debug("Refresh complete")
@@ -103,3 +115,5 @@ class Refresh(Deemon):
             dl = download.Download()
             dl.download_queue(self.queue_list)
         self.db.commit()
+        notification = notify.Notify(self.new_releases)
+        notification.send()

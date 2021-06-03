@@ -1,5 +1,5 @@
 import smtplib
-import sys
+import platform
 import ssl
 import logging
 from datetime import datetime
@@ -9,6 +9,7 @@ from email.mime.image import MIMEImage
 from email.mime.text import MIMEText
 from email.message import EmailMessage
 from deemon.app import Deemon, utils
+from deemon import __version__
 
 logger = logging.getLogger(__name__)
 
@@ -17,6 +18,7 @@ class Notify(Deemon):
 
     def __init__(self, new_releases: list):
         super().__init__()
+        logger.debug("notify initialized")
         self.server = self.config["smtp_server"]
         self.port = self.config["smtp_port"]
         self.user = self.config["smtp_user"]
@@ -25,7 +27,6 @@ class Notify(Deemon):
         self.recipient = self.config["smtp_recipient"]
         self.update = utils.check_version()
         self.subject = "New releases detected!"
-        self.notice = self.motd()
         self.releases = new_releases
 
     def send(self, body=None):
@@ -87,14 +88,6 @@ class Notify(Deemon):
 
         return msg
 
-    def motd(self):
-        """
-        Optional message to include when new release notifications are sent to users
-        This could be useful for alerting of new updates
-        """
-        if self.update:
-            return f"deemon {self.update} is now available!"
-
     def test(self):
         """
         Verify SMTP settings by sending test email
@@ -122,6 +115,10 @@ class Notify(Deemon):
         return message
 
     def html(self):
+
+        app_version = f"deemon {__version__}"
+        py_version = f"python {platform.python_version()}"
+        sys_version = f"{platform.system()} {platform.release()}"
 
         new_release_list_spacer = f"""
             </ul>
@@ -166,8 +163,11 @@ class Notify(Deemon):
             if self.update:
                 html_output = html_output.replace("{UPDATE_MESSAGE}", "A new update is available!")
             else:
-                html_output = html_output.replace("{VIEW_UPDATE_ALERT}", "display:none;")
+                html_output = html_output.replace("{VIEW_UPDATE_MESSAGE}", "display:none;")
 
             html_output = html_output.replace("{NEW_RELEASE_LIST}", all_new_releases)
+            html_output = html_output.replace("{DEEMON_VER}", app_version)
+            html_output = html_output.replace("{PY_VER}", py_version)
+            html_output = html_output.replace("{SYS_VER}", sys_version)
 
         return html_output
