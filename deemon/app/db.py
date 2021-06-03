@@ -22,6 +22,12 @@ class DBHelper:
             else:
                 self.open(db)
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+
     def open(self, name):
         try:
             self.conn = sqlite3.connect(name)
@@ -35,10 +41,12 @@ class DBHelper:
             self.cursor.close()
             self.conn.close()
 
-    def __enter__(self):
-        return self
+    def commit(self):
+        self.conn.commit()
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def commit_and_close(self):
+        logger.debug("Saving changes to DB")
+        self.commit()
         self.close()
 
     def create_new_database(self):
@@ -138,14 +146,3 @@ class DBHelper:
         result = self.query(sql, values).fetchone()
         return result
 
-
-    def commit(self):
-        self.conn.commit()
-
-    def close(self):
-        self.conn.close()
-
-    def commit_and_close(self):
-        logger.debug("Saving changes to DB")
-        self.commit()
-        self.close()
