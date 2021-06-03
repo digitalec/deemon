@@ -145,4 +145,3 @@ class DBHelper:
         sql = "SELECT * FROM 'releases' WHERE album_id = :id"
         result = self.query(sql, values).fetchone()
         return result
-
