@@ -17,6 +17,8 @@ DEFAULT_SETTINGS = {
     "plex_library": "",
     "download_path": "",
     "deemix_path": "",
+    "album_release": "new",
+    "release_max_days": 90,
     "bitrate": "320",
     "alerts": 0,
     "record_type": "all",

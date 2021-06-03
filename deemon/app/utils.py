@@ -45,6 +45,13 @@ def get_todays_date():
     return today_date
 
 
+def get_max_release_date(days):
+    day_in_secs = 86400
+    input_days_in_secs = days * day_in_secs
+    max_date_ts = int(time.time()) - input_days_in_secs
+    max_date = datetime.utcfromtimestamp(max_date_ts).strftime('%Y-%m-%d')
+    return max_date
+
 def check_version():
     latest_ver = "https://api.github.com/repos/digitalec/deemon/releases/latest"
     response = requests.get(latest_ver)

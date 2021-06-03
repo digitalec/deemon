@@ -53,6 +53,9 @@ class Notify(Deemon):
             except Exception as e:
                 logger.error("Error while sending mail: " + str(e))
 
+    def get_cover_images(self):
+        pass
+
     def build_message(self):
         """
         Builds message by combining plaintext and HTML messages for sending

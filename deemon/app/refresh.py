@@ -36,12 +36,12 @@ class Refresh(Deemon):
             for artist in self.artist_id:
                 self.monitored_artists.append(self.db.get_all_specified_artist(artist))
 
-    def construct_new_release_list(self, release_date, artist, album):
+    def construct_new_release_list(self, release_date, artist, album, cover):
         for days in self.new_releases:
             for key in days:
                 if key == "release_date":
                     if release_date in days[key]:
-                        self.new_releases.append({'artist': artist, 'album': album})
+                        self.new_releases.append({'artist': artist, 'album': album, 'cover': cover})
                         return
 
         self.new_releases.append({'release_date': release_date, 'releases': [{'artist': artist, 'album': album}]})
@@ -70,9 +70,9 @@ class Refresh(Deemon):
             for album in albums["data"]:
 
                 already_exists = self.db.get_album_by_id(album_id=album["id"])
+                todays_date = utils.get_todays_date()
 
                 if already_exists:
-                    todays_date = utils.get_todays_date()
                     release = [x for x in already_exists]
                     _album = {
                         'artist_id': release[0],
@@ -105,9 +105,15 @@ class Refresh(Deemon):
                 self.new_release_count += 1
 
                 if (self.config["record_type"] == album["record_type"]) or (self.config["record_type"] == "all"):
+                    if self.config["album_release"] == "new":
+                        max_release_date = utils.get_max_release_date(self.config["release_max_days"])
+                        if album['release_date'] < max_release_date:
+                            logger.debug(f"Release '{artist['name']} - {album['title']}' skipped, too old...")
+                            continue
                     logger.debug(f"queue: added {artist['name']} - {album['title']} to the queue")
                     self.queue_list.append(download.QueueItem(artist, album))
-                    self.construct_new_release_list(album['release_date'], artist['name'], album['title'])
+                    self.construct_new_release_list(album['release_date'], artist['name'],
+                                                    album['title'], album['cover_medium'])
             bar.update(idx)
         bar.finish()
         logger.debug("Refresh complete")
@@ -115,5 +121,7 @@ class Refresh(Deemon):
             dl = download.Download()
             dl.download_queue(self.queue_list)
         self.db.commit()
-        notification = notify.Notify(self.new_releases)
-        notification.send()
+
+        if len(self.new_releases) > 0:
+            notification = notify.Notify(self.new_releases)
+            notification.send()
