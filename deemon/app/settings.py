@@ -24,6 +24,7 @@ DEFAULT_SETTINGS = {
     "smtp_port": 465,
     "smtp_user": "",
     "smtp_pass": "",
+    "smtp_sender": "",
     "smtp_recipient": ""
 }
 

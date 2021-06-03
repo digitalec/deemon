@@ -1,5 +1,8 @@
+from packaging.version import parse as parse_version
+from deemon import __version__
 from datetime import datetime
 from pathlib import Path
+import requests
 import time
 import sys
 import os
@@ -40,3 +43,12 @@ def get_todays_date():
     now_ts = int(time.time())
     today_date = datetime.utcfromtimestamp(now_ts).strftime('%Y-%m-%d')
     return today_date
+
+
+def check_version():
+    latest_ver = "https://api.github.com/repos/digitalec/deemon/releases/latest"
+    response = requests.get(latest_ver)
+    local_version = __version__
+    remote_version = response.json()["name"]
+    if parse_version(remote_version) > parse_version(local_version):
+        return remote_version

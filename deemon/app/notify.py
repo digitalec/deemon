@@ -1,40 +1,173 @@
 import smtplib
+import sys
 import ssl
 import logging
+from datetime import datetime
 from email.utils import formataddr
+from email.mime.multipart import MIMEMultipart
+from email.mime.image import MIMEImage
+from email.mime.text import MIMEText
 from email.message import EmailMessage
+from deemon.app import Deemon, utils
 
 logger = logging.getLogger(__name__)
 
 
-class EmailNotification:
+class Notify(Deemon):
 
-    def __init__(self, config):
-        self.config = config
-        self.enable_notify = True if self.config["alerts"] else False
+    def __init__(self, new_releases: list):
+        super().__init__()
+        self.server = self.config["smtp_server"]
+        self.port = self.config["smtp_port"]
+        self.user = self.config["smtp_user"]
+        self.passwd = self.config["smtp_pass"]
+        self.sender = self.config["smtp_sender"]
+        self.recipient = self.config["smtp_recipient"]
+        self.update = utils.check_version()
+        self.subject = "New releases detected!"
+        self.notice = self.motd()
+        self.releases = new_releases
 
-    def notify(self, new_releases=[], test=False):
-        if test:
-            message = "Congrats! You'll now receive new release notifications."
-            subject = "deemon Test Notification"
-        elif self.enable_notify:
-            message = "The following new releases were detected:\n"
-            subject = "New release(s) detected!"
-            for release in new_releases:
-                message = message + "\n" + release
-            msg = EmailMessage()
-            msg['From'] = formataddr(('deemon', self.config["smtp_sender_email"]))
-            msg['Subject'] = subject
-            msg['To'] = self.config["smtp_recipient"]
-            msg.set_content(message)
+    def send(self, body=None):
+        """
+        Send email notification message
+        """
+        if not all([self.server, self.port, self.user, self.passwd, self.sender, self.recipient]):
+            logger.debug("Email not configured, no notifications will be sent")
+            return False
 
-            context = ssl.create_default_context()
+        if not body:
+            body = self.build_message()
 
-            logger.debug("Sending new release notification email")
-            logger.debug(f"Using server: {self.config['smtp_server']}:{self.config['smtp_port']}")
-            with smtplib.SMTP_SSL(self.config["smtp_server"], self.config["smtp_port"], context=context) as server:
-                try:
-                    server.login(self.config["smtp_username"], self.config["smtp_password"])
-                    server.sendmail(self.config["smtp_sender_email"], self.config["smtp_recipient"], msg.as_string())
-                except Exception as e:
-                    logger.error("Error while sending mail: " + str(e))
+        context = ssl.create_default_context()
+
+        logger.debug("Sending new release notification email")
+        logger.debug(f"Using server: {self.server}:{self.port}")
+
+        with smtplib.SMTP_SSL(self.server, self.port, context=context) as server:
+            try:
+                server.login(self.user, self.passwd)
+                server.sendmail(self.sender, self.recipient, body.as_string())
+                logger.debug("Email notification has been sent")
+            except Exception as e:
+                logger.error("Error while sending mail: " + str(e))
+
+    def build_message(self):
+        """
+        Builds message by combining plaintext and HTML messages for sending
+        """
+        msg = MIMEMultipart('alternative')
+        msg['To'] = self.recipient
+        msg['From'] = formataddr(('deemon', self.sender))
+        msg['Subject'] = self.subject
+        part1 = MIMEText(self.plaintext(), 'plain')
+        part2 = MIMEText(self.html(), 'html')
+        msg.attach(part1)
+        msg.attach(part2)
+
+        with open('../assets/images/logo.png', 'rb') as f:
+            image = MIMEImage(f.read())
+            image.add_header('Content-ID', 'logo')
+            msg.attach(image)
+
+        with open('../assets/images/github.png', 'rb') as f:
+            image = MIMEImage(f.read())
+            image.add_header('Content-ID', 'github')
+            msg.attach(image)
+
+        with open('../assets/images/telegram.png', 'rb') as f:
+            image = MIMEImage(f.read())
+            image.add_header('Content-ID', 'telegram')
+            msg.attach(image)
+
+        with open('../assets/images/discord.png', 'rb') as f:
+            image = MIMEImage(f.read())
+            image.add_header('Content-ID', 'discord')
+            msg.attach(image)
+
+        return msg
+
+    def motd(self):
+        """
+        Optional message to include when new release notifications are sent to users
+        This could be useful for alerting of new updates
+        """
+        if self.update:
+            return f"deemon {self.update} is now available!"
+
+    def test(self):
+        """
+        Verify SMTP settings by sending test email
+        """
+        self.subject = "deemon Test Notification"
+        message = "Congrats! You'll now receive new release notifications."
+        msg = EmailMessage()
+        msg['To'] = self.recipient
+        msg['From'] = formataddr(('deemon', self.sender))
+        msg['Subject'] = self.subject
+        msg.set_content(message)
+        self.send(msg)
+
+    def plaintext(self) -> str:
+        """
+        Plaintext version of email to send
+        """
+        message = "The following new releases were detected:\n\n"
+        for release in self.releases:
+            release_date_ts = datetime.strptime(release["release_date"], "%Y-%m-%d")
+            release_date_str = datetime.strftime(release_date_ts, "%A, %B %-d")
+            message += f"\n{release_date_str}\n"
+            for album in release["releases"]:
+                message += f"+ {album['artist']} - {album['album']}\n"
+        return message
+
+    def html(self):
+
+        new_release_list_spacer = f"""
+            </ul>
+            <p style="font-size: 14px; line-height: 140%;">&nbsp;</p>
+        """
+
+        all_new_releases = ""
+
+        for release in self.releases:
+
+            if all_new_releases != "":
+                all_new_releases += new_release_list_spacer
+
+            release_date_ts = datetime.strptime(release["release_date"], "%Y-%m-%d")
+            release_date_str = datetime.strftime(release_date_ts, "%A, %B %-d")
+
+            new_release_list_header = f"""
+                <p style="font-size: 14px; line-height: 140%;">
+                    <strong>
+                        <span style="font-size: 16px; line-height: 22.4px;">{release_date_str}</span>
+                    </strong>
+                </p>
+                <ul>
+            """
+
+            new_release_list_item = ""
+
+            for album in release["releases"]:
+                new_release_list_item += f"""
+                        <li style="font-size: 14px; line-height: 19.6px;">
+                            <span style="font-size: 16px; line-height: 22.4px;">
+                                {album['artist']} - {album['album']}
+                            </span>
+                        </li>
+                """
+
+            all_new_releases += new_release_list_header + new_release_list_item
+
+        with open('../assets/index.html', 'r') as f:
+            html_output = f.read()
+
+            if self.update:
+                html_output = html_output.replace("{UPDATE_MESSAGE}", "A new update is available!")
+            else:
+                html_output = html_output.replace("{VIEW_UPDATE_ALERT}", "display:none;")
+
+            html_output = html_output.replace("{NEW_RELEASE_LIST}", all_new_releases)
+
+        return html_output
