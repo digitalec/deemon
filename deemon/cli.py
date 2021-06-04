@@ -130,14 +130,6 @@ def import_cmd(path):
 
 
 @run.command()
-@click.argument('path')
-def export(path):
-    """Export all artists"""
-    batch = BatchJobs()
-    batch.export_artists(path)
-
-
-@run.command()
 @click.option('--include-logs', is_flag=True, help='include log files in backup')
 def backup(include_logs):
     """Backup configuration and database to a tar file"""
