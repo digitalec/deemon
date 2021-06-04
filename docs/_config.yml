@@ -1,1 +1,0 @@
-theme: just-the-docs
