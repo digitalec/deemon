@@ -1,37 +1,49 @@
-## Welcome to GitHub Pages
+---
+layout: default
+title: Home
+nav_order: 1
+description: "deemon is a monitoring utility for new artist releases that can provide email alerts and automate downloading via the deemix library"
+permalink: /
+---
 
-You can use the [editor on GitHub](https://github.com/digitalec/deemon/edit/v1.0/docs/index.md) to maintain and preview the content for your website in Markdown files.
+# deemon Documentation
+{: .fs-9 }
 
-Whenever you commit to this repository, GitHub Pages will run [Jekyll](https://jekyllrb.com/) to rebuild the pages in your site, from the content in your Markdown files.
+deemon is a monitoring utility for new artist releases that can provide email alerts and automate downloading via the deemix library
+{: .fs-6 .fw-300 }
 
-### Markdown
+[Get started now](#getting-started){: .btn .btn-primary .fs-5 .mb-4 .mb-md-0 .mr-2 } [View it on GitHub](https://github.com/digitalec/deemon){: .btn .fs-5 .mb-4 .mb-md-0 }
 
-Markdown is a lightweight and easy-to-use syntax for styling your writing. It includes conventions for
+---
 
-```markdown
-Syntax highlighted code block
+## Getting started
 
-# Header 1
-## Header 2
-### Header 3
+### Dependencies
 
-- Bulleted
-- List
+deemon depends on various python modules and libraries to perform all of its functions. The following dependencies are automatically installed when deemon is installed using the `pip` package manager
 
-1. Numbered
-2. List
-
-**Bold** and _Italic_ and `Code` text
-
-[Link](url) and ![Image](src)
+```
+deezer-py deemix plexapi packaging requests click progressbar
 ```
 
-For more details see [GitHub Flavored Markdown](https://guides.github.com/features/mastering-markdown/).
+### First use
 
-### Jekyll Themes
+The first time you run deemon, you'll need to start monitoring an artist. Monitoring an artist can be done simple by using the `monitor` command:
 
-Your Pages site will use the layout and styles from the Jekyll theme you have selected in your [repository settings](https://github.com/digitalec/deemon/settings/pages). The name of this theme is saved in the Jekyll `_config.yml` configuration file.
+```bash
+$ deemon monitor Artist
+```
 
-### Support or Contact
+### Configure deemon
 
-Having trouble with Pages? Check out our [documentation](https://docs.github.com/categories/github-pages-basics/) or [contact support](https://support.github.com/contact) and we’ll help you sort it out.
+- [See configuration options]({{ site.baseurl }}{% link docs/configuration.md %})
+
+---
+
+## About the project
+
+deemon is an open source project that came from the need to stay on top of new releases by some of my favorite artists
+
+### License
+
+deemon is distributed by a [GPL-3.0 license](https://github.com/digitalec/deemon/blob/main/LICENSE).
