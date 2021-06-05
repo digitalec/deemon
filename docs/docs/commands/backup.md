@@ -1,10 +1,10 @@
 ---
 layout: default
-title: Backup
+title: backup
 parent: Commands
 ---
 
-# Backup
+# backup
 {: .no_toc }
 
 ---

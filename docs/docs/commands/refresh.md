@@ -1,10 +1,10 @@
 ---
 layout: default
-title: Refresh
+title: refresh
 parent: Commands
 ---
 
-# Refresh
+# refresh
 {: .no_toc }
 
 ## Table of contents

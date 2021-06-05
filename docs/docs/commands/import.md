@@ -1,10 +1,10 @@
 ---
 layout: default
-title: Import
+title: import
 parent: Commands
 ---
 
-# Import
+# import
 {: .no_toc }
 
 ## Table of contents

@@ -1,10 +1,10 @@
 ---
 layout: default
-title: Monitor
+title: monitor
 parent: Commands
 ---
 
-# Monitor
+# monitor
 {: .no_toc }
 
 ## Table of contents
@@ -14,7 +14,7 @@ parent: Commands
 {:toc}
 
 ---
-Monitoring artists is the core feature of deemon. Using the monitor command, you can monitor artists by name, their Deezer ID or Deezer URL.
+Monitoring artists is the core feature of deemon. Using the `monitor` command, you can monitor artists by name, their Deezer ID or Deezer URL.
 
 ## Monitor by Artist Name
 This is the easiest way to monitor an artist but has some limitations. When using an artist name, deemon searches Deezer via an API call which returns the most likely result. In some situations you may find yourself monitoring the wrong artist. In this case, it would be best to [monitor the artist by ID](#monitor-by-artist-id).

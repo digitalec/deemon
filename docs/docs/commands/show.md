@@ -1,10 +1,10 @@
 ---
 layout: default
-title: Show
+title: show
 parent: Commands
 ---
 
-# Show
+# show
 {: .no_toc }
 
 ## Table of contents

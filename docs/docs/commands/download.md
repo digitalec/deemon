@@ -1,10 +1,10 @@
 ---
 layout: default
-title: Download
+title: download
 parent: Commands
 ---
 
-# Download
+# download
 {: .no_toc }
 
 ## Table of contents
