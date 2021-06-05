@@ -14,7 +14,6 @@ parent: Troubleshooting
 {:toc}
 
 ---
-## Requests
 
 ## Log file in use
 If you're using _deemix-pyweb_ on the same system as deemon, you may run into an issue where deemon cannot call deemix because a log file is already in use.
