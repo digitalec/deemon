@@ -22,9 +22,11 @@ deemon has some specific configuration parameters that can be defined in your co
 ## Configuration File
 Depending on your operating system, your config.json file will be located in one of the following locations:
 
-* **Windows:** %appdata%\deemon
-* **macOS:** /User/username/Library/Application Support/deemon
-* **Linux:** /home/username/.config/deemon
+| OS        | Path       |
+|:--------------|:------------------|
+| Linux | /home/_user_/.config/deemon |
+| macOS | /User/_user_/Library/Application Support/deemon |
+| Windows | %appdata%\deemon |
 
 <small>**config.json - v1.0 default**</small>
 ```json
@@ -54,9 +56,11 @@ deemon can initiate a refresh of a given Plex library to ensure Plex sees new mu
 
 To use this feature, you'll need to provide the following configuration values in your config.json:
 
-* **plex_baseurl** - Address to your Plex server (_http://127.0.0.1:32400_)
-* **plex_token** - Authentication token [(instructions)](https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/)
-* **plex_library** - Name of the Plex library to refresh
+| option        | description       |
+|:--------------|:------------------|
+| plex_baseurl       | Address to your Plex server - _http://127.0.0.1:32400_ |
+| plex_token | Authentication token [(instructions)](https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/) |
+| plex_library   | Name of the Plex library to refresh |
 
 ## Email Notifications
 When deemon performs a refresh and finds a new release, you can choose to receive email notifications containing a list of all releases that were found. This feature can be enabled by setting the _alerts_ parameter to _1_.
