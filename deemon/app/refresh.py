@@ -122,6 +122,6 @@ class Refresh(Deemon):
             dl.download_queue(self.queue_list)
         self.db.commit()
 
-        if len(self.new_releases) > 0:
+        if len(self.new_releases) > 0 and self.config["alerts"]:
             notification = notify.Notify(self.new_releases)
             notification.send()

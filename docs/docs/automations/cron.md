@@ -2,6 +2,7 @@
 layout: default
 title: cron (Linux/macOS)
 parent: Automations
+nav_order: 1
 ---
 
 # cron
