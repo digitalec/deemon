@@ -1,10 +1,10 @@
 ---
 layout: default
-title: Cron (Linux/macOS)
+title: cron (Linux/macOS)
 parent: Automations
 ---
 
-# Cron
+# cron
 {: .no_toc }
 
 ## Table of contents
