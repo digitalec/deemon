@@ -1,4 +1,5 @@
 from deemon import __version__
+from deemon.app import utils
 from datetime import datetime
 from pathlib import Path
 import logging

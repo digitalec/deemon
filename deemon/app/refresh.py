@@ -55,7 +55,7 @@ class Refresh(Deemon):
         bar.start()
         for idx, artist in enumerate(self.monitored_artists):
             new_artist = False
-            artist = {"id": artist[0], "name": artist[1], "bitrate": artist[2], "record_type": artist[3]}
+            artist = {"id": artist[0], "name": artist[1], "bitrate": self.config["bitrate"], "record_type": artist[3]}
             artist_exists = self.db.get_artist_by_id(artist_id=artist["id"])
             albums = self.dz.api.get_artist_albums(artist["id"])
 
@@ -105,7 +105,7 @@ class Refresh(Deemon):
                 self.new_release_count += 1
 
                 if (self.config["record_type"] == album["record_type"]) or (self.config["record_type"] == "all"):
-                    if self.config["album_release"] == "new":
+                    if self.config["release_by_date"]:
                         max_release_date = utils.get_max_release_date(self.config["release_max_days"])
                         if album['release_date'] < max_release_date:
                             logger.debug(f"Release '{artist['name']} - {album['title']}' skipped, too old...")

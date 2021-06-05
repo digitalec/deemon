@@ -1,4 +1,3 @@
-from requests.exceptions import ConnectionError
 from plexapi.server import PlexServer
 from deemon.app import dmi, notify
 from deemon.app import Deemon
@@ -42,7 +41,7 @@ class Download(Deemon):
                 logger.info("Plex settings found! Trying to connect...")
                 plex_server = PlexServer(baseurl, token, timeout=10)
                 return plex_server
-            except ConnectionError:
+            except Exception:
                 logger.error("Error: Unable to reach Plex server, please refresh manually.")
                 return False
 

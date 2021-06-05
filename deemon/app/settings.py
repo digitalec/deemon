@@ -5,21 +5,15 @@ import json
 
 logger = logging.getLogger(__name__)
 
-BITRATE = {
-    "MP3_128": 1,
-    "MP3_320": 3,
-    "FLAC": 9
-}
-
 DEFAULT_SETTINGS = {
     "plex_baseurl": "",
     "plex_token": "",
     "plex_library": "",
     "download_path": "",
     "deemix_path": "",
-    "album_release": "new",
+    "release_by_date": 1,
     "release_max_days": 90,
-    "bitrate": "320",
+    "bitrate": 9,
     "alerts": 0,
     "record_type": "all",
     "smtp_server": "",

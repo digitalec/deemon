@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 class Notify(Deemon):
 
-    def __init__(self, new_releases: list):
+    def __init__(self, new_releases: list = None):
         super().__init__()
         logger.debug("notify initialized")
         self.server = self.config["smtp_server"]
@@ -29,11 +29,13 @@ class Notify(Deemon):
         self.subject = "New releases detected!"
         self.releases = new_releases
 
-    def send(self, body=None):
+    def send(self, body=None, test=False):
         """
         Send email notification message
         """
         if not all([self.server, self.port, self.user, self.passwd, self.sender, self.recipient]):
+            if test:
+                logger.info("Unable to send test notification, email is not configured")
             logger.debug("Email not configured, no notifications will be sent")
             return False
 
@@ -102,7 +104,7 @@ class Notify(Deemon):
         msg['From'] = formataddr(('deemon', self.sender))
         msg['Subject'] = self.subject
         msg.set_content(message)
-        self.send(msg)
+        self.send(msg, test=True)
 
     def plaintext(self) -> str:
         """

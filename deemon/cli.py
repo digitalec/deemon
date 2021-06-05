@@ -1,4 +1,4 @@
-from deemon.app import settings, monitor, download
+from deemon.app import settings, monitor, download, notify
 from deemon.app.logger import setup_logger
 from deemon.app.batch import BatchJobs
 from deemon.app.refresh import Refresh
@@ -22,16 +22,22 @@ config = settings.config
 
 
 @click.group()
-@click.option('-t', '--test-alerts', is_flag=True, help='Test your SMTP settings')
 @click.option('-v', '--verbose', is_flag=True, help='Enable verbose output')
 @click.version_option(__version__, '-V', '--version', message='deemon %(version)s')
-def run(verbose, test_alerts):
+def run(verbose):
     """Monitoring and alerting tool for new music releases using the Deezer API.
 
     deemon is a free and open source tool. To report issues or to contribute,
     please visit https://github.com/digitalec/deemon
     """
     setup_logger(log_level='DEBUG' if verbose else 'INFO', log_file=utils.get_log_file())
+
+
+@run.command(name='test')
+def test():
+    """Test email server settings by sending a test notification"""
+    notification = notify.Notify()
+    notification.test()
 
 
 @run.command(name='download')
