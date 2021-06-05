@@ -21,7 +21,7 @@ $ deemon -a artists.txt
 
 ## Upgrade via pip
 
-Next, **delete or rename the [config.json](docs/configuration.html#configuration-file) file** as you'll need the latest changes.
+Next, **delete or rename the [config.json](configuration.html#configuration-file) file** as you'll need the latest changes.
 
 To perform the upgrade:
 
