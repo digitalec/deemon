@@ -1,10 +1,10 @@
 ---
 layout: default
-title: Upgrading from 0.4.x or earlier
+title: Upgrading from 0.4.x
 nav_order: 1
 ---
 
-# Upgrading
+# Upgrading from 0.4.x
 {: .no_toc }
 
 Starting with version 1.0, deemon now uses a new database called `deemon.db`. This is located in the same directory as the legacy version, `releases.db`. The process outlined below is entirely optional but recommended to make sure no releases are missed since the last time you ran deemon.
