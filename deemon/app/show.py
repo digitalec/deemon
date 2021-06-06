@@ -49,7 +49,7 @@ class ShowStats(Deemon):
             print("")
             release_list.sort(key=itemgetter(4), reverse=True)
             for release in release_list:
-                print('+ [%-10s] %-20s - %s' % (release[4], release[1], release[3]))
+                print('+ [%-10s] %s - %s' % (release[4], release[1], release[3]))
         else:
             logger.info(f"No releases found in that timeframe")
 
