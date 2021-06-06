@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from plexapi.server import PlexServer
 from deemon.app import dmi, notify
 from deemon.app import Deemon
@@ -26,6 +28,8 @@ class Download(Deemon):
         self.di = dmi.DeemixInterface(self.config["download_path"], self.config["deemix_path"])
         self.deemix_logger = logging.getLogger("deemix")
         self.queue_list = []
+        self.bitrate = self.config["bitrate"]
+        self.record_type = self.config["record_type"]
 
         if login:
             if not self.di.login():
@@ -45,18 +49,16 @@ class Download(Deemon):
                 logger.error("Error: Unable to reach Plex server, please refresh manually.")
                 return False
 
-
     def download_queue(self, queue):
         if queue:
             plex = self.get_plex_server()
-            plex = None
             num_queued = len(queue)
             logger.info("----------------------------")
             logger.info("Sending " + str(num_queued) + " release(s) to deemix for download:")
 
             for q in queue:
                 logger.info(f"+ {q.artist_name} - {q.album_title}... ")
-                self.di.download_url([q.url], q.bitrate)
+                # self.di.download_url([q.url], q.bitrate)
 
             print("")
             logger.info("Downloads complete!")
@@ -64,32 +66,51 @@ class Download(Deemon):
                 logger.debug("Sending signal to refresh Plex library")
                 plex.library.section(self.config["plex_library"]).update()
 
+    def add_to_queue(self, artist, album):
+        for _album in album['data']:
+            if (self.record_type == _album["record_type"]) or (self.record_type == "all"):
+                logger.debug(f"QUEUE: Adding '{_album['title']}' to queue...")
+                artist["bitrate"] = self.bitrate
+                self.queue_list.append(QueueItem(artist, _album))
+
     def download(self, opt: dict):
         logger.debug("download called with options: " + str(opt))
+        artist = {}
+
+        if opt["bitrate"]:
+            self.bitrate = opt["bitrate"]
+        if opt["record_type"]:
+            self.record_type = opt["record_type"]
 
         if opt["url"]:
             logger.info("Sending URL to deemix for processing:")
             self.deemix_logger.setLevel(logging.INFO)
             self.di.download_url([opt["url"]], opt["bitrate"])
-        else:
-            artist = {}
-            if opt["artist_id"] or opt["artist"]:
-                if opt["artist_id"]:
-                    artist = self.dz.api.get_artist(opt["artist_id"])
-                elif opt["artist"]:
-                    artist = self.dz.api.search_artist(opt["artist"], limit=1)['data'][0]
-                    opt["artist_id"] = artist["id"]
-                album = self.dz.api.get_artist_albums(opt["artist_id"])
 
-            if opt["album_id"]:
-                album = {'data': [self.dz.api.get_album(opt["album_id"])]}
-                artist["name"] = album["data"][0]["artist"]["name"]
+        if opt["file"]:
+            logger.info(f"Reading from file {opt['file']}")
+            if Path(opt['file']).exists():
+                with open(opt['file'], 'r') as f:
+                    artist_list = f.read().splitlines()
+                    for name in artist_list:
+                        artist = self.dz.api.search_artist(name, limit=1)['data'][0]
+                        album = self.dz.api.get_artist_albums(artist["id"])
+                        self.add_to_queue(artist, album)
 
-            for _album in album['data']:
-                if (opt["record_type"] == _album["record_type"]) or (opt["record_type"] == "all"):
-                    logger.debug(f"QUEUE: Adding '{_album['title']}' to queue...")
-                    artist["bitrate"] = opt["bitrate"]
-                    self.queue_list.append(QueueItem(artist, _album))
+        if opt["artist_id"] or opt["artist"]:
+            if opt["artist_id"]:
+                artist = self.dz.api.get_artist(opt["artist_id"])
+            elif opt["artist"]:
+                artist = self.dz.api.search_artist(opt["artist"], limit=1)['data'][0]
+                opt["artist_id"] = artist["id"]
 
-            self.download_queue(self.queue_list)
-        self.db.commit_and_close()
+            album = self.dz.api.get_artist_albums(opt["artist_id"])
+            self.add_to_queue(artist, album)
+
+        if opt["album_id"]:
+            album = {'data': [self.dz.api.get_album(opt["album_id"])]}
+            artist["name"] = album["data"][0]["artist"]["name"]
+            self.add_to_queue(artist, album)
+
+        self.download_queue(self.queue_list)
+        self.db.commit()

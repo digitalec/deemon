@@ -47,24 +47,28 @@ def test():
 
 
 @run.command(name='download')
-@click.option('-a', '--artist', metavar='NAME', help='Download all by artist name')
+@click.option('-a', '--artist', metavar='NAME', type=str, help='Download all by artist name')
 @click.option('-i', '--artist-id', metavar='ID', type=int, help='Download all by artist ID')
 @click.option('-A', '--album-id', metavar='ID', type=int, help='Download by album ID')
 @click.option('-u', '--url', metavar='URL', help='Download by URL of artist/album/track')
+@click.option('-f', '--file', 'input_file', metavar='FILE', help='Download batch of artists from file, one per line')
 @click.option('-b', '--bitrate', metavar='N', type=int, default=config["bitrate"],
               help='Set custom bitrate for this operation')
 @click.option('-r', '--record-type', metavar='TYPE', default=config["record_type"],
               help='Only get certain record types')
-def download_command(artist, artist_id, album_id, url, bitrate, record_type):
+def download_command(artist, artist_id, album_id, url, input_file, bitrate, record_type):
     """Download specific artist, album ID or by URL"""
+
     params = {
         'artist': artist,
         'artist_id': artist_id,
         'album_id': album_id,
         'url': url,
         'bitrate': bitrate,
-        'record_type': record_type
+        'record_type': record_type,
+        'file': input_file
     }
+
     dl = download.Download()
     dl.download(params)
 
