@@ -62,13 +62,13 @@ class Notify(Deemon):
         """
         Builds message by combining plaintext and HTML messages for sending
         """
-        msg = MIMEMultipart('alternative')
+        msg = MIMEMultipart('mixed')
         msg['To'] = self.recipient
         msg['From'] = formataddr(('deemon', self.sender))
         msg['Subject'] = self.subject
-        part1 = MIMEText(self.plaintext(), 'plain')
+        # part1 = MIMEText(self.plaintext(), 'plain')
         part2 = MIMEText(self.html(), 'html')
-        msg.attach(part1)
+        # msg.attach(part1)
         msg.attach(part2)
 
         with open('../assets/images/logo.png', 'rb') as f:
