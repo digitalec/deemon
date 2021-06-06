@@ -5,7 +5,6 @@
 ![PyPI](https://img.shields.io/pypi/v/deemon?style=flat-square)
 ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/deemon?style=flat-square)
 ![PyPI - License](https://img.shields.io/pypi/l/deemon?style=flat-square)
-![PyPI - Status](https://img.shields.io/pypi/status/deemon?style=flat-square)
 ![PyPI - Downloads](https://img.shields.io/pypi/dm/deemon?style=flat-square)
 ![GitHub last commit](https://img.shields.io/github/last-commit/digitalec/deemon?style=flat-square)
 ![Discord](https://img.shields.io/discord/831356172464160838?style=flat-square)
