@@ -81,9 +81,9 @@ class Notify(Deemon):
             image.add_header('Content-ID', 'github')
             msg.attach(image)
 
-        with open('../assets/images/telegram.png', 'rb') as f:
+        with open('../assets/images/reddit.png', 'rb') as f:
             image = MIMEImage(f.read())
-            image.add_header('Content-ID', 'telegram')
+            image.add_header('Content-ID', 'reddit')
             msg.attach(image)
 
         with open('../assets/images/discord.png', 'rb') as f:
