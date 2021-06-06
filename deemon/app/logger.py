@@ -38,7 +38,6 @@ def setup_logger(log_level='DEBUG', log_file=None):
         rotate.setLevel(logging.DEBUG)
         rotate.setFormatter(logging.Formatter(LOG_FORMATS['DEBUG'], datefmt=LOG_DATE))
         logger.addHandler(rotate)
-        deemix_logger.addHandler(rotate)
 
     stream = logging.StreamHandler(stream=sys.stdout)
     stream.setLevel(log_level)
