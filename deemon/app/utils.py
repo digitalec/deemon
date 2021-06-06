@@ -54,7 +54,10 @@ def get_max_release_date(days):
 
 def check_version():
     latest_ver = "https://api.github.com/repos/digitalec/deemon/releases/latest"
-    response = requests.get(latest_ver)
+    try:
+        response = requests.get(latest_ver)
+    except requests.exceptions.ConnectionError:
+        return
     local_version = __version__
     remote_version = response.json()["name"]
     if parse_version(remote_version) > parse_version(local_version):
