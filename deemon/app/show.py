@@ -21,10 +21,13 @@ class ShowStats(Deemon):
 
         artist_data = [artist[1] for artist in monitored_artists]
 
-        if len(artist_data) > 0:
+        if len(artist_data) > 10:
             artist_data = self.truncate_long_artists(artist_data)
 
-            for a, b in zip(artist_data[::2], artist_data[1::2]):
+            if len(artist_data) % 2 != 0:
+                artist_data.append(" ")
+
+            for a, b in zip(artist_data[0::2], artist_data[1::2]):
                 print('{:<30}{:<}'.format(a, b))
         else:
             for artist in artist_data:
