@@ -91,7 +91,9 @@ class Download(Deemon):
             logger.info(f"Reading from file {opt['file']}")
             if Path(opt['file']).exists():
                 with open(opt['file'], 'r') as f:
-                    artist_list = f.read().splitlines()
+                    make_csv = f.read().replace('\n', ',')
+                    csv_to_list = make_csv.split(',')
+                    artist_list = list(filter(None, csv_to_list))
                     for name in artist_list:
                         artist = self.dz.api.search_artist(name, limit=1)['data'][0]
                         album = self.dz.api.get_artist_albums(artist["id"])

@@ -32,10 +32,17 @@ $ deemon download --album-id 1234
 ```
 
 ## By URL
-Monitoring by URL was implemented with the intention of using it for integration with automation tools like Siri Shortcuts.
+Downloading by URL was implemented with the intention of using it for integration with automation tools like Siri Shortcuts.
 
 ```bash
 $ deemon download --url https://www.deezer.com/us/artist/1234
+```
+
+## By File
+You can queue up a batch of artists from CSV or by adding one artist per line to a text file:
+
+```bash
+$ deemon download --file artists.txt
 ```
 
 ## Configuration Overrides
