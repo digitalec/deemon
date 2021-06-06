@@ -30,13 +30,8 @@ class Settings:
     def __init__(self, custom_path=None):
         self.config_file = 'config.json'
         self.db_file = 'deemon.db'
-        self.legacy_path = Path(Path.home() / ".config/deemon")
         self.config_path = utils.get_appdata_dir()
         self.db_path = Path(self.config_path / self.db_file)
-
-        if self.legacy_path != self.config_path:
-            if Path(self.legacy_path / self.db_file).exists():
-                self.migrate_legacy_versions()
 
         if not Path(self.config_path / self.config_file).exists():
             self.create_default_config()
@@ -56,7 +51,3 @@ class Settings:
         for group in DEFAULT_SETTINGS:
             if group not in self.config:
                 self.config[group] = DEFAULT_SETTINGS[group]
-
-    def migrate_legacy_versions(self):
-        Path(self.legacy_path / self.db_file).rename(self.config_path / self.db_file)
-        Path(self.legacy_path).rmdir()
