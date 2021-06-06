@@ -129,9 +129,12 @@ class Deemon:
             logger.info("----------------------------")
             logger.info("** Here we go! Starting download of " + str(num_queued) + " release(s):")
             for q in queue:
-                notify_releases.append(q.artist_name + " - " + q.album_title)
                 logger.info(f"Downloading {q.artist_name} - {q.album_title}... ")
-                self.di.download_url([q.url], self.bitrate)
+                try:
+                    self.di.download_url([q.url], self.bitrate)
+                    notify_releases.append(q.artist_name + " - " + q.album_title)
+                except IndexError:
+                    logger.info(f"Error downloading {q.album_title} (no tracks available?), skipping... ")
 
             self.notify.notify(notify_releases)
 
