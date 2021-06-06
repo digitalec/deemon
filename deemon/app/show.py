@@ -22,11 +22,20 @@ class ShowStats(Deemon):
         artist_data = [artist[1] for artist in monitored_artists]
 
         if len(artist_data) > 0:
+            artist_data = self.truncate_long_artists(artist_data)
+
             for a, b in zip(artist_data[::2], artist_data[1::2]):
-                print('{:<40}{:<}'.format(a, b))
+                print('{:<30}{:<}'.format(a, b))
         else:
             for artist in artist_data:
                 print(artist)
+
+    @staticmethod
+    def truncate_long_artists(all_artists):
+        for idx, artist in enumerate(all_artists):
+            if len(artist) > 25:
+                all_artists[idx] = artist[:22] + "..."
+        return all_artists
 
     def releases(self, days):
         seconds_per_day = 86400
