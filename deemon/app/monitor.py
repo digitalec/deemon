@@ -53,9 +53,9 @@ class Monitor:
                 logger.error(e)
 
             if not silent:
-                logger.info("Now monitoring " + self.artist)
+                logger.info(f"Now monitoring {self.artist}")
             else:
-                logger.debug("Now monitoring " + self.artist)
+                logger.debug(f"Now monitoring {self.artist}")
 
             self.db.commit()
             return True
