@@ -34,7 +34,7 @@ def setup_logger(log_level='DEBUG', log_file=None):
     del deemix_logger.handlers[:]
 
     if log_file is not None:
-        rotate = RotatingFileHandler(log_file, maxBytes=1048576, backupCount=5)
+        rotate = RotatingFileHandler(log_file, maxBytes=1048576, backupCount=5, encoding="utf-8")
         rotate.setLevel(logging.DEBUG)
         rotate.setFormatter(logging.Formatter(LOG_FORMATS['DEBUG'], datefmt=LOG_DATE))
         logger.addHandler(rotate)

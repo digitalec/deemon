@@ -16,7 +16,7 @@ class BatchJobs(Deemon):
         # TODO check db for existing artist
         if import_artists:
             if Path(import_artists).is_file():
-                with open(import_artists) as f:
+                with open(import_artists, encoding="utf8") as f:
                     # TODO check for CSV!
                     import_list = f.read().splitlines()
                     # TODO clean this up and merge with lines 36:37
