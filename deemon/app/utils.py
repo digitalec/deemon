@@ -27,8 +27,7 @@ def get_appdata_dir():
 
 
 def init_appdata_dir(appdata):
-    Path(appdata).mkdir(exist_ok=True)
-    Path(appdata / 'logs').mkdir(exist_ok=True)
+    Path(appdata / 'logs').mkdir(parents=True, exist_ok=True)
     Path(appdata / 'backups').mkdir(exist_ok=True)
 
 
