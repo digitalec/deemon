@@ -16,6 +16,12 @@ deemon is a monitoring utility for new artist releases that can provide email al
 
 ---
 
+## Disclaimer
+
+deemon does not download anything by itself. It requires a third party library called deemix in order to do this and will be installed automatically when installed via pip. If you're doing a `git clone` on one of the branches, you will need to install the packages in `requirements.txt`.
+
+---
+
 ## Getting started
 
 ### Dependencies
