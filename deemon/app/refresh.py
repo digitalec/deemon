@@ -1,5 +1,5 @@
 from deemon.app import Deemon, utils, download, notify
-import progressbar
+import tqdm
 import logging
 import deezer
 
@@ -47,13 +47,19 @@ class Refresh(Deemon):
         self.new_releases.append({'release_date': release_date, 'releases': [{'artist': artist, 'album': album}]})
 
     def refresh(self):
-        logger.info(f"Refreshing artists, this may take some time...")
+        logger.debug(f"Refreshing artists")
         self.get_monitored_artists()
 
-        bar = progressbar.ProgressBar(maxval=len(self.monitored_artists),
-                                      widgets=[progressbar.Bar('=', '[', ']'), ' ', progressbar.Percentage()])
-        bar.start()
-        for idx, artist in enumerate(self.monitored_artists):
+        if len(self.monitored_artists) == 0:
+            logger.info("At least one artist needs to be monitored before you can refresh!")
+            return
+
+        progress = tqdm.tqdm(self.monitored_artists, bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt} '
+                                                                '({elapsed}{postfix})')
+
+        for artist in progress:
+            progress.set_description("Refreshing")
+            self.new_release_count = 0
             new_artist = False
             artist = {"id": artist[0], "name": artist[1], "bitrate": self.config["bitrate"], "record_type": artist[3]}
             artist_exists = self.db.get_artist_by_id(artist_id=artist["id"])
@@ -65,7 +71,7 @@ class Refresh(Deemon):
 
             if new_artist:
                 if len(albums["data"]) == 0:
-                    logger.debug(f"Artist '{artist['name']}' setup for monitoring but no releases were found.")
+                    logger.warning(f"WARNING: Artist '{artist['name']}' setup for monitoring but no releases were found.")
 
             for album in albums["data"]:
 
@@ -84,8 +90,8 @@ class Refresh(Deemon):
                     }
 
                     if _album["future_release"] and (_album["release_date"] <= todays_date):
-                        logger.debug(f"Pre-release has now been released and will be downloaded: "
-                                     f"{_album['artist_name']} - {_album['album_name']}")
+                        logger.info(f"Artist: {_album['artist_name']} ** Pre-release has now been released "
+                                    f"and will be downloaded **")
                         self.db.reset_future(_album['album_id'])
                     else:
                         continue
@@ -114,10 +120,13 @@ class Refresh(Deemon):
                     self.queue_list.append(download.QueueItem(artist, album))
                     self.construct_new_release_list(album['release_date'], artist['name'],
                                                     album['title'], album['cover_medium'])
-            bar.update(idx)
-        bar.finish()
+
+            if self.new_release_count > 0:
+                logger.info(f"{artist['name']}: {self.new_release_count} new release(s)")
+
         logger.debug("Refresh complete")
         if self.queue_list:
+            print("")
             dl = download.Download()
             dl.download_queue(self.queue_list)
         self.db.commit()

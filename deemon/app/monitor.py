@@ -34,8 +34,14 @@ class Monitor:
             except IndexError:
                 logger.error(f"Artist '{self.artist}' not found")
 
-    def start_monitoring(self, silent=False):
+    def start_monitoring(self):
         artist_info = self.get_artist_info()
+        values = {'artist_name': self.artist}
+        sql = "SELECT * FROM monitor WHERE artist_name = :artist_name"
+        already_monitored = self.db.query(sql, values).fetchone()
+        if already_monitored:
+            logger.debug(f"Artist: {self.artist} is already monitored, skipping...")
+            return
         if artist_info:
             sql = ("INSERT OR REPLACE INTO monitor (artist_id, artist_name, bitrate, record_type, alerts) "
                    "VALUES (:artist_id, :artist_name, :bitrate, :record_type, :alerts)")
@@ -52,13 +58,12 @@ class Monitor:
             except OperationalError as e:
                 logger.error(e)
 
-            if not silent:
-                logger.info(f"Now monitoring {self.artist}")
-            else:
-                logger.debug(f"Now monitoring {self.artist}")
+            logger.info(f"Now monitoring {self.artist}")
 
             self.db.commit()
-            return True
+            return 1
+        else:
+            return 2
 
     def stop_monitoring(self):
         self.get_artist_info()
