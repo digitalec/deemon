@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import plexapi.exceptions
 from plexapi.server import PlexServer
 from deemon.app import dmi, notify
 from deemon.app import Deemon
@@ -63,8 +64,12 @@ class Download(Deemon):
             print("")
             logger.info("Downloads complete!")
             if plex:
-                logger.debug("Sending signal to refresh Plex library")
-                plex.library.section(self.config["plex_library"]).update()
+                try:
+                    plex.library.section(self.config["plex_library"]).update()
+                    logger.debug("Plex library refreshed successfully")
+                except plexapi.exceptions.BadRequest as e:
+                    logger.error("Error occurred while refreshing your library. See logs for additional info.")
+                    logger.debug(f"Error during Plex refresh: {e}")
 
     def add_to_queue(self, artist, album):
         for _album in album['data']:
