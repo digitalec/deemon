@@ -67,7 +67,7 @@ When deemon performs a refresh and finds a new release, you can choose to receiv
 
 | option        | description       | allowed values |
 |:--------------|:------------------|:---------------|
-| alerts | enable or disable email notifications | 0 or 1 |
+| alerts | enable or disable email notifications | 0 [disable] or 1 [enable] |
 | smtp_server | outgoing mail server |
 | smtp_port | outgoing mail server port |
 | smtp_user   | username of outgoing mail server |
@@ -96,7 +96,7 @@ You may also wish to monitor only for new full-length albums which can be set us
 
 | option        | description       | allowed values |
 |:--------------|:------------------|:-------|
-| release_by_date | verify release date is newer than release_max_days | 0 or 1 |
+| release_by_date | verify release date is newer than release_max_days | 0 [disable] or 1 [enable] |
 | release_max_days | max amount of days to consider new release | # days (_default: 90_) |
 | record_type | monitor only for specific record types | all, album, ep, single |
 

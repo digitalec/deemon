@@ -14,4 +14,8 @@ parent: Commands
 {:toc}
 
 ---
-The `refresh` command is used to check for new releases, update the database and queue new releases with deemix.
+The `refresh` command is used to check for new releases, update the database and queue new releases with deemix:
+
+```bash
+$ deemon refresh
+```
