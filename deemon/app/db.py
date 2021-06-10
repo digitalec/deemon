@@ -62,6 +62,9 @@ class DBHelper:
                         "'album_name' TEXT, 'album_release' TEXT, 'album_added' INTEGER, "
                         "'future_release' INTEGER DEFAULT 0)")
 
+        sql_playlists = ("CREATE TABLE IF NOT EXISTS 'playlists' "
+                         "('id' INTEGER UNIQUE, 'name' TEXT, 'url' TEXT)")
+
         self.query(sql_monitor)
         self.query(sql_releases)
         self.query("CREATE TABLE IF NOT EXISTS 'deemon' ('property' TEXT, 'value' TEXT)")
@@ -146,3 +149,10 @@ class DBHelper:
         sql = "SELECT * FROM 'releases' WHERE album_id = :id"
         result = self.query(sql, values).fetchone()
         return result
+
+    def monitor_playlist(self, playlist):
+        values = {'id': playlist['id'], 'title': playlist['title'],
+                  'url': playlist['link']}
+        sql = "INSERT OR REPLACE INTO playlists ('id', 'title', 'url') VALUES (:id, :title, :url)"
+        self.query(sql, values)
+        self.commit()

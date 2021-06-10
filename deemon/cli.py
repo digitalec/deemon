@@ -76,9 +76,10 @@ def download_command(artist, artist_id, album_id, url, input_file, bitrate, reco
 @run.command(name='monitor', context_settings={"ignore_unknown_options": True})
 @click.argument('artist', nargs=-1)
 @click.option('-i', '--artist-id', type=int, metavar="ID", help="Monitor artist by ID")
+@click.option('-i', '--playlist', metavar="URL", help='Monitor Deezer playlist by URL')
 @click.option('-u', '--url', metavar="URL", help='Monitor artist by URL')
 @click.option('-R', '--remove', is_flag=True, help='Stop montioring an artist')
-def monitor_command(artist, artist_id, remove, url):
+def monitor_command(artist, artist_id, remove, url, playlist):
     """
     Monitor artist for new releases by ID, URL or name.
 
@@ -91,23 +92,34 @@ def monitor_command(artist, artist_id, remove, url):
 
     mon = monitor.Monitor()
 
-    if url:
-        id_from_url = url.split('/artist/')
+    if playlist:
+        id_from_url = playlist.split('/playlist/')
         try:
-            artist_id = int(id_from_url[1])
+            playlist_id = int(id_from_url[1])
         except (IndexError, ValueError):
-            logger.error(f"Invalid URL -- {url}")
+            logger.error(f"Invalid playlist URL -- {playlist}")
             sys.exit(1)
 
-    if artist_id:
-        mon.artist_id = artist_id
+        mon.playlist_id = playlist_id
+        mon.start_monitoring_playlist()
     else:
-        mon.artist = artist
+        if url:
+            id_from_url = url.split('/artist/')
+            try:
+                artist_id = int(id_from_url[1])
+            except (IndexError, ValueError):
+                logger.error(f"Invalid artist URL -- {url}")
+                sys.exit(1)
 
-    if remove:
-        mon.stop_monitoring()
-    else:
-        mon.start_monitoring()
+        if artist_id:
+            mon.artist_id = artist_id
+        else:
+            mon.artist = artist
+
+        if remove:
+            mon.stop_monitoring()
+        else:
+            mon.start_monitoring()
 
     refresh = Refresh()
     refresh.refresh()

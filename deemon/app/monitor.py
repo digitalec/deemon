@@ -1,5 +1,6 @@
 from sqlite3 import OperationalError
 from deemon.app import db, settings
+from deezer.api import DataException
 import logging
 import deezer
 
@@ -8,11 +9,12 @@ logger = logging.getLogger(__name__)
 
 class Monitor:
 
-    def __init__(self, artist=None, artist_id=None):
+    def __init__(self, artist=None, artist_id=None, playlist_id=None):
         self.settings = settings.Settings()
         self.config = self.settings.config
         self.artist = artist
         self.artist_id = artist_id
+        self.playlist_id = playlist_id
         self.db = db.DBHelper(self.settings.db_path)
         self.dz = deezer.Deezer()
 
@@ -85,3 +87,11 @@ class Monitor:
             logger.error(f"Artist '{self.artist}' not found")
 
         self.db.commit()
+
+    def start_monitoring_playlist(self):
+        try:
+            playlist = self.dz.api.get_playlist(self.playlist_id)
+            self.db.monitor_playlist(playlist)
+        except DataException:
+            logger.error("Playlist ID not found")
+            return
