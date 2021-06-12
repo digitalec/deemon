@@ -22,6 +22,7 @@ class Notify(Deemon):
     def __init__(self, new_releases: list = None):
         super().__init__()
         logger.debug("notify initialized")
+        logger.debug(f"releases to notify on: {new_releases}")
         self.server = self.config["smtp_server"]
         self.port = self.config["smtp_port"]
         self.user = self.config["smtp_user"]

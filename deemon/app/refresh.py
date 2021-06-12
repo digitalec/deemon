@@ -41,7 +41,7 @@ class Refresh(Deemon):
             for key in days:
                 if key == "release_date":
                     if release_date in days[key]:
-                        day["releases"].append({'artist': artist, 'album': album, 'cover': cover})
+                        days["releases"].append({'artist': artist, 'album': album, 'cover': cover})
                         return
 
         self.new_releases.append({'release_date': release_date, 'releases': [{'artist': artist, 'album': album}]})
