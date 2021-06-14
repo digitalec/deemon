@@ -25,11 +25,15 @@ class DeemixInterface(deemix):
             if Path(config_dir / '.arl').is_file():
                 with open(config_dir / '.arl', 'r') as f:
                     arl = f.readline().rstrip("\n")
+                    logger.debug(f"ARL found: {arl}")
                 if not self.dz.login_via_arl(arl):
+                    logger.error(f"ARL is expired or invalid")
                     return False
             else:
+                logger.error(f"ARL not found in {config_dir}")
                 return False
         else:
+            logger.error(f"ARL directory {config_dir} was not found")
             return False
         return True
 
