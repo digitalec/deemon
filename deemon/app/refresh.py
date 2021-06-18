@@ -41,7 +41,7 @@ class Refresh(Deemon):
             for key in days:
                 if key == "release_date":
                     if release_date in days[key]:
-                        self.new_releases.append({'artist': artist, 'album': album, 'cover': cover})
+                        days["releases"].append({'artist': artist, 'album': album, 'cover': cover})
                         return
 
         self.new_releases.append({'release_date': release_date, 'releases': [{'artist': artist, 'album': album}]})
@@ -131,6 +131,6 @@ class Refresh(Deemon):
             dl.download_queue(self.queue_list)
         self.db.commit()
 
-        if len(self.new_releases) > 0 and self.config["alerts"]:
+        if len(self.new_releases) > 0 and self.config["alerts"] == 1:
             notification = notify.Notify(self.new_releases)
             notification.send()

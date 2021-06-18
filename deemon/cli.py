@@ -34,7 +34,7 @@ def run(verbose):
     new_version = utils.check_version()
     if new_version:
         print("*" * 50)
-        logger.info(f"* Update is available: v{new_version}")
+        logger.info(f"* New version is available: v{__version__} -> v{new_version}")
         logger.info("* To upgrade, run `pip install --upgrade deemon`")
         print("*" * 50)
 

@@ -8,6 +8,9 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.image import MIMEImage
 from email.mime.text import MIMEText
 from email.message import EmailMessage
+
+import pkg_resources
+
 from deemon.app import Deemon, utils
 from deemon import __version__
 
@@ -19,6 +22,7 @@ class Notify(Deemon):
     def __init__(self, new_releases: list = None):
         super().__init__()
         logger.debug("notify initialized")
+        logger.debug(f"releases to notify on: {new_releases}")
         self.server = self.config["smtp_server"]
         self.port = self.config["smtp_port"]
         self.user = self.config["smtp_user"]
@@ -71,22 +75,27 @@ class Notify(Deemon):
         # msg.attach(part1)
         msg.attach(part2)
 
-        with open('../assets/images/logo.png', 'rb') as f:
+        logo = pkg_resources.resource_filename('deemon', 'assets/images/logo.png')
+        github =  pkg_resources.resource_filename('deemon', 'assets/images/github.png')
+        reddit =  pkg_resources.resource_filename('deemon', 'assets/images/reddit.png')
+        discord =  pkg_resources.resource_filename('deemon', 'assets/images/discord.png')
+
+        with open(logo, 'rb') as f:
             image = MIMEImage(f.read())
             image.add_header('Content-ID', 'logo')
             msg.attach(image)
 
-        with open('../assets/images/github.png', 'rb') as f:
+        with open(github, 'rb') as f:
             image = MIMEImage(f.read())
             image.add_header('Content-ID', 'github')
             msg.attach(image)
 
-        with open('../assets/images/reddit.png', 'rb') as f:
+        with open(reddit, 'rb') as f:
             image = MIMEImage(f.read())
             image.add_header('Content-ID', 'reddit')
             msg.attach(image)
 
-        with open('../assets/images/discord.png', 'rb') as f:
+        with open(discord, 'rb') as f:
             image = MIMEImage(f.read())
             image.add_header('Content-ID', 'discord')
             msg.attach(image)
@@ -162,7 +171,8 @@ class Notify(Deemon):
 
             all_new_releases += new_release_list_header + new_release_list_item
 
-        with open('../assets/index.html', 'r') as f:
+        index =  pkg_resources.resource_filename('deemon', 'assets/index.html')
+        with open(index, 'r') as f:
             html_output = f.read()
 
             if self.update:

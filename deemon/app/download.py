@@ -34,7 +34,6 @@ class Download(Deemon):
 
         if login:
             if not self.di.login():
-                logger.error("Error: ARL is invalid, expired or missing")
                 sys.exit(1)
 
     def get_plex_server(self):
@@ -100,9 +99,12 @@ class Download(Deemon):
                     csv_to_list = make_csv.split(',')
                     artist_list = list(filter(None, csv_to_list))
                     for name in artist_list:
-                        artist = self.dz.api.search_artist(name, limit=1)['data'][0]
-                        album = self.dz.api.get_artist_albums(artist["id"])
-                        self.add_to_queue(artist, album)
+                        try:
+                            artist = self.dz.api.search_artist(name, limit=1)['data'][0]
+                            album = self.dz.api.get_artist_albums(artist["id"])
+                            self.add_to_queue(artist, album)
+                        except IndexError:
+                            logger.warning(f"Artist '{name}' not found")
 
         if opt["artist_id"] or opt["artist"]:
             if opt["artist_id"]:
