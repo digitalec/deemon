@@ -20,11 +20,10 @@ class Refresh(Deemon):
         self.monitored_artists = []
         self.queue_list = []
         self.new_releases = []
-        self.release_date = ""
 
-    def is_future_release(self):
+    def is_future_release(self, album_release):
         today = utils.get_todays_date()
-        if self.release_date > today:
+        if album_release > today:
             return 1
         else:
             return 0
@@ -96,13 +95,17 @@ class Refresh(Deemon):
                     else:
                         continue
                 else:
+                    release_in_future = self.is_future_release(album["release_date"])
+                    if release_in_future:
+                        logger.debug(f"[PRE-RELEASE DETECTED] {artist['name']} - {album['title']} detected as a pre-release; "
+                                     f"will be released on {album['release_date']}")
                     self.db.add_new_release(
                         artist["id"],
                         artist["name"],
                         album["id"],
                         album["title"],
                         album["release_date"],
-                        future_release=self.is_future_release()
+                        future_release=release_in_future
                     )
 
                 if self.skip_download or new_artist:
