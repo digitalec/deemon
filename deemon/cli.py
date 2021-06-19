@@ -76,7 +76,7 @@ def download_command(artist, artist_id, album_id, url, input_file, bitrate, reco
 @run.command(name='monitor', context_settings={"ignore_unknown_options": True})
 @click.argument('artist', nargs=-1)
 @click.option('-i', '--artist-id', type=int, metavar="ID", help="Monitor artist by ID")
-@click.option('-i', '--playlist', metavar="URL", help='Monitor Deezer playlist by URL')
+@click.option('-p', '--playlist', metavar="URL", help='Monitor Deezer playlist by URL')
 @click.option('-u', '--url', metavar="URL", help='Monitor artist by URL')
 @click.option('-R', '--remove', is_flag=True, help='Stop montioring an artist')
 def monitor_command(artist, artist_id, remove, url, playlist):

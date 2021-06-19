@@ -13,12 +13,15 @@ logger = logging.getLogger(__name__)
 
 class QueueItem:
 
-    def __init__(self, artist: dict, album: dict):
-        self.artist_name = artist["name"]
-        self.bitrate = artist["bitrate"]
-        self.album_id = album["id"]
-        self.album_title = album["title"]
-        self.url = album["link"]
+    def __init__(self, artist=None, album=None, url=None):
+        if artist:
+            self.artist_name = artist["name"]
+        if album:
+            self.album_id = album["id"]
+            self.album_title = album["title"]
+            self.url = album["link"]
+        if url:
+            self.url = url
 
 
 class Download(Deemon):
@@ -57,8 +60,8 @@ class Download(Deemon):
             logger.info("Sending " + str(num_queued) + " release(s) to deemix for download:")
 
             for q in queue:
-                logger.info(f"+ {q.artist_name} - {q.album_title}... ")
-                self.di.download_url([q.url], q.bitrate)
+                # logger.info(f"+ {q.artist_name} - {q.album_title}... ")
+                self.di.download_url([q.url], self.bitrate)
 
             print("")
             logger.info("Downloads complete!")
@@ -66,7 +69,7 @@ class Download(Deemon):
                 try:
                     plex.library.section(self.config["plex_library"]).update()
                     logger.debug("Plex library refreshed successfully")
-                except plexapi.exceptions.BadRequest as e:
+                except Exception as e:
                     logger.error("Error occurred while refreshing your library. See logs for additional info.")
                     logger.debug(f"Error during Plex refresh: {e}")
 

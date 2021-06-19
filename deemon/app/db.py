@@ -18,9 +18,11 @@ class DBHelper:
         self.cursor = None
         if db:
             if not Path(db).exists():
+                logger.debug("Creating new database...")
                 self.open(db)
                 self.create_new_database()
             else:
+                logger.debug("Database found, using it...")
                 self.open(db)
 
     def __enter__(self):
@@ -63,10 +65,16 @@ class DBHelper:
                         "'future_release' INTEGER DEFAULT 0)")
 
         sql_playlists = ("CREATE TABLE IF NOT EXISTS 'playlists' "
-                         "('id' INTEGER UNIQUE, 'name' TEXT, 'url' TEXT)")
+                         "('id' INTEGER UNIQUE, 'title' TEXT, 'url' TEXT)")
+        
+        sql_playlist_tracks = ("CREATE TABLE IF NOT EXISTS 'playlist_tracks' "
+                               "('track_id' INTEGER UNIQUE, 'playlist_id' INTEGER, 'artist_id' INTEGER, "
+                               "'artist_name' TEXT, 'track_name' TEXT, 'track_added' TEXT)")
 
         self.query(sql_monitor)
         self.query(sql_releases)
+        self.query(sql_playlists)
+        self.query(sql_playlist_tracks)
         self.query("CREATE TABLE IF NOT EXISTS 'deemon' ('property' TEXT, 'value' TEXT)")
         self.query("CREATE UNIQUE INDEX 'idx_property' ON 'deemon' ('property')")
         self.query("CREATE UNIQUE INDEX 'idx_artist_id' ON 'monitor' ('artist_id')")
@@ -104,6 +112,11 @@ class DBHelper:
         result = self.query(f"SELECT * FROM monitor")
         artists = set(x for x in result)
         return sorted(artists, key=lambda x: x[1])
+
+    def get_all_monitored_playlists(self):
+        result = self.query("SELECT * FROM playlists")
+        playlists = [x for x in result]
+        return playlists
 
     def get_specified_artist(self, artist):
         if type(artist) is int:
