@@ -1,6 +1,7 @@
-from deemix.app import deemix
 from pathlib import Path
 import logging
+import deezer
+import deemix
 
 logger = logging.getLogger(__name__)
 
@@ -36,5 +37,3 @@ class DeemixInterface(deemix):
             logger.error(f"ARL directory {config_dir} was not found")
             return False
         return True
-
-
