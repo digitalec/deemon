@@ -147,7 +147,7 @@ class Notify(Deemon):
                 all_new_releases += new_release_list_spacer
 
             release_date_ts = datetime.strptime(release["release_date"], "%Y-%m-%d")
-            release_date_str = datetime.strftime(release_date_ts, "%A, %B %-d")
+            release_date_str = datetime.strftime(release_date_ts, "%A, %B %d").replace(" 0", " ")
 
             new_release_list_header = f"""
                 <p style="font-size: 14px; line-height: 140%;">
