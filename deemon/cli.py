@@ -76,10 +76,11 @@ def download_command(artist, artist_id, album_id, url, input_file, bitrate, reco
 @run.command(name='monitor', context_settings={"ignore_unknown_options": True})
 @click.argument('artist', nargs=-1)
 @click.option('-i', '--artist-id', multiple=True, type=int, metavar="ID", help="Monitor artist by ID")
+@click.option('-p', '--playlist', multiple=True, metavar="URL", help='Monitor Deezer playlist by URL')
 @click.option('-u', '--url', multiple=True, metavar="URL", help='Monitor artist by URL')
 @click.option('-s', '--skip-refresh', is_flag=True, help='Skip refresh after adding or removing artist')
 @click.option('-R', '--remove', is_flag=True, help='Stop monitoring an artist')
-def monitor_command(artist, artist_id, skip_refresh, remove, url):
+def monitor_command(artist, playlist, artist_id, skip_refresh, remove, url):
     """
     Monitor artist for new releases by ID, URL or name.
 
@@ -96,6 +97,7 @@ def monitor_command(artist, artist_id, skip_refresh, remove, url):
 
     artist_id = list(artist_id)
     url = list(url)
+    playlists = list(playlist)
 
     for a in artists:
         mon = monitor.Monitor()
@@ -114,6 +116,22 @@ def monitor_command(artist, artist_id, skip_refresh, remove, url):
             mon.stop_monitoring()
         else:
             mon.start_monitoring()
+
+    for p in playlists:
+        id_from_url = p.split('/playlist/')
+        try:
+            playlist_id = int(id_from_url[1])
+        except (IndexError, ValueError):
+            logger.error(f"Invalid playlist URL -- {p}")
+            sys.exit(1)
+
+        mon = monitor.Monitor()
+        mon.playlist_id = playlist_id
+
+        # if remove:
+        #     mon.stop_monitoring()
+        # else:
+        mon.start_monitoring_playlist()
 
     for u in url:
         id_from_url = u.split('/artist/')

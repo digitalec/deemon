@@ -1,5 +1,6 @@
-from deemon import __version__
+from deemon import __version__, __dbversion__
 from deemon.app import utils
+from packaging.version import parse as parse_version
 from datetime import datetime
 from pathlib import Path
 import logging
@@ -57,17 +58,21 @@ class DBHelper:
                        "('artist_id' INTEGER, 'artist_name' TEXT, 'bitrate' INTEGER, "
                        "'record_type' TEXT, 'alerts' INTEGER)")
 
+        sql_playlists = ("CREATE TABLE IF NOT EXISTS 'playlists' "
+                         "('id' INTEGER, 'title' TEXT, 'url' TEXT)")
+
         sql_releases = ("CREATE TABLE IF NOT EXISTS 'releases' "
                         "('artist_id' INTEGER, 'artist_name' TEXT, 'album_id' INTEGER, "
                         "'album_name' TEXT, 'album_release' TEXT, 'album_added' INTEGER, "
                         "'future_release' INTEGER DEFAULT 0)")
 
         self.query(sql_monitor)
+        self.query(sql_playlists)
         self.query(sql_releases)
         self.query("CREATE TABLE IF NOT EXISTS 'deemon' ('property' TEXT, 'value' TEXT)")
         self.query("CREATE UNIQUE INDEX 'idx_property' ON 'deemon' ('property')")
         self.query("CREATE UNIQUE INDEX 'idx_artist_id' ON 'monitor' ('artist_id')")
-        self.query(f"INSERT INTO 'deemon' ('property', 'value') VALUES ('version', '{__version__}')")
+        self.query(f"INSERT INTO 'deemon' ('property', 'value') VALUES ('version', '{__dbversion__}')")
         self.commit()
 
     def get_db_version(self):
@@ -78,6 +83,17 @@ class DBHelper:
 
         logger.debug(f"Database version {version}")
         return version
+
+    def do_upgrade(self, current_ver):
+        # Upgrade database v1.0 to v1.1
+        if current_ver < parse_version("1.1"):
+            sql_playlists = ("CREATE TABLE IF NOT EXISTS 'playlists' "
+                             "('id' INTEGER, 'title' TEXT, 'url' TEXT)")
+            self.query(sql_playlists)
+            self.query(f"INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('version', '{__dbversion__}')")
+            self.commit()
+            logger.debug(f"Database upgraded to version {__dbversion__}")
+
 
     def query(self, query: str, values=None):
         if values is None:
@@ -146,3 +162,10 @@ class DBHelper:
         sql = "SELECT * FROM 'releases' WHERE album_id = :id"
         result = self.query(sql, values).fetchone()
         return result
+
+    def monitor_playlist(self, playlist):
+        values = {'id': playlist['id'], 'title': playlist['title'],
+                  'url': playlist['link']}
+        sql = "INSERT OR REPLACE INTO playlists ('id', 'title', 'url') VALUES (:id, :title, :url)"
+        self.query(sql, values)
+        self.commit()
