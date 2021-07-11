@@ -13,7 +13,7 @@ class ShowStats(Deemon):
     def __init__(self):
         super().__init__()
 
-    def artists(self):
+    def artists(self, csv=False):
         monitored_artists = self.db.get_all_monitored_artists()
         if len(monitored_artists) == 0:
             logger.info("No artists are being monitored")
@@ -21,17 +21,20 @@ class ShowStats(Deemon):
 
         artist_data = [artist[1] for artist in monitored_artists]
 
-        if len(artist_data) > 10:
-            artist_data = self.truncate_long_artists(artist_data)
-
-            if len(artist_data) % 2 != 0:
-                artist_data.append(" ")
-
-            for a, b in zip(artist_data[0::2], artist_data[1::2]):
-                print('{:<30}{:<}'.format(a, b))
+        if csv:
+            logger.info(', '.join(artist_data))
         else:
-            for artist in artist_data:
-                print(artist)
+            if len(artist_data) > 10:
+                artist_data = self.truncate_long_artists(artist_data)
+
+                if len(artist_data) % 2 != 0:
+                    artist_data.append(" ")
+
+                for a, b in zip(artist_data[0::2], artist_data[1::2]):
+                    print('{:<30}{:<}'.format(a, b))
+            else:
+                for artist in artist_data:
+                    print(artist)
 
     @staticmethod
     def truncate_long_artists(all_artists):
