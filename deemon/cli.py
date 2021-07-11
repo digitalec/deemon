@@ -75,10 +75,11 @@ def download_command(artist, artist_id, album_id, url, input_file, bitrate, reco
 
 @run.command(name='monitor', context_settings={"ignore_unknown_options": True})
 @click.argument('artist', nargs=-1)
-@click.option('-i', '--artist-id', type=int, metavar="ID", help="Monitor artist by ID")
-@click.option('-u', '--url', metavar="URL", help='Monitor artist by URL')
-@click.option('-R', '--remove', is_flag=True, help='Stop montioring an artist')
-def monitor_command(artist, artist_id, remove, url):
+@click.option('-i', '--artist-id', multiple=True, type=int, metavar="ID", help="Monitor artist by ID")
+@click.option('-u', '--url', multiple=True, metavar="URL", help='Monitor artist by URL')
+@click.option('-s', '--skip-refresh', is_flag=True, help='Skip refresh after adding or removing artist')
+@click.option('-R', '--remove', is_flag=True, help='Stop monitoring an artist')
+def monitor_command(artist, artist_id, skip_refresh, remove, url):
     """
     Monitor artist for new releases by ID, URL or name.
 
@@ -89,28 +90,50 @@ def monitor_command(artist, artist_id, remove, url):
         monitor --url https://www.deezer.com/us/artist/000
     """
 
-    mon = monitor.Monitor()
+    artists = ' '.join(artist)
+    artists = artists.split(',')
+    artists = [x.lstrip() for x in artists]
 
-    if url:
-        id_from_url = url.split('/artist/')
+    artist_id = list(artist_id)
+    url = list(url)
+
+    for a in artists:
+        mon = monitor.Monitor()
+        mon.artist = a
+
+        if remove:
+            mon.stop_monitoring()
+        else:
+            mon.start_monitoring()
+
+    for aid in artist_id:
+        mon = monitor.Monitor()
+        mon.artist_id = aid
+
+        if remove:
+            mon.stop_monitoring()
+        else:
+            mon.start_monitoring()
+
+    for u in url:
+        id_from_url = u.split('/artist/')
         try:
             artist_id = int(id_from_url[1])
         except (IndexError, ValueError):
             logger.error(f"Invalid URL -- {url}")
             sys.exit(1)
 
-    if artist_id:
+        mon = monitor.Monitor()
         mon.artist_id = artist_id
-    else:
-        mon.artist = artist
 
-    if remove:
-        mon.stop_monitoring()
-    else:
-        mon.start_monitoring()
+        if remove:
+            mon.stop_monitoring()
+        else:
+            mon.start_monitoring()
 
-    refresh = Refresh()
-    refresh.refresh()
+    if not skip_refresh:
+        refresh = Refresh()
+        refresh.refresh()
 
 
 @run.command(name='refresh')
