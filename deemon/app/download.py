@@ -58,6 +58,7 @@ class Download(Deemon):
 
             for q in queue:
                 logger.info(f"+ {q.artist_name} - {q.album_title}... ")
+                logger.debug(f"bitrate set to {q.bitrate}")
                 self.di.download_url([q.url], q.bitrate)
 
             print("")
