@@ -31,13 +31,13 @@ def run(verbose):
     please visit https://github.com/digitalec/deemon
     """
     setup_logger(log_level='DEBUG' if verbose else 'INFO', log_file=utils.get_log_file())
-    # TODO UNCOMMENT
-    # new_version = utils.check_version()
-    # if new_version:
-    #     print("*" * 50)
-    #     logger.info(f"* New version is available: v{__version__} -> v{new_version}")
-    #     logger.info("* To upgrade, run `pip install --upgrade deemon`")
-    #     print("*" * 50)
+
+    new_version = utils.check_version()
+    if new_version:
+        print("*" * 50)
+        logger.info(f"* New version is available: v{__version__} -> v{new_version}")
+        logger.info("* To upgrade, run `pip install --upgrade deemon`")
+        print("*" * 50)
 
 
 @run.command(name='test')
@@ -156,9 +156,10 @@ def monitor_command(artist, playlist, artist_id, skip_refresh, remove, url):
 
 
 @run.command(name='refresh')
-def refresh_command():
+@click.option('-s', '--skip-download', is_flag=True, help="Skips downloading of new releases")
+def refresh_command(skip_download):
     """Check artists for new releases"""
-    refresh = Refresh()
+    refresh = Refresh(skip_download=skip_download)
     refresh.refresh()
 
 

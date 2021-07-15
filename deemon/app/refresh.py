@@ -9,13 +9,15 @@ logger = logging.getLogger(__name__)
 
 class Refresh(Deemon):
 
-    def __init__(self, artist_id: list = None, skip_download: bool = False):
+    def __init__(self, artist_id=None, skip_download=False):
         super().__init__()
 
         if artist_id is None:
             self.artist_id = []
 
         self.skip_download = skip_download
+        if self.skip_download:
+            logger.debug("--skip-download has been set, releases will only be added to the database")
         self.dz = deezer.Deezer()
         self.new_release_count = 0
         self.monitored_artists = []
@@ -60,6 +62,7 @@ class Refresh(Deemon):
 
         for item in progress:
             progress.set_description_str(f"Refreshing playlists")
+            # TODO check if playlist exists before adding it again
             new_playlist = False
 
             playlist = self.dz.api.get_playlist(item[0])
