@@ -31,12 +31,13 @@ def run(verbose):
     please visit https://github.com/digitalec/deemon
     """
     setup_logger(log_level='DEBUG' if verbose else 'INFO', log_file=utils.get_log_file())
-    new_version = utils.check_version()
-    if new_version:
-        print("*" * 50)
-        logger.info(f"* New version is available: v{__version__} -> v{new_version}")
-        logger.info("* To upgrade, run `pip install --upgrade deemon`")
-        print("*" * 50)
+    # TODO UNCOMMENT
+    # new_version = utils.check_version()
+    # if new_version:
+    #     print("*" * 50)
+    #     logger.info(f"* New version is available: v{__version__} -> v{new_version}")
+    #     logger.info("* To upgrade, run `pip install --upgrade deemon`")
+    #     print("*" * 50)
 
 
 @run.command(name='test')

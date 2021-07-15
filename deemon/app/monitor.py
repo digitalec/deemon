@@ -1,20 +1,18 @@
 from sqlite3 import OperationalError
-from deemon.app import db, settings
+from deemon.app import Deemon, download
 import logging
 import deezer
 
 logger = logging.getLogger(__name__)
 
 
-class Monitor:
+class Monitor(Deemon):
 
     def __init__(self):
-        self.settings = settings.Settings()
-        self.config = self.settings.config
+        super().__init__()
         self.artist = None
         self.artist_id = None
         self.playlist_id = None
-        self.db = db.DBHelper(self.settings.db_path)
         self.dz = deezer.Deezer()
 
     def get_artist_info(self):
@@ -88,6 +86,7 @@ class Monitor:
         self.db.commit()
 
     def start_monitoring_playlist(self):
+        found_new_tracks = False
         try:
             playlist = self.dz.api.get_playlist(self.playlist_id)
             self.db.monitor_playlist(playlist)

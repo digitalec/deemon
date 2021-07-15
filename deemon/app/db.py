@@ -53,13 +53,17 @@ class DBHelper:
 
     def create_new_database(self):
         logger.debug("Updating database structure")
-
+        # TODO MOVE TO ONE SQL STATEMENT OR BREAK INTO VERSIONED GROUPS
         sql_monitor = ("CREATE TABLE IF NOT EXISTS 'monitor' "
                        "('artist_id' INTEGER, 'artist_name' TEXT, 'bitrate' INTEGER, "
                        "'record_type' TEXT, 'alerts' INTEGER)")
 
         sql_playlists = ("CREATE TABLE IF NOT EXISTS 'playlists' "
-                         "('id' INTEGER, 'title' TEXT, 'url' TEXT)")
+                         "('id' INTEGER UNIQUE, 'title' TEXT, 'url' TEXT)")
+
+        sql_playlist_tracks = ("CREATE TABLE IF NOT EXISTS 'playlist_tracks' "
+                               "('track_id' INTEGER, 'playlist_id' INTEGER, 'artist_id' INTEGER, "
+                               "'artist_name' TEXT, 'track_name' TEXT, 'track_added' TEXT)")
 
         sql_releases = ("CREATE TABLE IF NOT EXISTS 'releases' "
                         "('artist_id' INTEGER, 'artist_name' TEXT, 'album_id' INTEGER, "
@@ -68,6 +72,7 @@ class DBHelper:
 
         self.query(sql_monitor)
         self.query(sql_playlists)
+        self.query(sql_playlist_tracks)
         self.query(sql_releases)
         self.query("CREATE TABLE IF NOT EXISTS 'deemon' ('property' TEXT, 'value' TEXT)")
         self.query("CREATE UNIQUE INDEX 'idx_property' ON 'deemon' ('property')")
@@ -88,14 +93,18 @@ class DBHelper:
         # Upgrade database v1.0 to v1.1
         if current_ver < parse_version("1.1"):
             sql_playlists = ("CREATE TABLE IF NOT EXISTS 'playlists' "
-                             "('id' INTEGER, 'title' TEXT, 'url' TEXT)")
+                             "('id' INTEGER UNIQUE, 'title' TEXT, 'url' TEXT)")
+
+            sql_playlist_tracks = ("CREATE TABLE IF NOT EXISTS 'playlist_tracks' "
+                                   "('track_id' INTEGER, 'playlist_id' INTEGER, 'artist_id' INTEGER, "
+                                   "'artist_name' TEXT, 'track_name' TEXT, 'track_added' TEXT)")
             self.query(sql_playlists)
+            self.query(sql_playlist_tracks)
             self.query(f"INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('version', '{__dbversion__}')")
             self.commit()
             logger.debug(f"Database upgraded to version {__dbversion__}")
 
-
-    def query(self, query: str, values=None):
+    def query(self, query, values=None):
         if values is None:
             values = {}
         result = self.cursor.execute(query, values)
@@ -169,3 +178,8 @@ class DBHelper:
         sql = "INSERT OR REPLACE INTO playlists ('id', 'title', 'url') VALUES (:id, :title, :url)"
         self.query(sql, values)
         self.commit()
+
+    def get_all_monitored_playlists(self):
+        result = self.query("SELECT * FROM playlists")
+        playlists = [x for x in result]
+        return playlists

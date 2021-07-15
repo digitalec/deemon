@@ -1,4 +1,5 @@
 from deemon.app import Deemon, utils, download, notify
+import time
 import tqdm
 import logging
 import deezer
@@ -18,6 +19,7 @@ class Refresh(Deemon):
         self.dz = deezer.Deezer()
         self.new_release_count = 0
         self.monitored_artists = []
+        self.monitored_playlists = []
         self.queue_list = []
         self.new_releases = []
 
@@ -45,7 +47,50 @@ class Refresh(Deemon):
 
         self.new_releases.append({'release_date': release_date, 'releases': [{'artist': artist, 'album': album}]})
 
+    def refresh_playlists(self):
+        logger.debug("Refreshing playlists")
+        found_new_tracks = False
+        self.monitored_playlists = self.db.get_all_monitored_playlists()
+
+        if not self.monitored_playlists:
+            return
+
+        progress = tqdm.tqdm(self.monitored_playlists, ascii=" #",
+                             bar_format='{desc}...  {n_fmt}/{total_fmt} [{bar:40}] {percentage:3.0f}%')
+
+        for item in progress:
+            progress.set_description_str(f"Refreshing playlists")
+            new_playlist = False
+
+            playlist = self.dz.api.get_playlist(item[0])
+
+            for track in playlist['tracks']['data']:
+                vals = {'playlist_id': playlist['id'],
+                        'track_id': track['id'],
+                        'track_name': track['title'],
+                        'artist_id': track['artist']['id'],
+                        'artist_name': track['artist']['name'],
+                        'track_added': int(time.time())}
+
+                sql_check_exists = "SELECT * FROM 'playlist_tracks' " \
+                                   "WHERE track_id = :track_id AND playlist_id = :playlist_id"
+
+                playlist_track_exists = self.db.query(sql_check_exists, vals).fetchone()
+
+                if not playlist_track_exists:
+                    found_new_tracks = True
+                    logger.info(f"New track added to playlist '{playlist['title']}': {track['artist']['name']} - {track['title']}")
+                    self.db.query("INSERT INTO 'playlist_tracks' "
+                                  "('track_id', 'playlist_id', 'artist_id', "
+                                  "'artist_name', 'track_name', 'track_added') "
+                                  "VALUES (:track_id, :playlist_id, :artist_id, :artist_name, "
+                                  ":track_name, :track_added)", vals)
+
+            if found_new_tracks:
+                self.queue_list.append(download.QueueItem(url=playlist['link'], playlist=playlist['title']))
+
     def refresh(self):
+        self.refresh_playlists()
         logger.debug(f"Refreshing artists")
         self.get_monitored_artists()
 
@@ -53,14 +98,14 @@ class Refresh(Deemon):
             logger.info("At least one artist needs to be monitored before you can refresh!")
             return
 
-        progress = tqdm.tqdm(self.monitored_artists, bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt} '
-                                                                '({elapsed}{postfix})')
+        progress = tqdm.tqdm(self.monitored_artists, ascii=" #",
+                             bar_format='{desc}...  {n_fmt}/{total_fmt} [{bar:40}] {percentage:3.0f}%')
 
         for artist in progress:
-            progress.set_description("Refreshing")
             self.new_release_count = 0
             new_artist = False
             artist = {"id": artist[0], "name": artist[1], "bitrate": self.config["bitrate"], "record_type": artist[3]}
+            progress.set_description_str(f"Refreshing artists")
             artist_exists = self.db.get_artist_by_id(artist_id=artist["id"])
             albums = self.dz.api.get_artist_albums(artist["id"])
 
