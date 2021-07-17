@@ -15,15 +15,19 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class DeemixInterface():
+class DeemixInterface:
     def __init__(self, download_path, config_dir=None):
         super().__init__()
         logger.debug("Initializing deemix library")
         self.dz = Deezer()
+        self.download_path = download_path
         self.config_dir = localpaths.getConfigFolder()
+        self.dx_settings = loadSettings(self.config_dir)
+        if self.download_path is not None:
+            self.download_path = Path(self.download_path)
+            self.dx_settings['downloadLocation'] = str(self.download_path)
 
     def download_url(self, url, bitrate):
-        settings = loadSettings(self.config_dir)
         links = []
         for link in url:
             if ';' in link:
@@ -35,9 +39,9 @@ class DeemixInterface():
             download_object = generateDownloadObject(self.dz, link, bitrate)
             if isinstance(download_object, list):
                 for obj in download_object:
-                    Downloader(self.dz, obj, settings).start()
+                    Downloader(self.dz, obj, self.dx_settings).start()
             else:
-                Downloader(self.dz, download_object, settings).start()
+                Downloader(self.dz, download_object, self.dx_settings).start()
 
     def login(self):
         logger.info("Verifying ARL is valid, please wait...")
