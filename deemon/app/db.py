@@ -133,7 +133,7 @@ class DBHelper:
             result = self.query("SELECT * FROM monitor WHERE artist_id = :artist", values).fetchone()
         else:
             values = {'artist': artist}
-            result = self.query("SELECT * FROM monitor WHERE artist_name = :artist COLLATE NOCASE", values).fetchone()
+            result = self.query("SELECT * FROM monitor WHERE artist_name = ':artist' COLLATE NOCASE", values).fetchone()
         return result
 
     def add_new_release(self, artist_id, artist_name, album_id, album_name, release_date, future_release):

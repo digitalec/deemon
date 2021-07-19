@@ -36,7 +36,7 @@ class Monitor(Deemon):
     def start_monitoring(self):
         artist_info = self.get_artist_info()
         values = {'artist_name': self.artist}
-        sql = "SELECT * FROM monitor WHERE artist_name = :artist_name"
+        sql = "SELECT * FROM monitor WHERE artist_name = ':artist_name'"
         already_monitored = self.db.query(sql, values).fetchone()
         if already_monitored:
             logger.debug(f"Artist: {self.artist} is already monitored, skipping...")
@@ -72,8 +72,8 @@ class Monitor(Deemon):
             sql_monitor = "DELETE FROM 'monitor' WHERE artist_id = :artist_id"
         else:
             values = {'artist': self.artist}
-            sql_releases = "DELETE FROM 'releases' WHERE artist_name = :artist COLLATE NOCASE"
-            sql_monitor = "DELETE FROM 'monitor' WHERE artist_name = :artist COLLATE NOCASE"
+            sql_releases = "DELETE FROM 'releases' WHERE artist_name = ':artist' COLLATE NOCASE"
+            sql_monitor = "DELETE FROM 'monitor' WHERE artist_name = ':artist' COLLATE NOCASE"
 
         result = self.db.query(sql_monitor, values)
         if result.rowcount > 0:
