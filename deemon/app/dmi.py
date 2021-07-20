@@ -16,16 +16,27 @@ logger = logging.getLogger(__name__)
 
 
 class DeemixInterface:
-    def __init__(self, download_path, config_dir=None):
+    def __init__(self, download_path, config_dir):
         super().__init__()
         logger.debug("Initializing deemix library")
         self.dz = Deezer()
         self.download_path = download_path
-        self.config_dir = localpaths.getConfigFolder()
+        self.config_dir = config_dir
+
+        if self.config_dir == "":
+            self.config_dir = localpaths.getConfigFolder()
+        else:
+            self.config_dir = Path(self.config_dir)
+
         self.dx_settings = loadSettings(self.config_dir)
-        if self.download_path is not None:
+
+        if self.download_path != "":
             self.download_path = Path(self.download_path)
             self.dx_settings['downloadLocation'] = str(self.download_path)
+
+        logger.debug(f"deemix Config Path: {self.config_dir}")
+        logger.debug(f"deemix Download Path: {self.dx_settings['downloadLocation']}")
+
 
     def download_url(self, url, bitrate):
         links = []
@@ -45,7 +56,7 @@ class DeemixInterface:
 
     def login(self):
         logger.info("Verifying ARL is valid, please wait...")
-        if Path(self.config_dir).is_dir():
+        if self.config_dir.is_dir():
             if Path(self.config_dir / '.arl').is_file():
                 with open(self.config_dir / '.arl', 'r') as f:
                     arl = f.readline().rstrip("\n")
