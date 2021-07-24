@@ -1,4 +1,4 @@
-![](deemon/assets/images/logo.png "deemon")
+<img src="deemon/assets/images/deemon.png" alt="deemon" width="300">
 
 [About](#about) | [Installation](#installation) | [Documentation](https://digitalec.github.io/deemon) | [Support](#support)
 
