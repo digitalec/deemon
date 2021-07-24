@@ -31,6 +31,7 @@ def run(verbose):
     please visit https://github.com/digitalec/deemon
     """
     setup_logger(log_level='DEBUG' if verbose else 'INFO', log_file=utils.get_log_file())
+
     new_version = utils.check_version()
     if new_version:
         print("*" * 50)
@@ -75,10 +76,12 @@ def download_command(artist, artist_id, album_id, url, input_file, bitrate, reco
 
 @run.command(name='monitor', context_settings={"ignore_unknown_options": True})
 @click.argument('artist', nargs=-1)
-@click.option('-i', '--artist-id', type=int, metavar="ID", help="Monitor artist by ID")
-@click.option('-u', '--url', metavar="URL", help='Monitor artist by URL')
-@click.option('-R', '--remove', is_flag=True, help='Stop montioring an artist')
-def monitor_command(artist, artist_id, remove, url):
+@click.option('-i', '--artist-id', multiple=True, type=int, metavar="ID", help="Monitor artist by ID")
+@click.option('-p', '--playlist', multiple=True, metavar="URL", help='Monitor Deezer playlist by URL', hidden=True)
+@click.option('-u', '--url', multiple=True, metavar="URL", help='Monitor artist by URL')
+@click.option('-s', '--skip-refresh', is_flag=True, help='Skip refresh after adding or removing artist')
+@click.option('-R', '--remove', is_flag=True, help='Stop monitoring an artist')
+def monitor_command(artist, playlist, artist_id, skip_refresh, remove, url):
     """
     Monitor artist for new releases by ID, URL or name.
 
@@ -89,48 +92,89 @@ def monitor_command(artist, artist_id, remove, url):
         monitor --url https://www.deezer.com/us/artist/000
     """
 
-    mon = monitor.Monitor()
+    artists = ' '.join(artist)
+    artists = artists.split(',')
+    artists = [x.lstrip() for x in artists]
 
-    if url:
-        id_from_url = url.split('/artist/')
+    artist_id = list(artist_id)
+    url = list(url)
+    playlists = list(playlist)
+
+    for a in artists:
+        mon = monitor.Monitor()
+        mon.artist = a
+
+        if remove:
+            mon.stop_monitoring()
+        else:
+            mon.start_monitoring()
+
+    for aid in artist_id:
+        mon = monitor.Monitor()
+        mon.artist_id = aid
+
+        if remove:
+            mon.stop_monitoring()
+        else:
+            mon.start_monitoring()
+
+    for p in playlists:
+        id_from_url = p.split('/playlist/')
+        try:
+            playlist_id = int(id_from_url[1])
+        except (IndexError, ValueError):
+            logger.error(f"Invalid playlist URL -- {p}")
+            sys.exit(1)
+
+        mon = monitor.Monitor()
+        mon.playlist_id = playlist_id
+
+        # if remove:
+        #     mon.stop_monitoring()
+        # else:
+        mon.start_monitoring_playlist()
+
+    for u in url:
+        id_from_url = u.split('/artist/')
         try:
             artist_id = int(id_from_url[1])
         except (IndexError, ValueError):
             logger.error(f"Invalid URL -- {url}")
             sys.exit(1)
 
-    if artist_id:
+        mon = monitor.Monitor()
         mon.artist_id = artist_id
-    else:
-        mon.artist = artist
 
-    if remove:
-        mon.stop_monitoring()
-    else:
-        mon.start_monitoring()
+        if remove:
+            mon.stop_monitoring()
+        else:
+            mon.start_monitoring()
 
-    refresh = Refresh()
-    refresh.refresh()
+    if not skip_refresh:
+        refresh = Refresh()
+        refresh.refresh()
 
 
 @run.command(name='refresh')
-def refresh_command():
+@click.option('-s', '--skip-download', is_flag=True, help="Skips downloading of new releases")
+def refresh_command(skip_download):
     """Check artists for new releases"""
-    refresh = Refresh()
+    refresh = Refresh(skip_download=skip_download)
     refresh.refresh()
 
 
 @run.command(name='show')
 @click.option('-a', '--artists', is_flag=True, help='Show artists currently being monitored')
+@click.option('-c', '--csv', is_flag=True, help='Used with --artists, output artists as CSV')
 @click.option('-n', '--new-releases', metavar='N', type=int, help='Show new releases from last N days')
-@click.option('-s', '--stats', is_flag=True, help='Show various usage stats')
-def show_command(artists, new_releases, stats):
+#@click.option('-s', '--stats', is_flag=True, help='Show various usage stats')
+def show_command(artists, new_releases, stats, csv):
     """
     Show monitored artists, latest new releases and various statistics
     """
     show = ShowStats()
     if artists:
-        show.artists()
+        show.artists(csv)
     elif new_releases:
         show.releases(new_releases)
     elif stats:

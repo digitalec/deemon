@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import deemix
 import plexapi.exceptions
 from plexapi.server import PlexServer
 from deemon.app import dmi, notify
@@ -13,12 +14,16 @@ logger = logging.getLogger(__name__)
 
 class QueueItem:
 
-    def __init__(self, artist: dict, album: dict):
-        self.artist_name = artist["name"]
-        self.bitrate = artist["bitrate"]
-        self.album_id = album["id"]
-        self.album_title = album["title"]
-        self.url = album["link"]
+    def __init__(self, artist=None, album=None, url=None, playlist=None):
+        if artist:
+            self.artist_name = artist["name"]
+            self.album_id = album["id"]
+            self.album_title = album["title"]
+            self.url = album["link"]
+        if url:
+            self.artist_name = None
+            self.url = url
+            self.playlist_name = playlist
 
 
 class Download(Deemon):
@@ -27,6 +32,7 @@ class Download(Deemon):
         super().__init__()
         self.dz = deezer.Deezer()
         self.di = dmi.DeemixInterface(self.config["download_path"], self.config["deemix_path"])
+        deemix.itemgen.generatePlaylistItem = self.di.generatePlaylistItem
         self.deemix_logger = logging.getLogger("deemix")
         self.queue_list = []
         self.bitrate = self.config["bitrate"]
@@ -57,8 +63,13 @@ class Download(Deemon):
             logger.info("Sending " + str(num_queued) + " release(s) to deemix for download:")
 
             for q in queue:
-                logger.info(f"+ {q.artist_name} - {q.album_title}... ")
-                self.di.download_url([q.url], q.bitrate)
+                logger.debug(f"Queued: {vars(q)}")
+                if q.artist_name:
+                    logger.info(f"+ {q.artist_name} - {q.album_title}... ")
+                else:
+                    logger.info(f"+ Updating playlist: {q.playlist_name}...")
+                logger.debug(f"bitrate set to {self.bitrate}")
+                self.di.download_url([q.url], self.bitrate)
 
             print("")
             logger.info("Downloads complete!")

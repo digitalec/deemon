@@ -1,19 +1,18 @@
 from sqlite3 import OperationalError
-from deemon.app import db, settings
+from deemon.app import Deemon, download
 import logging
 import deezer
 
 logger = logging.getLogger(__name__)
 
 
-class Monitor:
+class Monitor(Deemon):
 
-    def __init__(self, artist=None, artist_id=None):
-        self.settings = settings.Settings()
-        self.config = self.settings.config
-        self.artist = artist
-        self.artist_id = artist_id
-        self.db = db.DBHelper(self.settings.db_path)
+    def __init__(self):
+        super().__init__()
+        self.artist = None
+        self.artist_id = None
+        self.playlist_id = None
         self.dz = deezer.Deezer()
 
     def get_artist_info(self):
@@ -37,7 +36,7 @@ class Monitor:
     def start_monitoring(self):
         artist_info = self.get_artist_info()
         values = {'artist_name': self.artist}
-        sql = "SELECT * FROM monitor WHERE artist_name = :artist_name"
+        sql = "SELECT * FROM monitor WHERE artist_name = ':artist_name'"
         already_monitored = self.db.query(sql, values).fetchone()
         if already_monitored:
             logger.debug(f"Artist: {self.artist} is already monitored, skipping...")
@@ -73,8 +72,8 @@ class Monitor:
             sql_monitor = "DELETE FROM 'monitor' WHERE artist_id = :artist_id"
         else:
             values = {'artist': self.artist}
-            sql_releases = "DELETE FROM 'releases' WHERE artist_name = :artist COLLATE NOCASE"
-            sql_monitor = "DELETE FROM 'monitor' WHERE artist_name = :artist COLLATE NOCASE"
+            sql_releases = "DELETE FROM 'releases' WHERE artist_name = ':artist' COLLATE NOCASE"
+            sql_monitor = "DELETE FROM 'monitor' WHERE artist_name = ':artist' COLLATE NOCASE"
 
         result = self.db.query(sql_monitor, values)
         if result.rowcount > 0:
@@ -85,3 +84,12 @@ class Monitor:
             logger.error(f"Artist '{self.artist}' not found")
 
         self.db.commit()
+
+    def start_monitoring_playlist(self):
+        found_new_tracks = False
+        try:
+            playlist = self.dz.api.get_playlist(self.playlist_id)
+            self.db.monitor_playlist(playlist)
+        except deezer.api.DataException:
+            logger.error("Playlist ID not found")
+            return

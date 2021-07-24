@@ -1,5 +1,6 @@
-from deemon import __version__
+from deemon import __version__, __dbversion__
 from deemon.app import utils
+from packaging.version import parse as parse_version
 from datetime import datetime
 from pathlib import Path
 import logging
@@ -52,10 +53,17 @@ class DBHelper:
 
     def create_new_database(self):
         logger.debug("Updating database structure")
-
+        # TODO MOVE TO ONE SQL STATEMENT OR BREAK INTO VERSIONED GROUPS
         sql_monitor = ("CREATE TABLE IF NOT EXISTS 'monitor' "
                        "('artist_id' INTEGER, 'artist_name' TEXT, 'bitrate' INTEGER, "
                        "'record_type' TEXT, 'alerts' INTEGER)")
+
+        sql_playlists = ("CREATE TABLE IF NOT EXISTS 'playlists' "
+                         "('id' INTEGER UNIQUE, 'title' TEXT, 'url' TEXT)")
+
+        sql_playlist_tracks = ("CREATE TABLE IF NOT EXISTS 'playlist_tracks' "
+                               "('track_id' INTEGER, 'playlist_id' INTEGER, 'artist_id' INTEGER, "
+                               "'artist_name' TEXT, 'track_name' TEXT, 'track_added' TEXT)")
 
         sql_releases = ("CREATE TABLE IF NOT EXISTS 'releases' "
                         "('artist_id' INTEGER, 'artist_name' TEXT, 'album_id' INTEGER, "
@@ -63,11 +71,13 @@ class DBHelper:
                         "'future_release' INTEGER DEFAULT 0)")
 
         self.query(sql_monitor)
+        self.query(sql_playlists)
+        self.query(sql_playlist_tracks)
         self.query(sql_releases)
         self.query("CREATE TABLE IF NOT EXISTS 'deemon' ('property' TEXT, 'value' TEXT)")
         self.query("CREATE UNIQUE INDEX 'idx_property' ON 'deemon' ('property')")
         self.query("CREATE UNIQUE INDEX 'idx_artist_id' ON 'monitor' ('artist_id')")
-        self.query(f"INSERT INTO 'deemon' ('property', 'value') VALUES ('version', '{__version__}')")
+        self.query(f"INSERT INTO 'deemon' ('property', 'value') VALUES ('version', '{__dbversion__}')")
         self.commit()
 
     def get_db_version(self):
@@ -79,7 +89,22 @@ class DBHelper:
         logger.debug(f"Database version {version}")
         return version
 
-    def query(self, query: str, values=None):
+    def do_upgrade(self, current_ver):
+        # Upgrade database v1.0 to v1.1
+        if current_ver < parse_version("1.1"):
+            sql_playlists = ("CREATE TABLE IF NOT EXISTS 'playlists' "
+                             "('id' INTEGER UNIQUE, 'title' TEXT, 'url' TEXT)")
+
+            sql_playlist_tracks = ("CREATE TABLE IF NOT EXISTS 'playlist_tracks' "
+                                   "('track_id' INTEGER, 'playlist_id' INTEGER, 'artist_id' INTEGER, "
+                                   "'artist_name' TEXT, 'track_name' TEXT, 'track_added' TEXT)")
+            self.query(sql_playlists)
+            self.query(sql_playlist_tracks)
+            self.query(f"INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('version', '{__dbversion__}')")
+            self.commit()
+            logger.debug(f"Database upgraded to version {__dbversion__}")
+
+    def query(self, query, values=None):
         if values is None:
             values = {}
         result = self.cursor.execute(query, values)
@@ -108,7 +133,7 @@ class DBHelper:
             result = self.query("SELECT * FROM monitor WHERE artist_id = :artist", values).fetchone()
         else:
             values = {'artist': artist}
-            result = self.query("SELECT * FROM monitor WHERE artist_name = :artist COLLATE NOCASE", values).fetchone()
+            result = self.query("SELECT * FROM monitor WHERE artist_name = ':artist' COLLATE NOCASE", values).fetchone()
         return result
 
     def add_new_release(self, artist_id, artist_name, album_id, album_name, release_date, future_release):
@@ -146,3 +171,15 @@ class DBHelper:
         sql = "SELECT * FROM 'releases' WHERE album_id = :id"
         result = self.query(sql, values).fetchone()
         return result
+
+    def monitor_playlist(self, playlist):
+        values = {'id': playlist['id'], 'title': playlist['title'],
+                  'url': playlist['link']}
+        sql = "INSERT OR REPLACE INTO playlists ('id', 'title', 'url') VALUES (:id, :title, :url)"
+        self.query(sql, values)
+        self.commit()
+
+    def get_all_monitored_playlists(self):
+        result = self.query("SELECT * FROM playlists")
+        playlists = [x for x in result]
+        return playlists

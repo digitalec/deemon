@@ -20,7 +20,7 @@ class BatchJobs(Deemon):
                     num_to_import = len(import_list)
                     logger.debug(f"Detected {num_to_import} artist(s) to import")
             elif Path(import_artists).is_dir():
-                import_list = [x for x in Path(import_artists).iterdir() if x.is_dir()]
+                import_list = [x.relative_to(import_artists) for x in sorted(Path(import_artists).iterdir()) if x.is_dir()]
                 num_to_import = len(import_list)
                 logger.debug(f"Detected {num_to_import} artist(s) to import")
             else:
