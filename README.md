@@ -1,28 +1,19 @@
 ![](deemon/assets/images/logo.png "deemon")
 
-[About](#about) | [Upgrading from 0.4.x](#migrating) | [Installation](#installation) | [Support](#support) | [Documentation](https://digitalec.github.io/deemon)
+[About](#about) | [Installation](#installation) | [Documentation](https://digitalec.github.io/deemon) | [Support](#support)
 
-![PyPI](https://img.shields.io/pypi/v/deemon?style=flat-square)
-![PyPI - Python Version](https://img.shields.io/pypi/pyversions/deemon?style=flat-square)
-![PyPI - License](https://img.shields.io/pypi/l/deemon?style=flat-square)
+![PyPI](https://img.shields.io/pypi/v/deemon?style=flat)
 [![Downloads](https://pepy.tech/badge/deemon)](https://pepy.tech/project/deemon)
-![GitHub last commit](https://img.shields.io/github/last-commit/digitalec/deemon?style=flat-square)
-![Discord](https://img.shields.io/discord/831356172464160838?style=flat-square)
-
+![GitHub last commit](https://img.shields.io/github/last-commit/digitalec/deemon?style=flat)
+![GitHub last release](https://img.shields.io/github/release-date/digitalec/deemon?style=flat)
+![Discord](https://img.shields.io/discord/831356172464160838?style=flat)
 
 
 ### About
-deemon is an automation tool that relies on the deemix library and
-the deezer-py API module to monitor a specified list of artists for new releases
+deemon is a command line tool written in Python that monitors artists for new releases, provides email notifications and can also integrate with the deemix library to automatically download new releases.
 
 ### Support
 [Open an Issue](https://github.com/digitalec/deemon/issues/new) | [Discord](https://discord.gg/KzNCG2tkvn)
-
-
-### Upgrading from 0.4.x or earlier
-Please note, the deemon CLI has changed significantly and no longer accepts many of the switches/commands that were previously used. This was done to provide a better, more natural, user experience.
-
-Please take a look at the help via `deemon --help` or by reading the [documentation](https://digitalec.github.io/deemon).
 
 ### Installation
 
@@ -35,3 +26,5 @@ $ pip install deemon
 #### From source
 ```bash
 $ pip install -r requirements.txt
+$ python3 -m deemon
+```
