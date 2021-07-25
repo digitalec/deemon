@@ -14,7 +14,7 @@ parent: Commands
 {:toc}
 
 ---
-Monitoring artists is the core feature of deemon. Using the `monitor` command, you can monitor artists by name, their Deezer ID or Deezer URL.
+Monitoring artists is the core feature of deemon. Using the `monitor` command, you can monitor artists by name, their Deezer ID or Deezer URL. Starting with version 1.1, you can now provide multiple values in CSV format.
 
 ## Monitor by Artist Name
 This is the easiest way to monitor an artist but has some limitations. When using an artist name, deemon searches Deezer via an API call which returns the most likely result. In some situations you may find yourself monitoring the wrong artist. In this case, it would be best to [monitor the artist by ID](#monitor-by-artist-id).
@@ -44,3 +44,14 @@ If you no longer wish to monitor an artist, include the `--remove` flag with one
 ```bash
 $ deemon monitor --remove ...
 ```
+
+## Stop Monitoring All Artists
+To stop monitoring all artists, you can simply delete the database (`deemon.db`) or run the following command:
+```bash
+$ deemon monitor --remove $(deemon show -ac)
+```
+
+Note, if you have a lot of artists it will be much faster to delete your database and start fresh.
+
+## Skip Refresh
+If you'd like to monitor an artist and wish to bypass refreshing the database afterwards, simply add `-s, --skip-refresh`.
