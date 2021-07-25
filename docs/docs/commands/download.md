@@ -51,5 +51,5 @@ You can override the config.json and specify one-off settings for downloads such
 ```bash
 ## Download all album releases in FLAC format by My Band
 
-$ deemon download My Band --bitrate 9 --record-type album
+$ deemon download "My Band" --bitrate 9 --record-type album
 ```
