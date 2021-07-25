@@ -19,3 +19,6 @@ The `refresh` command is used to check for new releases, update the database and
 ```bash
 $ deemon refresh
 ```
+
+## Options
+`-s, --skip-download` option allows you to refresh the database without downloading
