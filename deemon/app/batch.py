@@ -15,7 +15,7 @@ class BatchJobs(Deemon):
         # TODO check db for existing artist
         if import_artists:
             if Path(import_artists).is_file():
-                with open(import_artists, encoding="utf8") as f:
+                with open(import_artists, encoding="utf8", errors="replace") as f:
                     import_list = f.read().splitlines()
                     num_to_import = len(import_list)
                     logger.debug(f"Detected {num_to_import} artist(s) to import")

@@ -167,8 +167,7 @@ def refresh_command(skip_download):
 @click.option('-a', '--artists', is_flag=True, help='Show artists currently being monitored')
 @click.option('-c', '--csv', is_flag=True, help='Used with --artists, output artists as CSV')
 @click.option('-n', '--new-releases', metavar='N', type=int, help='Show new releases from last N days')
-#@click.option('-s', '--stats', is_flag=True, help='Show various usage stats')
-def show_command(artists, new_releases, stats, csv):
+def show_command(artists, new_releases, csv):
     """
     Show monitored artists, latest new releases and various statistics
     """
@@ -177,8 +176,6 @@ def show_command(artists, new_releases, stats, csv):
         show.artists(csv)
     elif new_releases:
         show.releases(new_releases)
-    elif stats:
-        show.stats()
 
 
 @run.command(name='import')
