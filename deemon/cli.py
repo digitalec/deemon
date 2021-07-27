@@ -157,10 +157,29 @@ def monitor_command(artist, playlist, artist_id, skip_refresh, remove, url):
 
 @run.command(name='refresh')
 @click.option('-s', '--skip-download', is_flag=True, help="Skips downloading of new releases")
-def refresh_command(skip_download):
+@click.option('-dl','--download-all',is_flag=True,help="Downloads all monitored releases after refresh")
+def refresh_command(skip_download,download_all):
     """Check artists for new releases"""
-    refresh = Refresh(skip_download=skip_download)
+    refresh = Refresh(skip_download=skip_download or download_all)
     refresh.refresh()
+    if download_all:
+        dl = download.Download()
+        params = {
+            'record_type':config["record_type"],
+            'bitrate': config["bitrate"],
+            'url': None,
+            'file': None,
+            'artist_id':None,
+            'artist':None,
+            'album_id':None
+        }
+        for artist_id,*_ in refresh.db.get_all_monitored_artists():
+            artist = dl.dz.api.get_artist(artist_id)
+            albums = dl.dz.api.get_artist_albums(artist_id)
+            logger.info(f"+ Adding {len(albums['data'])} release(s) for {artist['name']}")
+            dl.add_to_queue(artist,albums)
+        dl.download_queue(dl.queue_list)
+        dl.queue_list.clear()
 
 
 @run.command(name='show')
