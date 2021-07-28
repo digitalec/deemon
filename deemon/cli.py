@@ -77,11 +77,13 @@ def download_command(artist, artist_id, album_id, url, input_file, bitrate, reco
 @run.command(name='monitor', context_settings={"ignore_unknown_options": True})
 @click.argument('artist', nargs=-1)
 @click.option('-i', '--artist-id', multiple=True, type=int, metavar="ID", help="Monitor artist by ID")
-@click.option('-p', '--playlist', multiple=True, metavar="URL", help='Monitor Deezer playlist by URL', hidden=True)
+@click.option('-p', '--playlist', multiple=True, metavar="URL", help='Monitor Deezer playlist by URL')
 @click.option('-u', '--url', multiple=True, metavar="URL", help='Monitor artist by URL')
-@click.option('-s', '--skip-refresh', is_flag=True, help='Skip refresh after adding or removing artist')
+@click.option('-n', '--no-refresh', is_flag=True, help='Skip refresh after adding or removing artist')
+# Leave --skip-refresh for now
+@click.option('-s', '--skip-refresh', is_flag=True, help='Skip refresh after adding or removing artist', hidden=True)
 @click.option('-R', '--remove', is_flag=True, help='Stop monitoring an artist')
-def monitor_command(artist, playlist, artist_id, skip_refresh, remove, url):
+def monitor_command(artist, playlist, artist_id, no_refresh, skip_refresh, remove, url):
     """
     Monitor artist for new releases by ID, URL or name.
 
@@ -150,16 +152,20 @@ def monitor_command(artist, playlist, artist_id, skip_refresh, remove, url):
         else:
             mon.start_monitoring()
 
-    if not skip_refresh:
+    if skip_refresh:
+        no_refresh = skip_refresh
+
+    if not no_refresh:
         refresh = Refresh()
         refresh.refresh()
 
 
 @run.command(name='refresh')
 @click.option('-s', '--skip-download', is_flag=True, help="Skips downloading of new releases")
-def refresh_command(skip_download):
+@click.option('-t', '--time-machine', metavar='DATE', type=str, help='Refresh as if it were this date (YYYY-MM-DD)')
+def refresh_command(skip_download, time_machine):
     """Check artists for new releases"""
-    refresh = Refresh(skip_download=skip_download)
+    refresh = Refresh(skip_download=skip_download, time_machine=time_machine)
     refresh.refresh()
 
 

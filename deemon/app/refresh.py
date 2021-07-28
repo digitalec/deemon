@@ -9,15 +9,28 @@ logger = logging.getLogger(__name__)
 
 class Refresh(Deemon):
 
-    def __init__(self, artist_id=None, skip_download=False):
+    def __init__(self, artist_id=None, skip_download=False, time_machine=None):
         super().__init__()
+
+        self.skip_download = skip_download
+        self.todays_date = utils.get_todays_date()
+        self.time_machine = False
 
         if artist_id is None:
             self.artist_id = []
 
-        self.skip_download = skip_download
         if self.skip_download:
             logger.debug("--skip-download has been set, releases will only be added to the database")
+
+        if time_machine:
+            if utils.validate_date(time_machine):
+                self.todays_date = time_machine
+                self.time_machine = True
+                logger.info(f"+ Time machine activated! Today is {time_machine}")
+            else:
+                logger.error(f"Time machine date is invalid: {time_machine}")
+                exit()
+
         self.dz = deezer.Deezer()
         self.new_release_count = 0
         self.monitored_artists = []
@@ -26,8 +39,7 @@ class Refresh(Deemon):
         self.new_releases = []
 
     def is_future_release(self, album_release):
-        today = utils.get_todays_date()
-        if album_release > today:
+        if album_release > self.todays_date:
             return 1
         else:
             return 0
@@ -123,7 +135,6 @@ class Refresh(Deemon):
             for album in albums["data"]:
 
                 already_exists = self.db.get_album_by_id(album_id=album["id"])
-                todays_date = utils.get_todays_date()
 
                 if already_exists:
                     release = [x for x in already_exists]
@@ -136,7 +147,7 @@ class Refresh(Deemon):
                         'future_release': release[6]
                     }
 
-                    if _album["future_release"] and (_album["release_date"] <= todays_date):
+                    if _album["future_release"] and (_album["release_date"] <= self.todays_date):
                         logger.info(f"Artist: {_album['artist_name']} ** Pre-release has now been released "
                                     f"and will be downloaded **")
                         self.db.reset_future(_album['album_id'])
@@ -145,6 +156,8 @@ class Refresh(Deemon):
                 else:
                     release_in_future = self.is_future_release(album["release_date"])
                     if release_in_future:
+                        if self.time_machine:
+                            continue
                         logger.debug(f"[PRE-RELEASE DETECTED] {artist['name']} - {album['title']} detected as a pre-release; "
                                      f"will be released on {album['release_date']}")
                     self.db.add_new_release(
@@ -159,14 +172,13 @@ class Refresh(Deemon):
                 if self.skip_download or new_artist:
                     continue
 
-                self.new_release_count += 1
-
                 if (self.config["record_type"] == album["record_type"]) or (self.config["record_type"] == "all"):
                     if self.config["release_by_date"]:
                         max_release_date = utils.get_max_release_date(self.config["release_max_days"])
                         if album['release_date'] < max_release_date:
                             logger.debug(f"Release '{artist['name']} - {album['title']}' skipped, too old...")
                             continue
+                        self.new_release_count += 1
                     logger.debug(f"queue: added {artist['name']} - {album['title']} to the queue")
                     self.queue_list.append(download.QueueItem(artist, album))
                     self.construct_new_release_list(album['release_date'], artist['name'],
