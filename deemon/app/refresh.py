@@ -94,7 +94,7 @@ class Refresh(Deemon):
             if found_new_tracks:
                 self.queue_list.append(download.QueueItem(url=playlist['link'], playlist=playlist['title']))
 
-    def refresh(self, artist_id):
+    def refresh(self, artist_id=None):
         self.refresh_playlists()
         logger.debug(f"Refreshing artists")
         if artist_id:

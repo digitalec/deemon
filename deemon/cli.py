@@ -109,6 +109,7 @@ def monitor_command(artist, playlist, no_refresh, artist_id, remove, url):
         mon.artist = a
 
         if remove:
+            # TODO speed this up by passing along all artists and removing in one sql transaction
             mon.stop_monitoring()
         else:
             successful_adds.append(mon.start_monitoring())
