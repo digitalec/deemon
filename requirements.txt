@@ -1,5 +1,5 @@
-deemix>=3.2.2
-deezer-py>=1.0.0
+deemix>=3.3.4
+deezer-py>=1.0.4
 packaging~=20.9
 requests~=2.25.1
 click~=8.0.1
