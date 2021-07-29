@@ -171,26 +171,27 @@ def refresh_command(skip_download, time_machine):
 
 @run.command(name='show')
 @click.option('-a', '--artists', is_flag=True, help='Show artists currently being monitored')
+@click.option('-i', '--artist-ids', is_flag=True, help='Show artist IDs currently being monitored')
 @click.option('-c', '--csv', is_flag=True, help='Used with --artists, output artists as CSV')
 @click.option('-n', '--new-releases', metavar='N', type=int, help='Show new releases from last N days')
-def show_command(artists, new_releases, csv):
+def show_command(artists, artist_ids, new_releases, csv):
     """
     Show monitored artists, latest new releases and various statistics
     """
     show = ShowStats()
-    if artists:
-        show.artists(csv)
+    if artists or artist_ids:
+        show.artists(csv, artist_ids)
     elif new_releases:
         show.releases(new_releases)
 
 
 @run.command(name='import')
 @click.argument('path')
-@click.option('-i', is_flag=True, help='Import file of CSV artist IDs')
-def import_cmd(path, i):
+@click.option('-i', '--artist-ids', is_flag=True, help='Import file of artist IDs')
+def import_cmd(path, artist_ids):
     """Import artists from CSV, text file or directory"""
     batch = BatchJobs()
-    batch.import_artists(path, i)
+    batch.import_artists(path, artist_ids)
 
 
 @run.command()
