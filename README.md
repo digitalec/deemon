@@ -7,6 +7,7 @@
 ![GitHub last commit](https://img.shields.io/github/last-commit/digitalec/deemon?style=flat)
 ![GitHub last release](https://img.shields.io/github/release-date/digitalec/deemon?style=flat)
 ![Discord](https://img.shields.io/discord/831356172464160838?style=flat)
+![Docker](https://img.shields.io/github/workflow/status/digitalec/deemon/Deploy%20Docker?style=flat-square)
 
 
 ### About
