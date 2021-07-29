@@ -1,5 +1,5 @@
 from sqlite3 import OperationalError
-from deemon.app import Deemon, download
+from deemon.app import Deemon, refresh
 import logging
 import deezer
 
@@ -8,12 +8,13 @@ logger = logging.getLogger(__name__)
 
 class Monitor(Deemon):
 
-    def __init__(self):
+    def __init__(self, skip_refresh=False):
         super().__init__()
         self.artist = None
         self.artist_id = None
         self.playlist_id = None
         self.dz = deezer.Deezer()
+        self.skip_refresh = skip_refresh
 
     def get_artist_info(self):
         if self.artist_id:
@@ -60,9 +61,9 @@ class Monitor(Deemon):
             logger.info(f"Now monitoring {self.artist}")
 
             self.db.commit()
-            return 1
+            return self.artist_id
         else:
-            return 2
+            return
 
     def stop_monitoring(self):
         self.get_artist_info()

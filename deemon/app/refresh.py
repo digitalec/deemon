@@ -9,15 +9,12 @@ logger = logging.getLogger(__name__)
 
 class Refresh(Deemon):
 
-    def __init__(self, artist_id=None, skip_download=False, time_machine=None):
+    def __init__(self, skip_download=False, time_machine=None):
         super().__init__()
 
         self.skip_download = skip_download
         self.todays_date = utils.get_todays_date()
         self.time_machine = False
-
-        if artist_id is None:
-            self.artist_id = []
 
         if self.skip_download:
             logger.debug("--skip-download has been set, releases will only be added to the database")
@@ -43,13 +40,6 @@ class Refresh(Deemon):
             return 1
         else:
             return 0
-
-    def get_monitored_artists(self):
-        if len(self.artist_id) == 0:
-            self.monitored_artists = self.db.get_all_monitored_artists()
-        else:
-            for artist in self.artist_id:
-                self.monitored_artists.append(self.db.get_all_specified_artist(artist))
 
     def construct_new_release_list(self, release_date, artist, album, cover):
         for days in self.new_releases:
@@ -104,10 +94,13 @@ class Refresh(Deemon):
             if found_new_tracks:
                 self.queue_list.append(download.QueueItem(url=playlist['link'], playlist=playlist['title']))
 
-    def refresh(self):
+    def refresh(self, artist_id):
         self.refresh_playlists()
         logger.debug(f"Refreshing artists")
-        self.get_monitored_artists()
+        if artist_id:
+            self.monitored_artists = self.db.get_monitored_artist_by_id(id=artist_id)
+        else:
+            self.monitored_artists = self.db.get_all_monitored_artists()
 
         if len(self.monitored_artists) == 0:
             logger.info("At least one artist needs to be monitored before you can refresh!")

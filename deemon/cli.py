@@ -80,12 +80,10 @@ def download_command(artist, artist_id, album_id, url, input_file, bitrate, reco
 @click.argument('artist', nargs=-1)
 @click.option('-i', '--artist-id', multiple=True, type=int, metavar="ID", help="Monitor artist by ID")
 @click.option('-p', '--playlist', multiple=True, metavar="URL", help='Monitor Deezer playlist by URL')
-@click.option('-u', '--url', multiple=True, metavar="URL", help='Monitor artist by URL')
 @click.option('-n', '--no-refresh', is_flag=True, help='Skip refresh after adding or removing artist')
-# Leave --skip-refresh for now
-@click.option('-s', '--skip-refresh', is_flag=True, help='Skip refresh after adding or removing artist', hidden=True)
+@click.option('-u', '--url', multiple=True, metavar="URL", help='Monitor artist by URL')
 @click.option('-R', '--remove', is_flag=True, help='Stop monitoring an artist')
-def monitor_command(artist, playlist, artist_id, no_refresh, skip_refresh, remove, url):
+def monitor_command(artist, playlist, no_refresh, artist_id, remove, url):
     """
     Monitor artist for new releases by ID, URL or name.
 
@@ -104,25 +102,28 @@ def monitor_command(artist, playlist, artist_id, no_refresh, skip_refresh, remov
     url = list(url)
     playlists = list(playlist)
 
+    successful_adds = []
+
     for a in artists:
-        mon = monitor.Monitor()
+        mon = monitor.Monitor(skip_refresh=no_refresh)
         mon.artist = a
 
         if remove:
             mon.stop_monitoring()
         else:
-            mon.start_monitoring()
+            successful_adds.append(mon.start_monitoring())
 
     for aid in artist_id:
-        mon = monitor.Monitor()
+        mon = monitor.Monitor(skip_refresh=no_refresh)
         mon.artist_id = aid
 
         if remove:
             mon.stop_monitoring()
         else:
-            mon.start_monitoring()
+            successful_adds.append(mon.start_monitoring())
 
     for p in playlists:
+        mon = monitor.Monitor(skip_refresh=no_refresh)
         id_from_url = p.split('/playlist/')
         try:
             playlist_id = int(id_from_url[1])
@@ -130,7 +131,6 @@ def monitor_command(artist, playlist, artist_id, no_refresh, skip_refresh, remov
             logger.error(f"Invalid playlist URL -- {p}")
             sys.exit(1)
 
-        mon = monitor.Monitor()
         mon.playlist_id = playlist_id
 
         # if remove:
@@ -139,6 +139,7 @@ def monitor_command(artist, playlist, artist_id, no_refresh, skip_refresh, remov
         mon.start_monitoring_playlist()
 
     for u in url:
+        mon = monitor.Monitor(skip_refresh=no_refresh)
         id_from_url = u.split('/artist/')
         try:
             artist_id = int(id_from_url[1])
@@ -146,20 +147,16 @@ def monitor_command(artist, playlist, artist_id, no_refresh, skip_refresh, remov
             logger.error(f"Invalid URL -- {url}")
             sys.exit(1)
 
-        mon = monitor.Monitor()
         mon.artist_id = artist_id
 
         if remove:
             mon.stop_monitoring()
         else:
-            mon.start_monitoring()
+            successful_adds.append(mon.start_monitoring())
 
-    if skip_refresh:
-        no_refresh = skip_refresh
-
-    if not no_refresh:
+    if len(successful_adds) > 0:
         refresh = Refresh()
-        refresh.refresh()
+        refresh.refresh(artist_id=successful_adds)
 
 
 @run.command(name='refresh')
