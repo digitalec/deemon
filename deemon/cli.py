@@ -186,10 +186,11 @@ def show_command(artists, new_releases, csv):
 
 @run.command(name='import')
 @click.argument('path')
-def import_cmd(path):
+@click.option('-i', is_flag=True, help='Import file of CSV artist IDs')
+def import_cmd(path, i):
     """Import artists from CSV, text file or directory"""
     batch = BatchJobs()
-    batch.import_artists(path)
+    batch.import_artists(path, i)
 
 
 @run.command()

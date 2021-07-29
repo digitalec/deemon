@@ -10,8 +10,9 @@ logger = logging.getLogger(__name__)
 
 class BatchJobs(Deemon):
 
-    def import_artists(self, path):
+    def import_artists(self, path, i=False):
         import_artists = path
+        import_as_id = i
         # TODO check db for existing artist
         if import_artists:
             if Path(import_artists).is_file():
@@ -34,7 +35,10 @@ class BatchJobs(Deemon):
             for artist in progress:
                 progress.set_description("Importing")
                 ma = monitor.Monitor()
-                ma.artist = artist
+                if not import_as_id:
+                    ma.artist = artist
+                else:
+                    ma.artist_id = artist
                 imported = ma.start_monitoring()
                 if imported == 1:
                     import_count += 1
