@@ -1,6 +1,6 @@
 <img src="deemon/assets/images/deemon.png" alt="deemon" width="300">
 
-[About](#about) | [Installation](#installation) | [Documentation](https://digitalec.github.io/deemon) | [Support](#support)
+[About](#about) | [Installation](#installation) | [Docker](#docker) | [Documentation](https://digitalec.github.io/deemon) | [Support](#support)
 
 ![PyPI](https://img.shields.io/pypi/v/deemon?style=flat)
 [![Downloads](https://pepy.tech/badge/deemon)](https://pepy.tech/project/deemon)
