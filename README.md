@@ -28,3 +28,55 @@ $ pip install deemon
 $ pip install -r requirements.txt
 $ python3 -m deemon
 ```
+
+### Docker
+Docker support has been added for `amd64`, `arm64` and `armv7` architectures. It is recommended to save your `docker run` command as a script to execute via cron/Task Scheduler.
+
+**Note:** Inside deemon's `config.json`, download_location **must** be set to `/downloads` until I can integrate this myself.
+
+**Example: Monitoring a directory of artists**
+```
+docker run --name deemon \
+       --rm \
+       -v /path/to/deemon/config:/config \
+       -v /path/to/music:/downloads \
+       -v /path/to/deemix/config:/deemix  \
+       -v /path/to/monitor:/import \
+       ghcr.io/digitalec/deemon:latest \
+       python3 -m deemon import /import
+```
+
+**Example: Monitoring a file of artists**
+```
+docker run --name deemon \
+       --rm \
+       -v /path/to/deemon/config:/config \
+       -v /path/to/music:/downloads \
+       -v /path/to/deemix/config:/deemix  \
+       -v /file/to/monitor:/artists.txt \
+       ghcr.io/digitalec/deemon:latest \
+       python3 -m deemon import /artists.txt
+```
+
+
+Default `config.json`:
+```json
+{
+    "plex_baseurl": "",
+    "plex_token": "",
+    "plex_library": "",
+    "download_path": "/downloads",
+    "deemix_path": "",
+    "release_by_date": 1,
+    "release_max_days": 90,
+    "bitrate": "3",
+    "alerts": 0,
+    "record_type": "all",
+    "smtp_server": "",
+    "smtp_port": 465,
+    "smtp_user": "",
+    "smtp_pass": "",
+    "smtp_sender": "",
+    "smtp_recipient": ""
+}
+```
