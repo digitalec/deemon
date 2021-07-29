@@ -20,8 +20,10 @@ settings = settings.Settings()
 settings.load_config()
 config = settings.config
 
+CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
-@click.group()
+
+@click.group(context_settings=CONTEXT_SETTINGS)
 @click.option('-v', '--verbose', is_flag=True, help='Enable verbose output')
 @click.version_option(__version__, '--version', message='deemon %(version)s')
 def run(verbose):
