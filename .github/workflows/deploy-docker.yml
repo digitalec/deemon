@@ -1,3 +1,5 @@
+name: Deploy Docker
+
 on:
   release:
     type: [created]
