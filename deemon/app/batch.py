@@ -16,7 +16,7 @@ class BatchJobs(Deemon):
         if import_artists:
             if Path(import_artists).is_file():
                 with open(import_artists, encoding="utf8", errors="replace") as f:
-                    import_list = f.read().splitlines()
+                    import_list = sorted(f.read().splitlines())
                     num_to_import = len(import_list)
                 # TODO move to function to check for CSV
                 if num_to_import == 1:
