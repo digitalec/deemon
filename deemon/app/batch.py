@@ -10,16 +10,21 @@ logger = logging.getLogger(__name__)
 
 class BatchJobs(Deemon):
 
-    def import_artists(self, path, i=False):
+    def import_artists(self, path, artist_ids=False):
         import_artists = path
-        import_as_id = i
-        # TODO check db for existing artist
+        import_as_ids = artist_ids
         if import_artists:
             if Path(import_artists).is_file():
                 with open(import_artists, encoding="utf8", errors="replace") as f:
                     import_list = f.read().splitlines()
                     num_to_import = len(import_list)
-                    logger.debug(f"Detected {num_to_import} artist(s) to import")
+                # TODO move to function to check for CSV
+                if num_to_import == 1:
+                    for i in import_list[0].split(','):
+                        import_list.append(i)
+                    import_list.remove(import_list[0])
+                    num_to_import = len(import_list)
+                logger.debug(f"Detected {num_to_import} artist(s) to import")
             elif Path(import_artists).is_dir():
                 import_list = [x.relative_to(import_artists) for x in sorted(Path(import_artists).iterdir()) if x.is_dir()]
                 num_to_import = len(import_list)
@@ -35,7 +40,7 @@ class BatchJobs(Deemon):
             for artist in progress:
                 progress.set_description("Importing")
                 ma = monitor.Monitor()
-                if not import_as_id:
+                if not import_as_ids:
                     ma.artist = artist
                 else:
                     ma.artist_id = artist
