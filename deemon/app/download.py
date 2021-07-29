@@ -105,15 +105,16 @@ class Download(Deemon):
         if opt["file"]:
             logger.info(f"Reading from file {opt['file']}")
             if Path(opt['file']).exists():
-                with open(opt['file'], 'r') as f:
+                with open(opt['file'], 'r', encoding="utf8", errors="replace") as f:
                     make_csv = f.read().replace('\n', ',')
                     csv_to_list = make_csv.split(',')
-                    artist_list = list(filter(None, csv_to_list))
+                    artist_list = sorted(list(filter(None, csv_to_list)))
                     for name in artist_list:
                         try:
                             artist = self.dz.api.search_artist(name, limit=1)['data'][0]
                             album = self.dz.api.get_artist_albums(artist["id"])
                             self.add_to_queue(artist, album)
+                            logger.info(f"Artist `{name}` added to queue")
                         except IndexError:
                             logger.warning(f"Artist '{name}' not found")
 
