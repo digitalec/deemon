@@ -27,10 +27,9 @@ jobs:
             ghcr.io/digitalec/deemon
           # generate Docker tags based on the following events/attributes
           tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
-            type=sha
+            type=pep440,pattern={{version}}
+            type=pep440,pattern={{major}}.{{minor}}
+            type=pep440,pattern={{major}}
       -
         name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
