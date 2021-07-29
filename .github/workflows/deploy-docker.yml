@@ -18,7 +18,7 @@ jobs:
         uses: docker/metadata-action@v3
         with:
           images: |
-            ghcr.io/digitalec/deemon
+            ghcr.io/digitalec/
           tags: |
             ${{ github.event.repository.name }}:latest
             ${{ github.repository }}:latest
