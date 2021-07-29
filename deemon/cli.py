@@ -25,7 +25,7 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
 @click.group(context_settings=CONTEXT_SETTINGS)
 @click.option('-v', '--verbose', is_flag=True, help='Enable verbose output')
-@click.version_option(__version__, '--version', message='deemon %(version)s')
+@click.version_option(__version__, '-V', '--version', message='deemon %(version)s')
 def run(verbose):
     """Monitoring and alerting tool for new music releases using the Deezer API.
 
