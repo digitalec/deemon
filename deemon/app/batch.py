@@ -33,7 +33,8 @@ class BatchJobs(Deemon):
                 logger.error(f"File or directory not found: {import_artists}")
                 sys.exit(1)
 
-            progress = tqdm.tqdm(import_list, bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt} ({elapsed}{postfix})')
+            progress = tqdm.tqdm(import_list, ascii=" #",
+                                 bar_format='{desc}...  {n_fmt}/{total_fmt} [{bar:40}] {percentage:3.0f}%')
 
             import_count = 0
             import_error = 0
