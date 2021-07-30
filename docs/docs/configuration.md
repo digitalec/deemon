@@ -36,6 +36,7 @@ Depending on your operating system, your config.json file will be located in one
     "plex_library": "",
     "download_path": "",
     "deemix_path": "",
+    "arl": "",
     "release_by_date": 1,
     "release_max_days": 90,
     "bitrate": "3",
