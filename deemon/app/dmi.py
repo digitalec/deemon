@@ -15,23 +15,22 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class DeemixInterface:
-    def __init__(self, download_path, config_dir):
+class DeemixInterface(Deemon):
+    def __init__(self):
         super().__init__()
         logger.debug("Initializing deemix library")
         self.dz = Deezer()
-        self.download_path = download_path
-        self.config_dir = config_dir
 
-        if self.config_dir == "":
+        if self.config["deemix_path"] == "":
             self.config_dir = localpaths.getConfigFolder()
         else:
-            self.config_dir = Path(self.config_dir)
+            self.config_dir = Path(self.config["deemix_path"])
 
         self.dx_settings = loadSettings(self.config_dir)
 
-        if self.download_path != "":
-            self.download_path = Path(self.download_path)
+        if self.config["download_path"] != "":
+            # TODO is this necessary?
+            self.download_path = Path(self.config["download_path"])
             self.dx_settings['downloadLocation'] = str(self.download_path)
 
         logger.debug(f"deemix Config Path: {self.config_dir}")
@@ -54,23 +53,38 @@ class DeemixInterface:
             else:
                 Downloader(self.dz, download_object, self.dx_settings).start()
 
+    def verify_arl(self, arl):
+        if not self.dz.login_via_arl(arl):
+            print("FAILED")
+            logger.debug(f"ARL Failed: {arl}")
+            return False
+        print("OK")
+        return True
+
     def login(self):
-        logger.info("Verifying ARL is valid, please wait...")
+        logger.debug("Looking for ARL...")
+        if self.config["arl"]:
+            logger.debug("ARL found in deemon config")
+            print("Found ARL in deemon config, checking... ", end="")
+            if self.verify_arl(self.config["arl"]):
+                return True
+
         if self.config_dir.is_dir():
             if Path(self.config_dir / '.arl').is_file():
                 with open(self.config_dir / '.arl', 'r') as f:
-                    arl = f.readline().rstrip("\n")
-                    logger.debug(f"ARL found: {arl}")
-                if not self.dz.login_via_arl(arl):
-                    logger.error(f"ARL is expired or invalid")
-                    return False
+                    arl_from_file = f.readline().rstrip("\n")
+                    logger.debug("ARL found in deemix config")
+                    print("Found ARL in deemix .arl file, checking... ", end="")
+                    if self.verify_arl(arl_from_file):
+                        return True
             else:
                 logger.error(f"ARL not found in {self.config_dir}")
                 return False
         else:
             logger.error(f"ARL directory {self.config_dir} was not found")
             return False
-        return True
+
+        # TODO send alert on expired ARL
 
     def generatePlaylistItem(self, link_id, bitrate, playlistAPI=None, playlistTracksAPI=None):
         if not playlistAPI:
