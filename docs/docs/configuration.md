@@ -36,9 +36,10 @@ Depending on your operating system, your config.json file will be located in one
     "plex_library": "",
     "download_path": "",
     "deemix_path": "",
+    "arl": "",
     "release_by_date": 1,
     "release_max_days": 90,
-    "bitrate": "320",
+    "bitrate": "3",
     "alerts": 0,
     "record_type": "all",
     "smtp_server": "",
@@ -83,7 +84,7 @@ Specify settings that override default deemix values
 
 | option        | description       | allowed values |
 |:--------------|:------------------|:-------|
-| bitrate       | choose between MP3 or FLAC | 128, 320, FLAC |
+| bitrate       | choose between MP3 or FLAC | 1=128, 3=320, 9=FLAC |
 | download_path | path to download music | deemix default path |
 | deemix_path   | path to deemix config directory | deemix default path |
 

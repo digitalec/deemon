@@ -127,6 +127,20 @@ class DBHelper:
         artists = set(x for x in result)
         return sorted(artists, key=lambda x: x[1])
 
+    def get_monitored_artist_by_id(self, id):
+        '''
+        Get unique set of artists stored in database
+
+        :return: Unique set of all artists
+        :rtype: set
+        '''
+        all_artists = []
+        for i in id:
+            values = {'id': i}
+            result = self.query(f"SELECT * FROM monitor WHERE artist_id = :id", values).fetchone()
+            all_artists.append(result)
+        return all_artists
+
     def get_specified_artist(self, artist):
         if type(artist) is int:
             values = {'artist': artist}

@@ -28,30 +28,30 @@ class QueueItem:
 
 class Download(Deemon):
 
-    def __init__(self, login=True):
+    def __init__(self):
         super().__init__()
         self.dz = deezer.Deezer()
-        self.di = dmi.DeemixInterface(self.config["download_path"], self.config["deemix_path"])
+        self.di = dmi.DeemixInterface()
         deemix.itemgen.generatePlaylistItem = self.di.generatePlaylistItem
         self.deemix_logger = logging.getLogger("deemix")
         self.queue_list = []
         self.bitrate = self.config["bitrate"]
         self.record_type = self.config["record_type"]
 
-        if login:
-            if not self.di.login():
-                sys.exit(1)
+        if not self.di.login():
+            sys.exit(1)
 
     def get_plex_server(self):
         baseurl = self.config["plex_baseurl"]
         token = self.config["plex_token"]
         if (baseurl != "") and (token != ""):
             try:
-                logger.info("----------------------------")
-                logger.info("Plex settings found! Trying to connect...")
+                print("Plex settings found, trying to connect... ", end="")
                 plex_server = PlexServer(baseurl, token, timeout=10)
+                print(" OK")
                 return plex_server
             except Exception:
+                print(" FAILED")
                 logger.error("Error: Unable to reach Plex server, please refresh manually.")
                 return False
 
@@ -59,7 +59,7 @@ class Download(Deemon):
         if queue:
             plex = self.get_plex_server()
             num_queued = len(queue)
-            logger.info("----------------------------")
+            print("----------------------------")
             logger.info("Sending " + str(num_queued) + " release(s) to deemix for download:")
 
             for q in queue:
@@ -105,15 +105,16 @@ class Download(Deemon):
         if opt["file"]:
             logger.info(f"Reading from file {opt['file']}")
             if Path(opt['file']).exists():
-                with open(opt['file'], 'r') as f:
+                with open(opt['file'], 'r', encoding="utf8", errors="replace") as f:
                     make_csv = f.read().replace('\n', ',')
                     csv_to_list = make_csv.split(',')
-                    artist_list = list(filter(None, csv_to_list))
+                    artist_list = sorted(list(filter(None, csv_to_list)))
                     for name in artist_list:
                         try:
                             artist = self.dz.api.search_artist(name, limit=1)['data'][0]
                             album = self.dz.api.get_artist_albums(artist["id"])
                             self.add_to_queue(artist, album)
+                            logger.info(f"Artist `{name}` added to queue")
                         except IndexError:
                             logger.warning(f"Artist '{name}' not found")
 

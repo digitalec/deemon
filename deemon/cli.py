@@ -20,10 +20,12 @@ settings = settings.Settings()
 settings.load_config()
 config = settings.config
 
+CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
-@click.group()
+
+@click.group(context_settings=CONTEXT_SETTINGS)
 @click.option('-v', '--verbose', is_flag=True, help='Enable verbose output')
-@click.version_option(__version__, '--version', message='deemon %(version)s')
+@click.version_option(__version__, '-V', '--version', message='deemon %(version)s')
 def run(verbose):
     """Monitoring and alerting tool for new music releases using the Deezer API.
 
@@ -77,11 +79,11 @@ def download_command(artist, artist_id, album_id, url, input_file, bitrate, reco
 @run.command(name='monitor', context_settings={"ignore_unknown_options": True})
 @click.argument('artist', nargs=-1)
 @click.option('-i', '--artist-id', multiple=True, type=int, metavar="ID", help="Monitor artist by ID")
-@click.option('-p', '--playlist', multiple=True, metavar="URL", help='Monitor Deezer playlist by URL', hidden=True)
+@click.option('-p', '--playlist', multiple=True, metavar="URL", help='Monitor Deezer playlist by URL')
+@click.option('-n', '--no-refresh', is_flag=True, help='Skip refresh after adding or removing artist')
 @click.option('-u', '--url', multiple=True, metavar="URL", help='Monitor artist by URL')
-@click.option('-s', '--skip-refresh', is_flag=True, help='Skip refresh after adding or removing artist')
 @click.option('-R', '--remove', is_flag=True, help='Stop monitoring an artist')
-def monitor_command(artist, playlist, artist_id, skip_refresh, remove, url):
+def monitor_command(artist, playlist, no_refresh, artist_id, remove, url):
     """
     Monitor artist for new releases by ID, URL or name.
 
@@ -100,25 +102,29 @@ def monitor_command(artist, playlist, artist_id, skip_refresh, remove, url):
     url = list(url)
     playlists = list(playlist)
 
+    successful_adds = []
+
     for a in artists:
-        mon = monitor.Monitor()
+        mon = monitor.Monitor(skip_refresh=no_refresh)
         mon.artist = a
 
         if remove:
+            # TODO speed this up by passing along all artists and removing in one sql transaction
             mon.stop_monitoring()
         else:
-            mon.start_monitoring()
+            successful_adds.append(mon.start_monitoring())
 
     for aid in artist_id:
-        mon = monitor.Monitor()
+        mon = monitor.Monitor(skip_refresh=no_refresh)
         mon.artist_id = aid
 
         if remove:
             mon.stop_monitoring()
         else:
-            mon.start_monitoring()
+            successful_adds.append(mon.start_monitoring())
 
     for p in playlists:
+        mon = monitor.Monitor(skip_refresh=no_refresh)
         id_from_url = p.split('/playlist/')
         try:
             playlist_id = int(id_from_url[1])
@@ -126,7 +132,6 @@ def monitor_command(artist, playlist, artist_id, skip_refresh, remove, url):
             logger.error(f"Invalid playlist URL -- {p}")
             sys.exit(1)
 
-        mon = monitor.Monitor()
         mon.playlist_id = playlist_id
 
         # if remove:
@@ -135,6 +140,7 @@ def monitor_command(artist, playlist, artist_id, skip_refresh, remove, url):
         mon.start_monitoring_playlist()
 
     for u in url:
+        mon = monitor.Monitor(skip_refresh=no_refresh)
         id_from_url = u.split('/artist/')
         try:
             artist_id = int(id_from_url[1])
@@ -142,48 +148,50 @@ def monitor_command(artist, playlist, artist_id, skip_refresh, remove, url):
             logger.error(f"Invalid URL -- {url}")
             sys.exit(1)
 
-        mon = monitor.Monitor()
         mon.artist_id = artist_id
 
         if remove:
             mon.stop_monitoring()
         else:
-            mon.start_monitoring()
+            successful_adds.append(mon.start_monitoring())
 
-    if not skip_refresh:
+    if len(successful_adds) > 0:
         refresh = Refresh()
-        refresh.refresh()
+        refresh.refresh(artist_id=successful_adds)
 
 
 @run.command(name='refresh')
 @click.option('-s', '--skip-download', is_flag=True, help="Skips downloading of new releases")
-def refresh_command(skip_download):
+@click.option('-t', '--time-machine', metavar='DATE', type=str, help='Refresh as if it were this date (YYYY-MM-DD)')
+def refresh_command(skip_download, time_machine):
     """Check artists for new releases"""
-    refresh = Refresh(skip_download=skip_download)
+    refresh = Refresh(skip_download=skip_download, time_machine=time_machine)
     refresh.refresh()
 
 
 @run.command(name='show')
 @click.option('-a', '--artists', is_flag=True, help='Show artists currently being monitored')
+@click.option('-i', '--artist-ids', is_flag=True, help='Show artist IDs currently being monitored')
 @click.option('-c', '--csv', is_flag=True, help='Used with --artists, output artists as CSV')
 @click.option('-n', '--new-releases', metavar='N', type=int, help='Show new releases from last N days')
-def show_command(artists, new_releases, csv):
+def show_command(artists, artist_ids, new_releases, csv):
     """
     Show monitored artists, latest new releases and various statistics
     """
     show = ShowStats()
-    if artists:
-        show.artists(csv)
+    if artists or artist_ids:
+        show.artists(csv, artist_ids)
     elif new_releases:
         show.releases(new_releases)
 
 
 @run.command(name='import')
 @click.argument('path')
-def import_cmd(path):
+@click.option('-i', '--artist-ids', is_flag=True, help='Import file of artist IDs')
+def import_cmd(path, artist_ids):
     """Import artists from CSV, text file or directory"""
     batch = BatchJobs()
-    batch.import_artists(path)
+    batch.import_artists(path, artist_ids)
 
 
 @run.command()

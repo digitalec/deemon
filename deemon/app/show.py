@@ -13,19 +13,23 @@ class ShowStats(Deemon):
     def __init__(self):
         super().__init__()
 
-    def artists(self, csv=False):
+    def artists(self, csv=False, artist_ids=False):
         monitored_artists = self.db.get_all_monitored_artists()
         if len(monitored_artists) == 0:
             logger.info("No artists are being monitored")
             sys.exit(0)
 
-        artist_data = [artist[1] for artist in monitored_artists]
+        if artist_ids:
+            artist_data = [str(artist[0]) for artist in monitored_artists]
+        else:
+            artist_data = [artist[1] for artist in monitored_artists]
 
         if csv:
-            logger.info(', '.join(artist_data))
+            logger.info(','.join(artist_data))
         else:
             if len(artist_data) > 10:
-                artist_data = self.truncate_long_artists(artist_data)
+                if not artist_ids:
+                    artist_data = self.truncate_long_artists(artist_data)
 
                 if len(artist_data) % 2 != 0:
                     artist_data.append(" ")

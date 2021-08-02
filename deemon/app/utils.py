@@ -44,6 +44,14 @@ def get_todays_date():
     return today_date
 
 
+def validate_date(d):
+    try:
+        datetime.strptime(d, '%Y-%m-%d')
+    except ValueError as e:
+        return False
+    return True
+
+
 def get_max_release_date(days):
     day_in_secs = 86400
     input_days_in_secs = days * day_in_secs
