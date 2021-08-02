@@ -31,6 +31,10 @@ Another Band
 $ deemon import artists.txt
 ```
 
+You can also specify `-i` or `--artist-ids` to import a text file containing a list of artist IDs.
+
+CSV support is in the works and should be available soon (likely v1.3)
+
 ## Directory
 Similarly to importing artists via a text file, deemon can read a directory listing that contains artist subdirectories.
 
