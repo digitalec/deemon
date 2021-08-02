@@ -7,3 +7,4 @@ test.txt
 venv
 .cache
 tests.py
+**/.DS_Store

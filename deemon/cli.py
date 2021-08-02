@@ -155,7 +155,7 @@ def monitor_command(artist, playlist, no_refresh, artist_id, remove, url):
         else:
             successful_adds.append(mon.start_monitoring())
 
-    if len(successful_adds) > 0:
+    if len(successful_adds) > 0 and not no_refresh:
         refresh = Refresh()
         refresh.refresh(artist_id=successful_adds)
 
