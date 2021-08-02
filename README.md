@@ -68,6 +68,7 @@ Default `config.json`:
     "plex_library": "",
     "download_path": "/downloads",
     "deemix_path": "",
+    "arl": "",
     "release_by_date": 1,
     "release_max_days": 90,
     "bitrate": "3",
