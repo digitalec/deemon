@@ -7,7 +7,7 @@ import deezer
 logger = logging.getLogger(__name__)
 
 db = Deemon().db
-
+dz = deezer.Deezer()
 # class Refresh(Deemon):
 #
 #     def __init__(self, skip_download=False, time_machine=None):
@@ -228,6 +228,14 @@ def refresh_playlists(p_id=None):
 
 
 def refresh_artists(a_id=None):
+
+    def existing_artist(a_id):
+        sql_values = {'artist_id': a_id}
+        query = "SELECT * FROM 'monitor' WHERE artist_id = :artist_id"
+        exists = db.query(query, sql_values).fetchone()
+        if exists:
+            return False
+
     if a_id:
         logger.debug(f"refreshing artist ID {a_id}")
         monitored = db.get_monitored_artist_by_id(id=a_id)
@@ -239,7 +247,20 @@ def refresh_artists(a_id=None):
 
     for artist in artists:
         new_release_count = 0
-        is_new_artist = False
+        new_artist = existing_artist(artist['id'])
+        artists.set_description_str("Refreshing artists")
+        artist_albums = dz.api.get_artist_albums(artist['id'])
+
+        if new_artist:
+            logger.debug(f"New artist: '{artist['name']}'")
+            if len(artist_albums['data']) == 0:
+                logger.warning(f"WARNING: Artist '{artist['name']}' setup for monitoring but no releases were found.")
+
+        for album in artist_albums['data']:
+            album_exists = db.get_album_by_id(album_id=album['id'])
+
+            if album_exists:
+                 = [x for x in album_exists]
         
 
 
