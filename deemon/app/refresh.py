@@ -85,7 +85,8 @@ class Refresh(Deemon):
 
                 if not playlist_track_exists:
                     found_new_tracks = True
-                    logger.info(f"New track added to playlist {playlist['title']}: {track['artist']['name']} - {track['title']}")
+                    if not new_playlist:
+                        logger.info(f"New track added to playlist {playlist['title']}: {track['artist']['name']} - {track['title']}")
                     self.db.query("INSERT INTO 'playlist_tracks' "
                                   "('track_id', 'playlist_id', 'artist_id', "
                                   "'artist_name', 'track_name', 'track_added') "

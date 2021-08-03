@@ -102,70 +102,42 @@ def monitor_command(artist, playlist, no_refresh, artist_id, remove, url):
     url = list(url)
     playlists = list(playlist)
 
-    successful_adds = []
+    new_artists = []
+    new_playlists = []  # Requires rewrite of REFRESH module
 
     if artist:
         for a in artists:
-            mon = monitor.Monitor(skip_refresh=no_refresh)
-            mon.artist = a
-
-            if remove:
-                # TODO speed this up by passing along all artists and removing in one sql transaction
-                mon.stop_monitoring()
-            else:
-                successful_adds.append(mon.start_monitoring())
+            result = monitor.monitor("artist", a, remove=remove)
+            if type(result) == int:
+                new_artists.append(result)
 
     if artist_id:
         for aid in artist_id:
-            mon = monitor.Monitor(skip_refresh=no_refresh)
-            mon.artist_id = aid
-
-            if remove:
-                mon.stop_monitoring()
-            else:
-                successful_adds.append(mon.start_monitoring())
-
-    if playlists:
-        for p in playlists:
-            mon = monitor.Monitor(skip_refresh=no_refresh)
-            id_from_url = p.split('/playlist/')
-            try:
-                playlist_id = int(id_from_url[1])
-            except (IndexError, ValueError):
-                logger.error(f"Invalid playlist URL -- {p}")
-                sys.exit(1)
-
-            mon.playlist_id = playlist_id
-
-            if remove:
-                mon.stop_monitoring()
-            else:
-                mon.start_monitoring_playlist()
-        if not no_refresh:
-            refresh = Refresh()
-            refresh.refresh()
+            result = monitor.monitor("artist_id", aid, remove=remove)
+            if type(result) == int:
+                new_artists.append(result)
 
     if url:
         for u in url:
-            mon = monitor.Monitor(skip_refresh=no_refresh)
             id_from_url = u.split('/artist/')
             try:
                 artist_id = int(id_from_url[1])
             except (IndexError, ValueError):
                 logger.error(f"Invalid URL -- {url}")
                 sys.exit(1)
+        result = monitor.monitor("artist_id", artist_id, remove=remove)
+        if type(result) == int:
+            new_artists.append(result)
 
-            mon.artist_id = artist_id
+    if playlists:
+        for p in playlists:
+            result = monitor.monitor("playlist", p, remove=remove)
+            if type(result) == int:
+                new_playlists.append(result)
 
-            if remove:
-                mon.stop_monitoring()
-            else:
-                successful_adds.append(mon.start_monitoring())
-
-    if len(successful_adds) > 0 and not no_refresh:
-        logger.debug(f"successful_adds is {successful_adds} with len {len(successful_adds)}")
+    if (len(new_artists) > 0 or len(new_playlists) > 0) and not no_refresh:
         refresh = Refresh()
-        refresh.refresh(artist_id=successful_adds)
+        refresh.refresh()  # artist_id=new_artists - taking this out until REFRESH module rewrite
 
 
 @run.command(name='refresh')
