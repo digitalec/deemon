@@ -90,16 +90,17 @@ class DeemixInterface(Deemon):
 
     def generatePlaylistItem(self, dz, link_id, bitrate, playlistAPI=None, playlistTracksAPI=None):
         if not playlistAPI:
-            if not str(link_id).isdecimal(): raise InvalidID(f"https://deezer.com/playlist/{link_id}")
+            if not str(link_id).isdecimal():
+                raise InvalidID(f"https://deezer.com/playlist/{link_id}")
             # Get essential playlist info
             try:
-                playlistAPI = self.dz.api.get_playlist(link_id)
+                playlistAPI = dz.api.get_playlist(link_id)
             except APIError:
                 playlistAPI = None
             # Fallback to gw api if the playlist is private
             if not playlistAPI:
                 try:
-                    userPlaylist = self.dz.gw.get_playlist_page(link_id)
+                    userPlaylist = dz.gw.get_playlist_page(link_id)
                     playlistAPI = map_user_playlist(userPlaylist['DATA'])
                 except GWAPIError as e:
                     raise GenerationError(f"https://deezer.com/playlist/{link_id}", str(e)) from e
@@ -110,8 +111,8 @@ class DeemixInterface(Deemon):
                 raise NotYourPrivatePlaylist(f"https://deezer.com/playlist/{link_id}")
 
         if not playlistTracksAPI:
-            playlistTracksAPI = self.dz.gw.get_playlist_tracks(link_id)
-        playlistAPI['various_artist'] = self.dz.api.get_artist(5080)  # Useful for save as compilation
+            playlistTracksAPI = dz.gw.get_playlist_tracks(link_id)
+        playlistAPI['various_artist'] = dz.api.get_artist(5080)  # Useful for save as compilation
 
         totalSize = len(playlistTracksAPI)
         playlistAPI['nb_tracks'] = totalSize
