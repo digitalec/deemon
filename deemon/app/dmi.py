@@ -1,5 +1,5 @@
 from pathlib import Path
-
+import deemix
 from deezer import Deezer
 from deezer.api import APIError
 from deezer.utils import map_user_playlist
@@ -19,6 +19,8 @@ class DeemixInterface(Deemon):
     def __init__(self):
         super().__init__()
         logger.debug("Initializing deemix library")
+
+        deemix.generatePlaylistItem = self.generatePlaylistItem
         self.dz = Deezer()
 
         if self.config["deemix_path"] == "":
@@ -35,7 +37,6 @@ class DeemixInterface(Deemon):
 
         logger.debug(f"deemix Config Path: {self.config_dir}")
         logger.debug(f"deemix Download Path: {self.dx_settings['downloadLocation']}")
-
 
     def download_url(self, url, bitrate):
         links = []
@@ -59,6 +60,7 @@ class DeemixInterface(Deemon):
             logger.debug(f"ARL Failed: {arl}")
             return False
         print("OK")
+        logger.debug("ARL is valid")
         return True
 
     def login(self):
@@ -86,7 +88,7 @@ class DeemixInterface(Deemon):
 
         # TODO send alert on expired ARL
 
-    def generatePlaylistItem(self, link_id, bitrate, playlistAPI=None, playlistTracksAPI=None):
+    def generatePlaylistItem(self, dz, link_id, bitrate, playlistAPI=None, playlistTracksAPI=None):
         if not playlistAPI:
             if not str(link_id).isdecimal(): raise InvalidID(f"https://deezer.com/playlist/{link_id}")
             # Get essential playlist info
@@ -117,7 +119,7 @@ class DeemixInterface(Deemon):
         dn = Deemon()
         for pos, trackAPI in enumerate(playlistTracksAPI, start=1):
             # Check if release has been seen already and skip it
-            vals = {'track_id': trackAPI['SNG_ID'], 'playlist_id': id}
+            vals = {'track_id': trackAPI['SNG_ID'], 'playlist_id': playlistAPI['id']}
             sql = "SELECT * FROM 'playlist_tracks' WHERE track_id = :track_id AND playlist_id = :playlist_id"
             result = dn.db.query(sql, vals).fetchone()
             if result:

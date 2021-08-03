@@ -40,6 +40,11 @@ class ShowStats(Deemon):
                 for artist in artist_data:
                     print(artist)
 
+    def playlists(self, csv=False):
+        monitored_playlists = self.db.get_all_monitored_playlists()
+        for p in monitored_playlists:
+            print(f"{p[1]} ({p[2]})")
+
     @staticmethod
     def truncate_long_artists(all_artists):
         for idx, artist in enumerate(all_artists):

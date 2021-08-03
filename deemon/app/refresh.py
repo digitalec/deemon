@@ -64,11 +64,12 @@ class Refresh(Deemon):
 
         for item in progress:
             progress.set_description_str(f"Refreshing playlists")
-            # TODO check if playlist exists before adding it again
             new_playlist = False
-
             playlist = self.dz.api.get_playlist(item[0])
-
+            playlist_exists = self.db.get_playlist_by_id(playlist['id'])
+            if not playlist_exists:
+                logger.debug("Playlist is newly added, no downloads this round...")
+                new_playlist = True
             for track in playlist['tracks']['data']:
                 vals = {'playlist_id': playlist['id'],
                         'track_id': track['id'],
@@ -84,15 +85,15 @@ class Refresh(Deemon):
 
                 if not playlist_track_exists:
                     found_new_tracks = True
-                    logger.info(f"New track added to playlist '{playlist['title']}': {track['artist']['name']} - {track['title']}")
+                    logger.info(f"New track added to playlist {playlist['title']}: {track['artist']['name']} - {track['title']}")
                     self.db.query("INSERT INTO 'playlist_tracks' "
                                   "('track_id', 'playlist_id', 'artist_id', "
                                   "'artist_name', 'track_name', 'track_added') "
                                   "VALUES (:track_id, :playlist_id, :artist_id, :artist_name, "
                                   ":track_name, :track_added)", vals)
-
-            if found_new_tracks:
+            if found_new_tracks and not new_playlist:
                 self.queue_list.append(download.QueueItem(url=playlist['link'], playlist=playlist['title']))
+                #TODO separate download jobs between refreshes; currently artists refresh handles job
 
     def refresh(self, artist_id=None):
         self.refresh_playlists()

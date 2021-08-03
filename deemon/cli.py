@@ -104,58 +104,66 @@ def monitor_command(artist, playlist, no_refresh, artist_id, remove, url):
 
     successful_adds = []
 
-    for a in artists:
-        mon = monitor.Monitor(skip_refresh=no_refresh)
-        mon.artist = a
+    if artist:
+        for a in artists:
+            mon = monitor.Monitor(skip_refresh=no_refresh)
+            mon.artist = a
 
-        if remove:
-            # TODO speed this up by passing along all artists and removing in one sql transaction
-            mon.stop_monitoring()
-        else:
-            successful_adds.append(mon.start_monitoring())
+            if remove:
+                # TODO speed this up by passing along all artists and removing in one sql transaction
+                mon.stop_monitoring()
+            else:
+                successful_adds.append(mon.start_monitoring())
 
-    for aid in artist_id:
-        mon = monitor.Monitor(skip_refresh=no_refresh)
-        mon.artist_id = aid
+    if artist_id:
+        for aid in artist_id:
+            mon = monitor.Monitor(skip_refresh=no_refresh)
+            mon.artist_id = aid
 
-        if remove:
-            mon.stop_monitoring()
-        else:
-            successful_adds.append(mon.start_monitoring())
+            if remove:
+                mon.stop_monitoring()
+            else:
+                successful_adds.append(mon.start_monitoring())
 
-    for p in playlists:
-        mon = monitor.Monitor(skip_refresh=no_refresh)
-        id_from_url = p.split('/playlist/')
-        try:
-            playlist_id = int(id_from_url[1])
-        except (IndexError, ValueError):
-            logger.error(f"Invalid playlist URL -- {p}")
-            sys.exit(1)
+    if playlists:
+        for p in playlists:
+            mon = monitor.Monitor(skip_refresh=no_refresh)
+            id_from_url = p.split('/playlist/')
+            try:
+                playlist_id = int(id_from_url[1])
+            except (IndexError, ValueError):
+                logger.error(f"Invalid playlist URL -- {p}")
+                sys.exit(1)
 
-        mon.playlist_id = playlist_id
+            mon.playlist_id = playlist_id
 
-        # if remove:
-        #     mon.stop_monitoring()
-        # else:
-        mon.start_monitoring_playlist()
+            if remove:
+                mon.stop_monitoring()
+            else:
+                mon.start_monitoring_playlist()
+        if not no_refresh:
+            refresh = Refresh()
+            refresh.refresh()
 
-    for u in url:
-        mon = monitor.Monitor(skip_refresh=no_refresh)
-        id_from_url = u.split('/artist/')
-        try:
-            artist_id = int(id_from_url[1])
-        except (IndexError, ValueError):
-            logger.error(f"Invalid URL -- {url}")
-            sys.exit(1)
+    if url:
+        for u in url:
+            mon = monitor.Monitor(skip_refresh=no_refresh)
+            id_from_url = u.split('/artist/')
+            try:
+                artist_id = int(id_from_url[1])
+            except (IndexError, ValueError):
+                logger.error(f"Invalid URL -- {url}")
+                sys.exit(1)
 
-        mon.artist_id = artist_id
+            mon.artist_id = artist_id
 
-        if remove:
-            mon.stop_monitoring()
-        else:
-            successful_adds.append(mon.start_monitoring())
+            if remove:
+                mon.stop_monitoring()
+            else:
+                successful_adds.append(mon.start_monitoring())
 
     if len(successful_adds) > 0 and not no_refresh:
+        logger.debug(f"successful_adds is {successful_adds} with len {len(successful_adds)}")
         refresh = Refresh()
         refresh.refresh(artist_id=successful_adds)
 
@@ -172,15 +180,18 @@ def refresh_command(skip_download, time_machine):
 @run.command(name='show')
 @click.option('-a', '--artists', is_flag=True, help='Show artists currently being monitored')
 @click.option('-i', '--artist-ids', is_flag=True, help='Show artist IDs currently being monitored')
+@click.option('-p', '--playlists', is_flag=True, help='Show playlists currently being monitored')
 @click.option('-c', '--csv', is_flag=True, help='Used with --artists, output artists as CSV')
 @click.option('-n', '--new-releases', metavar='N', type=int, help='Show new releases from last N days')
-def show_command(artists, artist_ids, new_releases, csv):
+def show_command(artists, artist_ids, playlists, new_releases, csv):
     """
     Show monitored artists, latest new releases and various statistics
     """
     show = ShowStats()
     if artists or artist_ids:
         show.artists(csv, artist_ids)
+    elif playlists:
+        show.playlists(csv)
     elif new_releases:
         show.releases(new_releases)
 

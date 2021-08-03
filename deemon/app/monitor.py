@@ -69,28 +69,34 @@ class Monitor(Deemon):
         self.get_artist_info()
         if self.artist_id:
             values = {'artist_id': self.artist_id}
-            sql_releases = "DELETE FROM 'releases' WHERE artist_id = :artist_id"
             sql_monitor = "DELETE FROM 'monitor' WHERE artist_id = :artist_id"
+            sql_releases = "DELETE FROM 'releases' WHERE artist_id = :artist_id"
+        elif self.playlist_id:
+            values = {'playlist_id': self.playlist_id}
+            sql_monitor = "DELETE FROM 'playlists' WHERE id = :playlist_id"
+            sql_releases = "DELETE FROM 'playlist_tracks' WHERE playlist_id = :playlist_id"
         else:
             values = {'artist': self.artist}
-            sql_releases = "DELETE FROM 'releases' WHERE artist_name = ':artist' COLLATE NOCASE"
             sql_monitor = "DELETE FROM 'monitor' WHERE artist_name = ':artist' COLLATE NOCASE"
+            sql_releases = "DELETE FROM 'releases' WHERE artist_name = ':artist' COLLATE NOCASE"
 
         result = self.db.query(sql_monitor, values)
         if result.rowcount > 0:
-            logger.info("No longer monitoring " + self.artist)
-            logger.info("Cleaning up release table...")
+            print("Removing from database... ", end="")
+            print("done!")
             self.db.query(sql_releases, values)
         else:
-            logger.error(f"Artist '{self.artist}' not found")
+            logger.error(f"Can't stop monitoring, not found in database.")
 
         self.db.commit()
 
     def start_monitoring_playlist(self):
-        found_new_tracks = False
+        # TODO check if playlist ID is monitored
         try:
             playlist = self.dz.api.get_playlist(self.playlist_id)
             self.db.monitor_playlist(playlist)
+            logger.info("Playlist setup for monitoring")
+            return self.playlist_id
         except deezer.api.DataException:
             logger.error("Playlist ID not found")
             return

@@ -197,3 +197,9 @@ class DBHelper:
         result = self.query("SELECT * FROM playlists")
         playlists = [x for x in result]
         return playlists
+
+    def get_playlist_by_id(self, playlist_id):
+        values = {'id': playlist_id}
+        sql = "SELECT * FROM 'playlist_tracks' WHERE playlist_id = :id"
+        result = self.query(sql, values).fetchone()
+        return result

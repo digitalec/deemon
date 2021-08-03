@@ -1,9 +1,8 @@
 from pathlib import Path
 
-import deemix
 import plexapi.exceptions
 from plexapi.server import PlexServer
-from deemon.app import dmi, notify
+from deemon.app import dmi
 from deemon.app import Deemon
 import logging
 import deezer
@@ -32,8 +31,6 @@ class Download(Deemon):
         super().__init__()
         self.dz = deezer.Deezer()
         self.di = dmi.DeemixInterface()
-        deemix.itemgen.generatePlaylistItem = self.di.generatePlaylistItem
-        self.deemix_logger = logging.getLogger("deemix")
         self.queue_list = []
         self.bitrate = self.config["bitrate"]
         self.record_type = self.config["record_type"]
@@ -99,7 +96,6 @@ class Download(Deemon):
 
         if opt["url"]:
             logger.info("Sending URL to deemix for processing:")
-            self.deemix_logger.setLevel(logging.INFO)
             self.di.download_url([opt["url"]], opt["bitrate"])
 
         if opt["file"]:
