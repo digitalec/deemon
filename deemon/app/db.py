@@ -127,19 +127,16 @@ class DBHelper:
         artists = set(x for x in result)
         return sorted(artists, key=lambda x: x[1])
 
-    def get_monitored_artist_by_id(self, id):
+    def get_monitored_artist_by_id(self, artist_id):
         '''
         Get unique set of artists stored in database
 
         :return: Unique set of all artists
         :rtype: set
         '''
-        all_artists = []
-        for i in id:
-            values = {'id': i}
-            result = self.query(f"SELECT * FROM monitor WHERE artist_id = :id", values).fetchone()
-            all_artists.append(result)
-        return all_artists
+        values = {'id': artist_id}
+        result = self.query(f"SELECT * FROM monitor WHERE artist_id = :id", values).fetchone()
+        return result
 
     def get_specified_artist(self, artist):
         if type(artist) is int:
@@ -184,7 +181,12 @@ class DBHelper:
         values = {'id': album_id}
         sql = "SELECT * FROM 'releases' WHERE album_id = :id"
         result = self.query(sql, values).fetchone()
-        return result
+        if result:
+            album = {'artist_id': result[0], 'artist_name': result[1],
+                     'album_id': result[2], 'album_name': result[3],
+                     'album_release': result[4], 'album_added': result[5],
+                     'future_release': result[6]}
+            return album
 
     def monitor_playlist(self, playlist):
         values = {'id': playlist['id'], 'title': playlist['title'],
@@ -197,6 +199,11 @@ class DBHelper:
         result = self.query("SELECT * FROM playlists")
         playlists = [x for x in result]
         return playlists
+
+    def get_monitored_playlists_by_id(self, playlist_id):
+        values = {'id': playlist_id}
+        result = self.query("SELECT * FROM playlists WHERE id = :id", values).fetchone()
+        return result
 
     def get_playlist_by_id(self, playlist_id):
         values = {'id': playlist_id}

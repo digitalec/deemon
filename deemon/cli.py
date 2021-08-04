@@ -145,8 +145,7 @@ def monitor_command(artist, playlist, no_refresh, artist_id, remove, url):
 @click.option('-t', '--time-machine', metavar='DATE', type=str, help='Refresh as if it were this date (YYYY-MM-DD)')
 def refresh_command(skip_download, time_machine):
     """Check artists for new releases"""
-    refresh = Refresh(skip_download=skip_download, time_machine=time_machine)
-    refresh.refresh()
+    Refresh(skip_download=skip_download, time_machine=time_machine)
 
 
 @run.command(name='show')

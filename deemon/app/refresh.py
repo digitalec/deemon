@@ -6,8 +6,6 @@ import deezer
 
 logger = logging.getLogger(__name__)
 
-db = Deemon().db
-dz = deezer.Deezer()
 # class Refresh(Deemon):
 #
 #     def __init__(self, skip_download=False, time_machine=None):
@@ -195,111 +193,169 @@ dz = deezer.Deezer()
 #             notification.send()
 
 
-def refresh(artist_id=None, playlist_id=None, skip_download=False, time_machine=None):
-    logger.debug(locals())
-    total_new_releases = 0
-    queue_list, new_releases = [], []
-    refresh_date = set_refresh_date(time_machine)
-    if not refresh_date:
-        logger.error(f"Error while setting time machine to {time_machine}")
+class Refresh:
 
-    if playlist_id:
-        for p in playlist_id:
-            refresh_playlists(p_id=p)
-    else:
-        if monitoring_playlists():
-            refresh_playlists()
+    def __init__(self, artist_id=None, playlist_id=None, skip_download=False, time_machine=None):
+        self.artist_id = artist_id
+        self.playlist_id = playlist_id
+        self.skip_download = skip_download
+        self.time_machine = time_machine
+        self.total_new_releases = 0
+        self.queue_list = []
+        self.new_releases = []
+        self.refresh_date = self.set_refresh_date()
+        self.db = Deemon().db
+        self.config = Deemon().config
+        self.dz = deezer.Deezer()
+        self.run()
 
-    if artist_id:
-        for a in artist_id:
-            refresh_artists(a_id=a)
-    else:
-        if monitoring_artists():
-            refresh_artists()
-
-    if len(queue_list) > 0:
-        pass
-
-
-def refresh_playlists(p_id=None):
-    if p_id:
-        logger.debug(f"refreshing playlist ID {p_id}")
-        return
-
-
-def refresh_artists(a_id=None):
-
-    def existing_artist(a_id):
-        sql_values = {'artist_id': a_id}
-        query = "SELECT * FROM 'monitor' WHERE artist_id = :artist_id"
-        exists = db.query(query, sql_values).fetchone()
-        if exists:
-            return False
-
-    if a_id:
-        logger.debug(f"refreshing artist ID {a_id}")
-        monitored = db.get_monitored_artist_by_id(id=a_id)
-    else:
-        monitored = db.get_all_monitored_artists()
-
-    artists = tqdm.tqdm(monitored, ascii=" #",
-                        bar_format='{desc}...  {n_fmt}/{total_fmt} [{bar:40}] {percentage:3.0f}%')
-
-    for artist in artists:
-        new_release_count = 0
-        new_artist = existing_artist(artist['id'])
-        artists.set_description_str("Refreshing artists")
-        artist_albums = dz.api.get_artist_albums(artist['id'])
-
-        if new_artist:
-            logger.debug(f"New artist: '{artist['name']}'")
-            if len(artist_albums['data']) == 0:
-                logger.warning(f"WARNING: Artist '{artist['name']}' setup for monitoring but no releases were found.")
-
-        for album in artist_albums['data']:
-            album_exists = db.get_album_by_id(album_id=album['id'])
-
-            if album_exists:
-                 = [x for x in album_exists]
-        
-
-
-
-def is_future_release(release_date, refresh_date):
-    if release_date > refresh_date:
-        return True
-
-
-def set_refresh_date(d):
-    if d:
-        if utils.validate_date(d):
-            return d
+    def set_refresh_date(self):
+        if self.time_machine:
+            if utils.validate_date(self.time_machine):
+                return self.time_machine
+            else:
+                return False
         else:
-            return False
-    else:
-        return utils.get_todays_date()
+            return utils.get_todays_date()
 
+    def run(self):
+        if not self.refresh_date:
+            logger.error(f"Error while setting time machine to {self.time_machine}")
 
-def monitoring_playlists():
-    query = "SELECT * FROM 'playlists'"
-    result = db.query(query).fetchone()
-    if len(result) > 0:
-        return True
+        if self.playlist_id or self.monitoring_playlists():
+            self.refresh_playlists()
 
+        if self.artist_id or self.monitoring_artists():
+            self.refresh_artists()
 
-def monitoring_artists():
-    query = "SELECT * FROM 'monitor'"
-    result = db.query(query).fetchone()
-    if len(result) > 0:
-        return True
+        if len(self.queue_list) > 0:
+            dl = download.Download()
+            dl.download_queue(self.queue_list)
 
+        self.db.commit()
 
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.DEBUG)
-    if monitoring_playlists():
-        logger.info(" [OK] Monitoring playlists")
-    if monitoring_artists():
-        logger.info(" [OK] Monitoring artists")
-    refresh(time_machine="2021-07-31")
+    def refresh_playlists(self):
+        logger.debug("Refreshing playlists")
+        new_track_count = 0
+        if self.playlist_id:
+            monitored = []
+            for i in self.playlist_id:
+                monitored.append(self.db.get_monitored_playlists_by_id(i))
+        else:
+            monitored = self.db.get_all_monitored_playlists()
 
-    refresh(artist_id=[726])
+            progress = tqdm.tqdm(monitored, ascii=" #",
+                                 bar_format='{desc}...  {n_fmt}/{total_fmt} [{bar:40}] {percentage:3.0f}%')
+
+            for plist in progress:
+                new_playlist = self.existing_playlist(plist[0])
+                playlist = self.dz.api.get_playlist(plist[0])
+                progress.set_description_str("Refreshing playlists")
+
+                if new_playlist:
+                    logger.debug(f"New playlist: {plist[1]}")
+                    
+
+    def refresh_artists(self):
+        logger.debug("Refreshing artists")
+        if self.artist_id:
+            monitored = []
+            for i in self.artist_id:
+                monitored.append(self.db.get_monitored_artist_by_id(i))
+        else:
+            monitored = self.db.get_all_monitored_artists()
+
+        progress = tqdm.tqdm(monitored, ascii=" #",
+                             bar_format='{desc}...  {n_fmt}/{total_fmt} [{bar:40}] {percentage:3.0f}%')
+
+        for artist in progress:
+            artist = {"id": artist[0], "name": artist[1], "bitrate": self.config["bitrate"], "record_type": artist[3]}
+            artist_new_release_count = 0
+            new_artist = self.existing_artist(artist['id'])
+            progress.set_description_str("Refreshing artists")
+            artist_albums = self.dz.api.get_artist_albums(artist['id'])
+
+            if new_artist:
+                logger.debug(f"New artist: '{artist['name']}'")
+                if len(artist_albums['data']) == 0:
+                    logger.warning(f"WARNING: Artist '{artist['name']}' setup for monitoring but no releases were found.")
+
+            for album in artist_albums['data']:
+                exists = self.db.get_album_by_id(album_id=album['id'])
+                if exists:
+                    if exists['future_release'] and (exists['release_date'] <= self.refresh_date):
+                        logger.debug(f"Pre-release released: {exists['artist_name']} - {exists['album_name']}")
+                        self.db.reset_future(exists['album_id'])
+                    else:
+                        continue
+
+                future = self.is_future_release(album['release_date'])
+                if future:
+                    if self.time_machine:
+                        continue
+                    logger.debug(f"Pre-release detected: {artist['name']} - {album['title']} [{album['release_date']}]")
+
+                self.db.add_new_release(artist['id'], artist['name'], album['id'],
+                                        album['title'], album['release_date'], future_release=future)
+
+                if self.skip_download or new_artist:
+                    continue
+
+                if ((self.config['record_type'] == album['record_type']) or
+                        (self.config['record_type'] == "all")):
+                    if self.config['release_by_date']:
+                        max_release_date = utils.get_max_release_date(self.config['release_max_days'])
+                        if album['release_date'] < max_release_date:
+                            logger.debug(f"Skipping release, too old... {artist['name']} - {album['title']}")
+                            continue
+                    self.total_new_releases += 1
+                    logger.debug(f"Adding to queue: {artist['name']} - {album['title']}")
+                    self.queue_list.append(download.QueueItem(artist, album))
+                    self.append_new_release(album['release_date'], artist['name'],
+                                            album['title'], album['cover_medium'])
+            if artist_new_release_count > 0:
+                logger.info(f"{artist['name']}: {artist_new_release_count} new release(s)")
+
+    def is_future_release(self, release_date):
+        if release_date > self.refresh_date:
+            return 1
+        else:
+            return 0
+
+    def monitoring_playlists(self):
+        query = "SELECT * FROM 'playlists'"
+        result = self.db.query(query).fetchone()
+        if len(result) > 0:
+            return True
+
+    def monitoring_artists(self):
+        query = "SELECT * FROM 'monitor'"
+        result = self.db.query(query).fetchone()
+        if len(result) > 0:
+            return True
+
+    def existing_artist(self, artist_id):
+        sql_values = {'artist_id': artist_id}
+        # TODO BUG - issue #25 - Artist treated as new artist until at least one release has been seen
+        query = "SELECT * FROM 'releases' WHERE artist_id = :artist_id"
+        artist_exists = self.db.query(query, sql_values).fetchone()
+        if not artist_exists:
+            return True
+
+    def existing_playlist(self, playlist_id):
+        sql_values = {'playlist_id': playlist_id}
+        # TODO BUG - issue #25 - Artist treated as new artist until at least one release has been seen
+        query = "SELECT * FROM 'playlist_tracks' WHERE playlist_id = :playlist_id"
+        playlist_exists = self.db.query(query, sql_values).fetchone()
+        if not playlist_exists:
+            return True
+
+    def append_new_release(self, release_date, artist, album, cover):
+        for days in self.new_releases:
+            for key in days:
+                if key == "release_date":
+                    if release_date in days[key]:
+                        days["releases"].append({'artist': artist, 'album': album, 'cover': cover})
+                        return
+
+        self.new_releases.append({'release_date': release_date, 'releases': [{'artist': artist, 'album': album}]})
