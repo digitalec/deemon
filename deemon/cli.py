@@ -81,9 +81,12 @@ def download_command(artist, artist_id, album_id, url, input_file, bitrate, reco
 @click.option('-i', '--artist-id', multiple=True, type=int, metavar="ID", help="Monitor artist by ID")
 @click.option('-p', '--playlist', multiple=True, metavar="URL", help='Monitor Deezer playlist by URL')
 @click.option('-n', '--no-refresh', is_flag=True, help='Skip refresh after adding or removing artist')
+@click.option('-r', '--record-type', type=click.Choice(['album', 'ep', 'single'], case_sensitive=False),
+              help='Specify record type to monitor (default=ALL)')
 @click.option('-u', '--url', multiple=True, metavar="URL", help='Monitor artist by URL')
 @click.option('-R', '--remove', is_flag=True, help='Stop monitoring an artist')
-def monitor_command(artist, playlist, no_refresh, artist_id, remove, url):
+@click.option('--reset', is_flag=True, help='Remove all artists/playlists from monitoring')
+def monitor_command(artist, playlist, no_refresh, record_type, artist_id, remove, url, reset):
     """
     Monitor artist for new releases by ID, URL or name.
 
@@ -103,21 +106,30 @@ def monitor_command(artist, playlist, no_refresh, artist_id, remove, url):
     playlists = list(playlist)
 
     new_artists = []
-    new_playlists = []  # Requires rewrite of REFRESH module
+    new_playlists = []
+
+    if reset:
+        logger.warning("** ALL ARTISTS AND PLAYLISTS WILL BE REMOVED! **")
+        confirm = input("Type 'reset' to confirm: ")
+        if confirm == "reset":
+            monitor.monitor(profile=None, value=None, reset=True)
+        else:
+            logger.info("Reset aborted. Database has NOT been modified.")
+        return
 
     if artist:
         for a in artists:
-            result = monitor.monitor("artist", a, remove=remove)
+            result = monitor.monitor("artist", a, remove=remove, rtype=record_type)
             if type(result) == int:
                 new_artists.append(result)
 
     if artist_id:
         for aid in artist_id:
-            result = monitor.monitor("artist_id", aid, remove=remove)
+            result = monitor.monitor("artist_id", aid, remove=remove, rtype=record_type)
             if type(result) == int:
                 new_artists.append(result)
 
-    if url:
+    if url:  # TODO cleanup, merge with artist_id somehow?
         for u in url:
             id_from_url = u.split('/artist/')
             try:
@@ -125,19 +137,20 @@ def monitor_command(artist, playlist, no_refresh, artist_id, remove, url):
             except (IndexError, ValueError):
                 logger.error(f"Invalid URL -- {url}")
                 sys.exit(1)
-        result = monitor.monitor("artist_id", artist_id, remove=remove)
+        result = monitor.monitor("artist_id", artist_id, remove=remove, rtype=record_type)
         if type(result) == int:
             new_artists.append(result)
 
     if playlists:
         for p in playlists:
             result = monitor.monitor("playlist", p, remove=remove)
-            if type(result) == int:
+            if type(result) == int:  # TODO is this needed? What return values are possible? if result > 0?
                 new_playlists.append(result)
-
     if (len(new_artists) > 0 or len(new_playlists) > 0) and not no_refresh:
-        refresh = Refresh()
-        refresh.refresh()  # artist_id=new_artists - taking this out until REFRESH module rewrite
+        logger.debug("Requesting refresh, standby...")
+        logger.debug(f"new_artists={new_artists}")
+        logger.debug(f"new_playlists={new_playlists}")
+        Refresh(artist_id=new_artists, playlist_id=new_playlists) # TODO will an empty list cause an issue?
 
 
 @run.command(name='refresh')

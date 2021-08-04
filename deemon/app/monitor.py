@@ -7,17 +7,51 @@ import deezer
 logger = logging.getLogger(__name__)
 
 
-def monitor(profile, value, remove=False):
+def monitor(profile, value, remove=False, reset=False, record_type=None):
 
     dz = deezer.Deezer()
     db = Deemon().db
     config = Deemon().config
 
+    def purge_playlist(i, title):
+        values = {'id': api_result['id']}
+        db.query("DELETE FROM 'playlists' WHERE id = :id", values)
+        logger.debug(f"Playlist {i} removed from monitoring")
+        db.query("DELETE FROM 'playlist_tracks' WHERE playlist_id = :id", values)
+        logger.debug(f"All releases tracked for playlist {i} have been removed")
+        db.commit()
+        logger.info(f"No longer monitoring playlist '{title}'")
+
+    def purge_artist(i, name):
+        values = {'id': api_result['id']}
+        db.query("DELETE FROM 'monitor' WHERE artist_id = :id", values)
+        logger.debug(f"Artist {i} removed from monitoring")
+        db.query("DELETE FROM 'releases' WHERE artist_id = :id", values)
+        logger.debug(f"All releases tracked for artist {i} have been removed")
+        db.commit()
+        logger.info(f"No longer monitoring artist '{name}'")
+
+    if reset:
+        db.query("DELETE FROM monitor")
+        db.query("DELETE FROM releases")
+        db.commit()
+        logger.debug("All artists have been purged from database")
+
+        db.query("DELETE FROM playlists")
+        db.query("DELETE FROM playlist_tracks")
+        db.commit()
+        logger.debug("All playlists have been purge from database")
+        logger.info("Database has been reset")
+        return
+
+    if not record_type:
+        record_type = config['record_type']
+
     if profile in ['artist', 'artist_id']:
         if profile == "artist":
             try:
                 api_result = dz.api.search_artist(value, limit=1)["data"][0]
-            except deezer.api.DataException:
+            except (deezer.api.DataException, IndexError):
                 logger.error(f"Artist {value} not found.")
                 return
         else:
@@ -32,10 +66,7 @@ def monitor(profile, value, remove=False):
             if not artist_exists:
                 logger.warning(f"{api_result['name']} is not being monitored yet")
                 return
-            db.query("DELETE FROM 'monitor' WHERE artist_id = :id", sql_values)
-            db.query("DELETE FROM 'releases' WHERE artist_id = :id", sql_values)
-            db.commit()
-            logger.info(f"No longer monitoring artist '{api_result['name']}'")
+            purge_artist(api_result['id'], api_result['name'])
             return True
         if artist_exists:
             logger.warning(f"Artist '{api_result['name']}' is already being monitored")
@@ -44,7 +75,7 @@ def monitor(profile, value, remove=False):
             'artist_id': api_result['id'],
             'artist_name': api_result['name'],
             'bitrate': config["bitrate"],
-            'record_type': config["record_type"],
+            'record_type': record_type,
             'alerts': config["alerts"]
         }
         query = ("INSERT INTO monitor (artist_id, artist_name, bitrate, record_type, alerts) "
@@ -78,10 +109,7 @@ def monitor(profile, value, remove=False):
             if not playlist_exists:
                 logger.warning(f"Playlist '{api_result['title']}' is not being monitored yet")
                 return
-            db.query("DELETE FROM 'playlists' WHERE id = :id", sql_values)
-            db.query("DELETE FROM 'playlist_tracks' WHERE playlist_id = :id", sql_values)
-            db.commit()
-            logger.info(f"No longer monitoring playlist '{api_result['title']}'")
+            purge_playlist(api_result['id'], api_result['title'])
             return True
         if playlist_exists:
             logger.warning(f"Playlist '{api_result['title']}' is already being monitored")
@@ -98,4 +126,3 @@ def monitor(profile, value, remove=False):
 
         db.commit()
         return api_result['id']
-
