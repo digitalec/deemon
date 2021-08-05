@@ -7,7 +7,7 @@ import deezer
 logger = logging.getLogger(__name__)
 
 
-def monitor(profile, value, remove=False, reset=False, r_type=None):
+def monitor(profile, value, remove=False, reset=False, bitrate=None, r_type=None, alerts=None):
 
     dz = deezer.Deezer()
     db = Deemon().db
@@ -30,9 +30,6 @@ def monitor(profile, value, remove=False, reset=False, r_type=None):
         logger.debug(f"All releases tracked for artist {i} have been removed")
         db.commit()
         logger.info(f"No longer monitoring artist '{name}'")
-
-    if not r_type:
-        r_type = config['record_type']
 
     if reset:
         db.query("DELETE FROM monitor")
@@ -74,9 +71,9 @@ def monitor(profile, value, remove=False, reset=False, r_type=None):
         sql_values = {
             'artist_id': api_result['id'],
             'artist_name': api_result['name'],
-            'bitrate': config["bitrate"],
+            'bitrate': bitrate,
             'record_type': r_type,
-            'alerts': config["alerts"]
+            'alerts': alerts
         }
         query = ("INSERT INTO monitor (artist_id, artist_name, bitrate, record_type, alerts) "
                  "VALUES (:artist_id, :artist_name, :bitrate, :record_type, :alerts)")

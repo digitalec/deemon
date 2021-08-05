@@ -81,12 +81,15 @@ def download_command(artist, artist_id, album_id, url, input_file, bitrate, reco
 @click.option('-i', '--artist-id', multiple=True, type=int, metavar="ID", help="Monitor artist by ID")
 @click.option('-u', '--url', multiple=True, metavar="URL", help='Monitor artist by URL')
 @click.option('-p', '--playlist', multiple=True, metavar="URL", help='Monitor Deezer playlist by URL')
+@click.option('-b', '--bitrate', type=click.Choice(['1', '3', '9']), default=config["bitrate"], help="Specify bitrate")
 @click.option('-t', '--record-type', type=click.Choice(['all', 'album', 'ep', 'single'], case_sensitive=False),
               default=config["record_type"], help='Specify record types to download')
+@click.option('-a', '--alerts', type=click.Choice(['0', '1']), default=config["alerts"],
+              help="Enable or disable alerts")
 @click.option('-n', '--no-refresh', is_flag=True, help='Skip refresh after adding or removing artist')
 @click.option('-R', '--remove', is_flag=True, help='Stop monitoring an artist')
 @click.option('--reset', is_flag=True, help='Remove all artists/playlists from monitoring')
-def monitor_command(artist, playlist, no_refresh, record_type, artist_id, remove, url, reset):
+def monitor_command(artist, playlist, no_refresh, bitrate, record_type, alerts, artist_id, remove, url, reset):
     """
     Monitor artist for new releases by ID, URL or name.
 
@@ -108,6 +111,9 @@ def monitor_command(artist, playlist, no_refresh, record_type, artist_id, remove
     new_artists = []
     new_playlists = []
 
+    alerts = int(alerts)
+    bitrate = int(bitrate)
+
     if reset:
         logger.warning("** ALL ARTISTS AND PLAYLISTS WILL BE REMOVED! **")
         confirm = input("Type 'reset' to confirm: ")
@@ -119,13 +125,13 @@ def monitor_command(artist, playlist, no_refresh, record_type, artist_id, remove
 
     if artist:
         for a in artists:
-            result = monitor.monitor("artist", a, remove=remove, r_type=record_type)
+            result = monitor.monitor("artist", a, remove=remove, r_type=record_type, bitrate=bitrate, alerts=alerts)
             if type(result) == int:
                 new_artists.append(result)
 
     if artist_id:
         for aid in artist_id:
-            result = monitor.monitor("artist_id", aid, remove=remove, r_type=record_type)
+            result = monitor.monitor("artist_id", aid, remove=remove, r_type=record_type, bitrate=bitrate, alerts=alerts)
             if type(result) == int:
                 new_artists.append(result)
 
@@ -137,7 +143,7 @@ def monitor_command(artist, playlist, no_refresh, record_type, artist_id, remove
             except (IndexError, ValueError):
                 logger.error(f"Invalid URL -- {url}")
                 sys.exit(1)
-        result = monitor.monitor("artist_id", artist_id, remove=remove, r_type=record_type)
+        result = monitor.monitor("artist_id", artist_id, remove=remove, r_type=record_type, bitrate=bitrate, alerts=alerts)
         if type(result) == int:
             new_artists.append(result)
 

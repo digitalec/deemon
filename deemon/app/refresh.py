@@ -109,14 +109,15 @@ class Refresh:
                              bar_format='{desc}...  {n_fmt}/{total_fmt} [{bar:40}] {percentage:3.0f}%')
 
         for artist in progress:
-            artist = {"id": artist[0], "name": artist[1], "bitrate": self.config["bitrate"], "record_type": artist[3]}
+            artist = {"id": artist[0], "name": artist[1], "bitrate": artist[2],
+                      "record_type": artist[3], "alerts": artist[4]}
             artist_new_release_count = 0
             new_artist = self.existing_artist(artist['id'])
             progress.set_description_str("Refreshing artists")
             artist_albums = self.dz.api.get_artist_albums(artist['id'])
 
             logger.debug(f"Artist settings for {artist['name']} ({artist['id']}): bitrate={artist['bitrate']}, "
-                         f"record_type={artist['record_type']}")
+                         f"record_type={artist['record_type']}, alerts={artist['alerts']}")
             for album in artist_albums['data']:
                 exists = self.db.get_album_by_id(album_id=album['id'])
                 if exists:
