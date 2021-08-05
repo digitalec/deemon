@@ -59,7 +59,7 @@ class DBHelper:
                        "'record_type' TEXT, 'alerts' INTEGER)")
 
         sql_playlists = ("CREATE TABLE IF NOT EXISTS 'playlists' "
-                         "('id' INTEGER UNIQUE, 'title' TEXT, 'url' TEXT)")
+                         "('id' INTEGER UNIQUE, 'title' TEXT, 'url' TEXT, 'bitrate' INTEGER)")
 
         sql_playlist_tracks = ("CREATE TABLE IF NOT EXISTS 'playlist_tracks' "
                                "('track_id' INTEGER, 'playlist_id' INTEGER, 'artist_id' INTEGER, "
@@ -100,9 +100,17 @@ class DBHelper:
                                    "'artist_name' TEXT, 'track_name' TEXT, 'track_added' TEXT)")
             self.query(sql_playlists)
             self.query(sql_playlist_tracks)
-            self.query(f"INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('version', '{__dbversion__}')")
+            self.query("INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('version', '1.1')")
             self.commit()
-            logger.debug(f"Database upgraded to version {__dbversion__}")
+            logger.debug("Database upgraded to version 1.1")
+        # Upgrade database v1.1 to v1.3
+        if current_ver < parse_version("1.3"):
+            sql_playlists = "ALTER TABLE playlists ADD COLUMN bitrate INTEGER"
+            sql_updatever = "INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('version', '1.3')"
+            self.query(sql_playlists)
+            self.query(sql_updatever)
+            self.commit()
+            logger.debug(f"Database upgraded to version 1.3")
 
     def query(self, query, values=None):
         if values is None:

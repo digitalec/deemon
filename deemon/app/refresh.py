@@ -90,7 +90,7 @@ class Refresh:
                     new_track_count += 1
 
             if new_track_count > 0 and not new_playlist:
-                self.queue_list.append(download.QueueItem(url=playlist_api['link'], playlist=playlist['title']))
+                self.queue_list.append(download.QueueItem(playlist=playlist_api))
                 logger.info(f"Playlist '{playlist_api['title']}' has {new_track_count} new track(s)")
             else:
                 logger.debug(f"No new tracks have been added to playlist '{playlist_api['title']}'")
@@ -110,7 +110,7 @@ class Refresh:
 
         for artist in progress:
             artist = {"id": artist[0], "name": artist[1], "bitrate": artist[2],
-                      "record_type": artist[3], "alerts": artist[4]}
+                      "record_type": artist[3], "alerts": artist[4]}  # TODO This could be cleaned up using rowfactory
             artist_new_release_count = 0
             new_artist = self.existing_artist(artist['id'])
             progress.set_description_str("Refreshing artists")

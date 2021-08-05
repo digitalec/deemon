@@ -13,14 +13,14 @@ logger = logging.getLogger(__name__)
 
 class QueueItem:
 
-    def __init__(self, artist=None, album=None, url=None, playlist=None):
+    def __init__(self, artist=None, album=None, playlist=None):
         if artist:
             self.artist_name = artist["name"]
             self.bitrate = artist["bitrate"]
             self.album_id = album["id"]
             self.album_title = album["title"]
             self.url = album["link"]
-        if url:
+        if playlist:
             self.artist_name = None
             self.bitrate = artist["bitrate"]
             self.url = url

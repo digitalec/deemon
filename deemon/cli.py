@@ -84,7 +84,7 @@ def download_command(artist, artist_id, album_id, url, input_file, bitrate, reco
 @click.option('-b', '--bitrate', type=click.Choice(['1', '3', '9']), default=config["bitrate"], help="Specify bitrate")
 @click.option('-t', '--record-type', type=click.Choice(['all', 'album', 'ep', 'single'], case_sensitive=False),
               default=config["record_type"], help='Specify record types to download')
-@click.option('-a', '--alerts', type=click.Choice(['0', '1']), default=config["alerts"],
+@click.option('-a', '--alerts', type=click.Choice(['0', '1']), default=str(config["alerts"]),
               help="Enable or disable alerts")
 @click.option('-n', '--no-refresh', is_flag=True, help='Skip refresh after adding or removing artist')
 @click.option('-R', '--remove', is_flag=True, help='Stop monitoring an artist')
