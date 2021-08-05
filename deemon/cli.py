@@ -57,8 +57,8 @@ def test():
 @click.option('-f', '--file', 'input_file', metavar='FILE', help='Download batch of artists from file, one per line')
 @click.option('-b', '--bitrate', metavar='N', type=int, default=config["bitrate"],
               help='Set custom bitrate for this operation')
-@click.option('-r', '--record-type', metavar='TYPE', default=config["record_type"],
-              help='Only get certain record types')
+@click.option('-t', '--record-type', type=click.Choice(['all', 'album', 'ep', 'single'], case_sensitive=False),
+              default=config["record_type"], help='Specify record types to download')
 def download_command(artist, artist_id, album_id, url, input_file, bitrate, record_type):
     """Download specific artist, album ID or by URL"""
 
@@ -79,11 +79,11 @@ def download_command(artist, artist_id, album_id, url, input_file, bitrate, reco
 @run.command(name='monitor', context_settings={"ignore_unknown_options": True})
 @click.argument('artist', nargs=-1)
 @click.option('-i', '--artist-id', multiple=True, type=int, metavar="ID", help="Monitor artist by ID")
-@click.option('-p', '--playlist', multiple=True, metavar="URL", help='Monitor Deezer playlist by URL')
-@click.option('-n', '--no-refresh', is_flag=True, help='Skip refresh after adding or removing artist')
-@click.option('-r', '--record-type', type=click.Choice(['album', 'ep', 'single'], case_sensitive=False),
-              help='Specify record type to monitor (default=ALL)')
 @click.option('-u', '--url', multiple=True, metavar="URL", help='Monitor artist by URL')
+@click.option('-p', '--playlist', multiple=True, metavar="URL", help='Monitor Deezer playlist by URL')
+@click.option('-t', '--record-type', type=click.Choice(['all', 'album', 'ep', 'single'], case_sensitive=False),
+              default=config["record_type"], help='Specify record types to download')
+@click.option('-n', '--no-refresh', is_flag=True, help='Skip refresh after adding or removing artist')
 @click.option('-R', '--remove', is_flag=True, help='Stop monitoring an artist')
 @click.option('--reset', is_flag=True, help='Remove all artists/playlists from monitoring')
 def monitor_command(artist, playlist, no_refresh, record_type, artist_id, remove, url, reset):
@@ -119,13 +119,13 @@ def monitor_command(artist, playlist, no_refresh, record_type, artist_id, remove
 
     if artist:
         for a in artists:
-            result = monitor.monitor("artist", a, remove=remove, rtype=record_type)
+            result = monitor.monitor("artist", a, remove=remove, r_type=record_type)
             if type(result) == int:
                 new_artists.append(result)
 
     if artist_id:
         for aid in artist_id:
-            result = monitor.monitor("artist_id", aid, remove=remove, rtype=record_type)
+            result = monitor.monitor("artist_id", aid, remove=remove, r_type=record_type)
             if type(result) == int:
                 new_artists.append(result)
 
@@ -137,7 +137,7 @@ def monitor_command(artist, playlist, no_refresh, record_type, artist_id, remove
             except (IndexError, ValueError):
                 logger.error(f"Invalid URL -- {url}")
                 sys.exit(1)
-        result = monitor.monitor("artist_id", artist_id, remove=remove, rtype=record_type)
+        result = monitor.monitor("artist_id", artist_id, remove=remove, r_type=record_type)
         if type(result) == int:
             new_artists.append(result)
 
@@ -207,4 +207,3 @@ def backup(include_logs):
     with tarfile.open(backup_path / backup_tar, "w") as tar:
         tar.add(settings.config_path, arcname='deemon', filter=filter_func)
         logger.info(f"Backed up to {backup_path / backup_tar}")
-

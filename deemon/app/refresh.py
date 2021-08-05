@@ -43,7 +43,7 @@ class Refresh:
             else:
                 self.refresh_artists()
         else:
-            if not self.monitoring_playlists() or self.monitoring_artists():
+            if not self.monitoring_playlists() and not self.monitoring_artists():
                 logger.info("Nothing to refresh. Try monitoring an artist or playlist first!")
                 return
 
@@ -115,6 +115,8 @@ class Refresh:
             progress.set_description_str("Refreshing artists")
             artist_albums = self.dz.api.get_artist_albums(artist['id'])
 
+            logger.debug(f"Artist settings for {artist['name']} ({artist['id']}): bitrate={artist['bitrate']}, "
+                         f"record_type={artist['record_type']}")
             for album in artist_albums['data']:
                 exists = self.db.get_album_by_id(album_id=album['id'])
                 if exists:
@@ -140,26 +142,26 @@ class Refresh:
                             f"WARNING: Artist '{artist['name']}' setup for monitoring but no releases were found.")
                     continue
 
-                if ((self.config['record_type'] == album['record_type']) or
-                        (self.config['record_type'] == "all")):
+                if (artist['record_type'] == album['record_type']) or artist['record_type'] == "all":
                     if self.config['release_by_date']:
                         max_release_date = utils.get_max_release_date(self.config['release_max_days'])
                         if album['release_date'] < max_release_date:
                             logger.debug(f"Release {album['id']} outside of max_release_date, skipping...")
                             continue
                     self.total_new_releases += 1
+                    artist_new_release_count += 1
                     self.queue_list.append(download.QueueItem(artist, album))
                     logger.debug(f"Release {album['id']} added to queue")
                     self.append_new_release(album['release_date'], artist['name'],
                                             album['title'], album['cover_medium'])
                 else:
                     logger.debug(f"Release {album['id']} does not meet album_type "
-                                 f"requirement of {self.config['record_type']}")
+                                 f"requirement of '{self.config['record_type']}'")
             if artist_new_release_count > 0:
                 logger.info(f"{artist['name']}: {artist_new_release_count} new release(s)")
             else:
                 if not new_artist:
-                    logger.debug(f"No new releases found for artist '{artist['name']} ({artist['id']})'")
+                    logger.debug(f"No new releases found for artist {artist['name']} ({artist['id']})")
 
     def is_future_release(self, release_date):
         if release_date > self.refresh_date:
@@ -169,13 +171,13 @@ class Refresh:
 
     def monitoring_playlists(self):
         query = "SELECT * FROM 'playlists'"
-        result = self.db.query(query).fetchone()
+        result = self.db.query(query).fetchall()
         if result and len(result) > 0:
             return True
 
     def monitoring_artists(self):
         query = "SELECT * FROM 'monitor'"
-        result = self.db.query(query).fetchone()
+        result = self.db.query(query).fetchall()
         if result and len(result) > 0:
             return True
 

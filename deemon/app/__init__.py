@@ -2,7 +2,7 @@ from deemon.app import settings, db
 from deemon import __dbversion__
 from packaging.version import parse as parse_version
 
-
+# TODO this needs to be cleaned up / database object recreated on each import
 class Deemon:
     def __init__(self):
         self.settings = settings.Settings()
