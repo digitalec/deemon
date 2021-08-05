@@ -14,25 +14,36 @@ logger = logging.getLogger(__name__)
 class QueueItem:
 
     def __init__(self, artist=None, album=None, playlist=None):
+        self.artist_name = None
+        self.bitrate = None
+        self.album_id = None
+        self.album_title = None
+        self.url = None
+        self.playlist_title = None
+
         if artist:
             self.artist_name = artist["name"]
             self.bitrate = artist["bitrate"]
+
+        if album:
             self.album_id = album["id"]
             self.album_title = album["title"]
             self.url = album["link"]
+
         if playlist:
-            self.artist_name = None
             self.bitrate = artist["bitrate"]
-            self.url = url
-            self.playlist_name = playlist
+            self.url = playlist["url"]
+            self.playlist_title = playlist["title"]
 
 
-class Download(Deemon):
+class Download():
 
     def __init__(self):
         super().__init__()
         self.dz = deezer.Deezer()
         self.di = dmi.DeemixInterface()
+        self.db = Deemon().db
+        self.config = Deemon().config
         self.queue_list = []
         self.bitrate = None
 
@@ -53,6 +64,7 @@ class Download(Deemon):
                 logger.error("Error: Unable to reach Plex server, please refresh manually.")
                 return False
 
+    # TODO - Rewrite download_queue - function is used by Refresh module when new releases are detected
     def download_queue(self, queue):
         if queue:
             plex = self.get_plex_server()
@@ -61,25 +73,28 @@ class Download(Deemon):
             logger.info("Sending " + str(num_queued) + " release(s) to deemix for download:")
 
             for q in queue:
-                self.bitrate = q.bitrate
                 logger.debug(f"Queued: {vars(q)}")
                 if q.artist_name:
                     logger.info(f"+ {q.artist_name} - {q.album_title}... ")
                 else:
                     logger.info(f"+ Updating playlist: {q.playlist_name}...")
-                logger.debug(f"bitrate set to {self.bitrate}")
-                self.di.download_url([q.url], self.bitrate)
+                logger.debug(f"bitrate set to {q.bitrate}")
+                self.di.download_url([q.url], q.bitrate)
 
             print("")
             logger.info("Downloads complete!")
-            if plex:
+            if plex and (self.config["plex_library"] != ""):
                 try:
                     plex.library.section(self.config["plex_library"]).update()
                     logger.debug("Plex library refreshed successfully")
                 except plexapi.exceptions.BadRequest as e:
                     logger.error("Error occurred while refreshing your library. See logs for additional info.")
                     logger.debug(f"Error during Plex refresh: {e}")
+                except plexapi.exceptions.NotFound as e:
+                    logger.error("Error: Plex library not found. See logs for additional info.")
+                    logger.debug(f"Error during Plex refresh: {e}")
 
+    # TODO Re-write manual download option - add_to_queue only used by download()
     def add_to_queue(self, artist, album):
         for _album in album['data']:
             if (self.record_type == _album["record_type"]) or (self.record_type == "all"):
@@ -87,6 +102,7 @@ class Download(Deemon):
                 artist["bitrate"] = self.bitrate
                 self.queue_list.append(QueueItem(artist, _album))
 
+    # TODO Re-write manual download option
     def download(self, opt: dict):
         logger.debug("download called with options: " + str(opt))
         artist = {}
