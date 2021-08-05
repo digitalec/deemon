@@ -16,11 +16,13 @@ class QueueItem:
     def __init__(self, artist=None, album=None, url=None, playlist=None):
         if artist:
             self.artist_name = artist["name"]
+            self.bitrate = artist["bitrate"]
             self.album_id = album["id"]
             self.album_title = album["title"]
             self.url = album["link"]
         if url:
             self.artist_name = None
+            self.bitrate = artist["bitrate"]
             self.url = url
             self.playlist_name = playlist
 
@@ -32,8 +34,7 @@ class Download(Deemon):
         self.dz = deezer.Deezer()
         self.di = dmi.DeemixInterface()
         self.queue_list = []
-        self.bitrate = self.config["bitrate"]
-        self.record_type = self.config["record_type"]
+        self.bitrate = None
 
         if not self.di.login():
             sys.exit(1)
@@ -60,6 +61,7 @@ class Download(Deemon):
             logger.info("Sending " + str(num_queued) + " release(s) to deemix for download:")
 
             for q in queue:
+                self.bitrate = q.bitrate
                 logger.debug(f"Queued: {vars(q)}")
                 if q.artist_name:
                     logger.info(f"+ {q.artist_name} - {q.album_title}... ")
