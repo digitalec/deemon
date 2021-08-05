@@ -24,6 +24,7 @@ class QueueItem:
         if artist:
             self.artist_name = artist["name"]
             self.bitrate = artist["bitrate"]
+            self.url = artist["link"]
 
         if album:
             self.album_id = album["id"]
@@ -34,6 +35,11 @@ class QueueItem:
             self.bitrate = artist["bitrate"]
             self.url = playlist["url"]
             self.playlist_title = playlist["title"]
+
+        self.print_queue_to_log()
+
+    def print_queue_to_log(self):
+        logger.debug("Item created in queue: " + str(self.__dict__))
 
 
 class Download:
@@ -103,18 +109,30 @@ class Download:
                 self.queue_list.append(QueueItem(artist, _album))
 
     # TODO Re-write manual download option
-    def download(self, opt: dict):
-        logger.debug("download called with options: " + str(opt))
-        artist = {}
+    def download(self, artist, artist_id, album_id, url, bitrate, record_type, file):
 
-        if opt["bitrate"]:
-            self.bitrate = opt["bitrate"]
-        if opt["record_type"]:
-            self.record_type = opt["record_type"]
+        # TODO URL needs to be reworked / self.di.download_url()
 
-        if opt["url"]:
-            logger.info("Sending URL to deemix for processing:")
-            self.di.download_url([opt["url"]], opt["bitrate"])
+        def filter_by_record_type(artist, record_type):
+            album_api = self.dz.api.get_artist_albums(artist['id'])['data']
+            filtered_albums = []
+            for album in album_api:
+                if album['record_type'] == record_type:
+                    filtered_albums.append(album)
+            return filtered_albums
+
+        for a in artist:
+            try:
+                artist_api = self.dz.api.search_artist(a, limit=1)["data"][0]
+                artist_api['bitrate'] = bitrate
+                if record_type != "all":
+                    for release in filter_by_record_type(artist_api, record_type):
+                        self.queue_list.append(QueueItem(artist_api, release))
+                self.queue_list.append(QueueItem(artist_api))
+            except (deezer.api.DataException, IndexError):
+                logger.error(f"Artist {a} not found.")
+
+        exit()
 
         if opt["file"]:
             logger.info(f"Reading from file {opt['file']}")

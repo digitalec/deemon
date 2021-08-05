@@ -114,11 +114,11 @@ class Refresh:
             artist_new_release_count = 0
             new_artist = self.existing_artist(artist['id'])
             progress.set_description_str("Refreshing artists")
-            artist_albums = self.dz.api.get_artist_albums(artist['id'])
+            artist_albums = self.dz.api.get_artist_albums(artist['id'])['data']
 
             logger.debug(f"Artist settings for {artist['name']} ({artist['id']}): bitrate={artist['bitrate']}, "
                          f"record_type={artist['record_type']}, alerts={artist['alerts']}")
-            for album in artist_albums['data']:
+            for album in artist_albums:
                 exists = self.db.get_album_by_id(album_id=album['id'])
                 if exists:
                     if exists['future_release'] and (exists['release_date'] <= self.refresh_date):
@@ -138,7 +138,7 @@ class Refresh:
                                         album['title'], album['release_date'], future_release=future)
 
                 if new_artist:
-                    if len(artist_albums['data']) == 0:
+                    if len(artist_albums) == 0:
                         logger.warning(
                             f"WARNING: Artist '{artist['name']}' setup for monitoring but no releases were found.")
                     continue

@@ -50,30 +50,31 @@ def test():
 
 
 @run.command(name='download')
-@click.option('-a', '--artist', metavar='NAME', type=str, help='Download all by artist name')
-@click.option('-i', '--artist-id', metavar='ID', type=int, help='Download all by artist ID')
-@click.option('-A', '--album-id', metavar='ID', type=int, help='Download by album ID')
-@click.option('-u', '--url', metavar='URL', help='Download by URL of artist/album/track')
-@click.option('-f', '--file', 'input_file', metavar='FILE', help='Download batch of artists from file, one per line')
+@click.argument('artist', nargs=-1)
+@click.option('-i', '--artist-id', multiple=True, metavar='ID', type=int, help='Download by artist ID')
+@click.option('-A', '--album-id', multiple=True, metavar='ID', type=int, help='Download by album ID')
+@click.option('-u', '--url', metavar='URL', multiple=True, help='Download by URL of artist/album/track')  # TODO playlist?
+@click.option('-f', '--file', metavar='FILE', help='Download batch of artists from file, one per line')  # TODO centralize function for processing files
 @click.option('-b', '--bitrate', metavar='N', type=int, default=config["bitrate"],
               help='Set custom bitrate for this operation')
 @click.option('-t', '--record-type', type=click.Choice(['all', 'album', 'ep', 'single'], case_sensitive=False),
               default=config["record_type"], help='Specify record types to download')
-def download_command(artist, artist_id, album_id, url, input_file, bitrate, record_type):
-    """Download specific artist, album ID or by URL"""
+def download_command(artist, artist_id, album_id, url, file, bitrate, record_type):
+    """
+    Download specific artist, album ID or by URL
 
-    params = {
-        'artist': artist,
-        'artist_id': artist_id,
-        'album_id': album_id,
-        'url': url,
-        'bitrate': bitrate,
-        'record_type': record_type,
-        'file': input_file
-    }
+    \b
+    Examples:
+        download Mozart
+        download -i 100 -t album -b 9
+    """
+    artists = artists_to_csv(artist) if artist else None
+    artist_ids = [x for x in artist_id] if artist_id else None
+    album_ids = [x for x in album_id] if album_id else None
+    urls = [x for x in url] if url else None
 
     dl = download.Download()
-    dl.download(params)
+    dl.download(artists, artist_ids, album_ids, urls, bitrate, record_type, file)
 
 
 @run.command(name='monitor', context_settings={"ignore_unknown_options": True})
@@ -87,6 +88,7 @@ def download_command(artist, artist_id, album_id, url, input_file, bitrate, reco
 @click.option('-a', '--alerts', type=click.Choice(['0', '1']), default=str(config["alerts"]),
               help="Enable or disable alerts")
 @click.option('-n', '--no-refresh', is_flag=True, help='Skip refresh after adding or removing artist')
+@click.option('-D', '--download', is_flag=True, help='Download all releases matching record type')  # TODO Need to implement
 @click.option('-R', '--remove', is_flag=True, help='Stop monitoring an artist')
 @click.option('--reset', is_flag=True, help='Remove all artists/playlists from monitoring')
 def monitor_command(artist, playlist, no_refresh, bitrate, record_type, alerts, artist_id, remove, url, reset):
@@ -99,11 +101,6 @@ def monitor_command(artist, playlist, no_refresh, bitrate, record_type, alerts, 
         monitor --artist-id 100
         monitor --url https://www.deezer.com/us/artist/000
     """
-
-    artists = ' '.join(artist)
-    artists = artists.split(',')
-    artists = [x.lstrip() for x in artists]
-
     artist_id = list(artist_id)
     url = list(url)
     playlists = list(playlist)
@@ -124,7 +121,7 @@ def monitor_command(artist, playlist, no_refresh, bitrate, record_type, alerts, 
         return
 
     if artist:
-        for a in artists:
+        for a in artists_to_csv(artist):
             result = monitor.monitor("artist", a, remove=remove, r_type=record_type, bitrate=bitrate, alerts=alerts)
             if type(result) == int:
                 new_artists.append(result)
@@ -213,3 +210,10 @@ def backup(include_logs):
     with tarfile.open(backup_path / backup_tar, "w") as tar:
         tar.add(settings.config_path, arcname='deemon', filter=filter_func)
         logger.info(f"Backed up to {backup_path / backup_tar}")
+
+
+def artists_to_csv(a):
+    csv_artists = ' '.join(a)
+    csv_artists = csv_artists.split(',')
+    csv_artists = [x.lstrip() for x in csv_artists]
+    return csv_artists
