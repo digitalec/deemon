@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 class QueueItem:
 
-    def __init__(self, artist=None, album=None, playlist=None):
+    def __init__(self, artist=None, album=None, playlist=None):  # TODO - Accept new playlist tracks for output/alerts
         self.artist_name = None
         self.bitrate = None
         self.album_id = None
@@ -36,7 +36,7 @@ class QueueItem:
             self.playlist_title = playlist["title"]
 
 
-class Download():
+class Download:
 
     def __init__(self):
         super().__init__()
@@ -55,7 +55,7 @@ class Download():
         token = self.config["plex_token"]
         if (baseurl != "") and (token != ""):
             try:
-                print("Plex settings found, trying to connect... ", end="")
+                print("Plex settings found, trying to connect (10s)... ", end="")
                 plex_server = PlexServer(baseurl, token, timeout=10)
                 print(" OK")
                 return plex_server
@@ -64,35 +64,35 @@ class Download():
                 logger.error("Error: Unable to reach Plex server, please refresh manually.")
                 return False
 
-    # TODO - Rewrite download_queue - function is used by Refresh module when new releases are detected
+    def refresh_plex(self, plexobj):
+        try:
+            plexobj.library.section(self.config["plex_library"]).update()
+            logger.debug("Plex library refreshed successfully")
+        except plexapi.exceptions.BadRequest as e:
+            logger.error("Error occurred while refreshing your library. See logs for additional info.")
+            logger.debug(f"Error during Plex refresh: {e}")
+        except plexapi.exceptions.NotFound as e:
+            logger.error("Error: Plex library not found. See logs for additional info.")
+            logger.debug(f"Error during Plex refresh: {e}")
+
     def download_queue(self, queue):
         if queue:
             plex = self.get_plex_server()
-            num_queued = len(queue)
             print("----------------------------")
-            logger.info("Sending " + str(num_queued) + " release(s) to deemix for download:")
+            logger.info("Sending " + str(len(queue)) + " release(s) to deemix for download:")
 
             for q in queue:
-                logger.debug(f"Queued: {vars(q)}")
+                logger.debug(f"Processing queue item {vars(q)}")
                 if q.artist_name:
                     logger.info(f"+ {q.artist_name} - {q.album_title}... ")
                 else:
-                    logger.info(f"+ Updating playlist: {q.playlist_name}...")
-                logger.debug(f"bitrate set to {q.bitrate}")
+                    logger.info(f"+ Updating playlist: {q.playlist_title}...")
                 self.di.download_url([q.url], q.bitrate)
 
             print("")
             logger.info("Downloads complete!")
-            if plex and (self.config["plex_library"] != ""):
-                try:
-                    plex.library.section(self.config["plex_library"]).update()
-                    logger.debug("Plex library refreshed successfully")
-                except plexapi.exceptions.BadRequest as e:
-                    logger.error("Error occurred while refreshing your library. See logs for additional info.")
-                    logger.debug(f"Error during Plex refresh: {e}")
-                except plexapi.exceptions.NotFound as e:
-                    logger.error("Error: Plex library not found. See logs for additional info.")
-                    logger.debug(f"Error during Plex refresh: {e}")
+            if plex and (self.config["plex_library"] != ""):  # TODO - config validation should be done elsewhere
+                self.refresh_plex(plex)
 
     # TODO Re-write manual download option - add_to_queue only used by download()
     def add_to_queue(self, artist, album):

@@ -90,7 +90,7 @@ class Refresh:
                     new_track_count += 1
 
             if new_track_count > 0 and not new_playlist:
-                self.queue_list.append(download.QueueItem(playlist=playlist_api))
+                self.queue_list.append(download.QueueItem(playlist=playlist))
                 logger.info(f"Playlist '{playlist_api['title']}' has {new_track_count} new track(s)")
             else:
                 logger.debug(f"No new tracks have been added to playlist '{playlist_api['title']}'")
