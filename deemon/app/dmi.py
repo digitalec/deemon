@@ -20,7 +20,6 @@ class DeemixInterface(Deemon):
         super().__init__()
         logger.debug("Initializing deemix library")
 
-        deemix.generatePlaylistItem = self.generatePlaylistItem
         self.dz = Deezer()
 
         if self.config["deemix_path"] == "":
@@ -38,7 +37,9 @@ class DeemixInterface(Deemon):
         logger.debug(f"deemix Config Path: {self.config_dir}")
         logger.debug(f"deemix Download Path: {self.dx_settings['downloadLocation']}")
 
-    def download_url(self, url, bitrate):
+    def download_url(self, url, bitrate, override_deemix=True):
+        if override_deemix:
+            deemix.generatePlaylistItem = self.generatePlaylistItem
         links = []
         for link in url:
             if ';' in link:

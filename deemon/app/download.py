@@ -97,9 +97,10 @@ class Download:
                     logger.debug(f"Processing queue item {vars(q)}")
                 if q.artist_name:
                     logger.info(f"+ {q.artist_name} - {q.album_title}... ")
+                    self.di.download_url([q.url], q.bitrate)
                 else:
                     logger.info(f"+ {q.playlist_title} (playlist)...")
-                self.di.download_url([q.url], q.bitrate)
+                    self.di.download_url([q.url], q.bitrate, override_deemix=False)
 
             print("")
             logger.info("Downloads complete!")
