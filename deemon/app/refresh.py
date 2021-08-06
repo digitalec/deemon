@@ -90,7 +90,8 @@ class Refresh:
                     new_track_count += 1
 
             if new_track_count > 0 and not new_playlist:
-                self.queue_list.append(download.QueueItem(playlist=playlist))
+                pl = {'id': playlist[0], 'title': playlist[1], 'url': playlist[2],'bitrate': playlist[3]}
+                self.queue_list.append(download.QueueItem(pl['bitrate'], playlist=pl))
                 logger.info(f"Playlist '{playlist_api['title']}' has {new_track_count} new track(s)")
             else:
                 logger.debug(f"No new tracks have been added to playlist '{playlist_api['title']}'")
@@ -151,7 +152,7 @@ class Refresh:
                             continue
                     self.total_new_releases += 1
                     artist_new_release_count += 1
-                    self.queue_list.append(download.QueueItem(artist, album))
+                    self.queue_list.append(download.QueueItem(artist['bitrate'], artist, album))
                     logger.debug(f"Release {album['id']} added to queue")
                     self.append_new_release(album['release_date'], artist['name'],
                                             album['title'], album['cover_medium'])
