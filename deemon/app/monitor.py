@@ -7,7 +7,7 @@ import deezer
 logger = logging.getLogger(__name__)
 
 
-def monitor(profile, value, remove=False, reset=False, bitrate=None, r_type=None, alerts=None, dl=False):
+def monitor(profile, value, bitrate, r_type, remove=False, reset=False, alerts=None, dl_obj=False):
 
     dz = deezer.Deezer()
     db = Deemon().db
@@ -84,8 +84,8 @@ def monitor(profile, value, remove=False, reset=False, bitrate=None, r_type=None
             logger.info(e)
 
         logger.info(f"Now monitoring artist '{api_result['name']}'")
-        if dl:
-            dl.download(None, [api_result['id']], None, None, bitrate, r_type, None, False)
+        if dl_obj:
+            dl_obj.download(None, [api_result['id']], None, None, bitrate, r_type, None, False)
         db.commit()
         return api_result['id']
 
@@ -112,8 +112,9 @@ def monitor(profile, value, remove=False, reset=False, bitrate=None, r_type=None
         if playlist_exists:
             logger.warning(f"Playlist '{api_result['title']}' is already being monitored")
             return
-        sql_values = {'id': api_result['id'], 'title': api_result['title'], 'url': api_result['link']}
-        query = "INSERT INTO playlists ('id', 'title', 'url') VALUES (:id, :title, :url)"
+        sql_values = {'id': api_result['id'], 'title': api_result['title'],
+                      'url': api_result['link'], 'bitrate': bitrate}
+        query = "INSERT INTO playlists ('id', 'title', 'url', 'bitrate') VALUES (:id, :title, :url, :bitrate)"
 
         try:
             db.query(query, sql_values)
@@ -121,7 +122,7 @@ def monitor(profile, value, remove=False, reset=False, bitrate=None, r_type=None
             logger.error(e)
 
         logger.info(f"Now monitoring playlist '{api_result['title']}'")
-        if dl:
-            dl.download(None, None, None, [api_result['id']], bitrate, r_type, None, False)
+        if dl_obj:
+            dl_obj.download(None, None, None, [api_result['link']], bitrate, r_type, None, False)
         db.commit()
         return api_result['id']

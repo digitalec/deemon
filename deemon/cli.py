@@ -126,15 +126,13 @@ def monitor_command(artist, playlist, no_refresh, bitrate, record_type, alerts, 
 
     if artist:
         for a in artists_to_csv(artist):
-            result = monitor.monitor("artist", a, remove=remove,
-                                     r_type=record_type, bitrate=bitrate, alerts=alerts, dl=dl)
+            result = monitor.monitor("artist", a, bitrate, record_type, remove=remove, alerts=alerts, dl_obj=dl)
             if type(result) == int:
                 new_artists.append(result)
 
     if artist_id:
         for aid in artist_id:
-            result = monitor.monitor("artist_id", aid, remove=remove, r_type=record_type,
-                                     bitrate=bitrate, alerts=alerts, dl=dl)
+            result = monitor.monitor("artist_id", aid, bitrate, record_type, remove=remove, alerts=alerts, dl_obj=dl)
             if type(result) == int:
                 new_artists.append(result)
 
@@ -146,14 +144,13 @@ def monitor_command(artist, playlist, no_refresh, bitrate, record_type, alerts, 
             except (IndexError, ValueError):
                 logger.error(f"Invalid URL -- {url}")
                 sys.exit(1)
-        result = monitor.monitor("artist_id", artist_id, remove=remove, r_type=record_type,
-                                 bitrate=bitrate, alerts=alerts, dl=dl)
+        result = monitor.monitor("artist_id", artist_id, bitrate, record_type, remove=remove, alerts=alerts, dl_obj=dl)
         if type(result) == int:
             new_artists.append(result)
 
     if playlists:
         for p in playlists:
-            result = monitor.monitor("playlist", p, remove=remove, dl=dl)
+            result = monitor.monitor("playlist", p, bitrate, record_type, remove=remove, dl_obj=dl)
             if type(result) == int:  # TODO is this needed? What return values are possible? if result > 0?
                 new_playlists.append(result)
 
@@ -161,10 +158,7 @@ def monitor_command(artist, playlist, no_refresh, bitrate, record_type, alerts, 
         logger.debug("Requesting refresh, standby...")
         logger.debug(f"new_artists={new_artists}")
         logger.debug(f"new_playlists={new_playlists}")
-        Refresh(artist_id=new_artists, playlist_id=new_playlists) # TODO will an empty list cause an issue?
-
-    if dl:
-        dl.download_queue()
+        Refresh(artist_id=new_artists, playlist_id=new_playlists, dl_obj=dl)
 
 
 @run.command(name='refresh')

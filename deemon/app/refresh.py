@@ -9,19 +9,24 @@ logger = logging.getLogger(__name__)
 
 class Refresh:
 
-    def __init__(self, artist_id=None, playlist_id=None, skip_download=False, time_machine=None):
+    def __init__(self, artist_id=None, playlist_id=None, skip_download=False, time_machine=None, dl_obj=None):
         self.artist_id = artist_id if artist_id else None
         self.playlist_id = playlist_id if playlist_id else None
         self.skip_download = skip_download
         self.time_machine = time_machine
         self.total_new_releases = 0
-        self.dl = download.Download()
-        self.queue_list = self.dl.queue_list
         self.new_releases = []
         self.refresh_date = self.set_refresh_date()
         self.db = Deemon().db
         self.config = Deemon().config
         self.dz = deezer.Deezer()
+
+        if not dl_obj:
+            self.dl = download.Download()
+        else:
+            self.dl = dl_obj
+        self.queue_list = self.dl.queue_list
+
         self.run()
 
     def set_refresh_date(self):
