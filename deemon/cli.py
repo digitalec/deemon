@@ -172,8 +172,8 @@ def refresh_command(skip_download, time_machine):
 @run.command(name='show')
 @click.option('-a', '--artists', is_flag=True, help='Show artists currently being monitored')
 @click.option('-i', '--artist-ids', is_flag=True, help='Show artist IDs currently being monitored')
-@click.option('-p', '--playlists', is_flag=True, help='Show playlists currently being monitored')
-@click.option('-c', '--csv', is_flag=True, help='Used with --artists, output artists as CSV')
+@click.option('-p', '--playlists', is_flag=True, help='Show playlists currently being monitored', hidden=True)
+@click.option('-c', '--csv', is_flag=True, help='Used with -a, -i, -p; output artists as CSV')
 @click.option('-n', '--new-releases', metavar='N', type=int, help='Show new releases from last N days')
 def show_command(artists, artist_ids, playlists, new_releases, csv):
     """
