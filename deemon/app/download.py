@@ -21,7 +21,7 @@ class QueueItem:
         self.album_title = None
         self.url = None
         self.playlist_title = None
-        self.verbose = os.environ.get('VERBOSE').lower()
+        self.verbose = os.environ.get('VERBOSE')
 
         if artist:
             self.artist_name = artist["name"]
@@ -54,11 +54,10 @@ class Download:
         super().__init__()
         self.dz = deezer.Deezer()
         self.di = dmi.DeemixInterface()
-        self.db = Deemon().db
         self.config = Deemon().config
         self.queue_list = []
         self.bitrate = None
-        self.verbose = os.environ.get("VERBOSE").lower()
+        self.verbose = os.environ.get("VERBOSE")
 
         if not self.di.login():
             sys.exit(1)
@@ -150,7 +149,15 @@ class Download:
             api_object['bitrate'] = bitrate
             filtered = filter_artist_by_record_type(api_object, record_type)
             for album in filtered:
-                self.queue_list.append(QueueItem(api_object, album))
+                if check_queue_item_exists(album['id']):
+                    self.queue_list.append(QueueItem(api_object, album))
+
+        def check_queue_item_exists(i):
+            for q in self.queue_list:
+                if q.album_id == i:
+                    logger.debug(f"Album ID {i} is already in queue")
+                    return False
+            return True
 
         def read_file_as_csv(file):
             with open(file, 'r', encoding="utf8", errors="replace") as f:
@@ -162,47 +169,52 @@ class Download:
         def check_for_artist_ids(artist_list):
             logger.debug("Processing file contents")
             int_artists = []
+            str_artists = []
             for i in range(len(artist_list)):
                 try:
                     int_artists.append(int(artist_list[i]))
                 except ValueError:
-                    logger.debug("Detected non-integer values, processing as artist names")
-                    return False
-            logger.debug("Detected integer values, processing as artist IDs")
-            return int_artists
+                    str_artists.append(artist_list[i])
+            logger.debug(f"Detected {len(int_artists)} artist ID(s) and {len(str_artists)} artist name(s)")
+            return int_artists, str_artists
 
         def download_by_name(artist):
             for a in artist:
                 artist_result = get_api_result(artist=a)
-                queue_filtered_releases(artist_result)
+                if artist_result:
+                    queue_filtered_releases(artist_result)
 
         def download_by_id(artist_id):
             for i in artist_id:
                 artist_id_result = get_api_result(artist_id=i)
-                queue_filtered_releases(artist_id_result)
+                if artist_id_result:
+                    queue_filtered_releases(artist_id_result)
 
         if artist:
+            logger.debug("Downloading by Artist")
             download_by_name(artist)
 
         if artist_id:
+            logger.debug("Downloading by Artist ID")
             download_by_id(artist_id)
 
         if album_id:
+            logger.debug("Downloading by Album ID")
             for i in album_id:
                 record_type = "all"
-                bitrate = bitrate
                 album_id_result = get_api_result(album_id=i)
-                queue_filtered_releases(album_id_result)
+                if album_id_result:
+                    album_id_result['bitrate'] = bitrate
+                    self.queue_list.append(QueueItem(album=album_id_result))
 
         if input_file:
             logger.info(f"Reading from file {input_file}")
             if Path(input_file).exists():
                 artist_list = read_file_as_csv(input_file)
-                artist_id_list = check_for_artist_ids(artist_list)
-                if artist_id_list:
-                    download_by_id(artist_id_list)
-                else:
-                    download_by_name(artist_list)
+                artist_int_list, artist_str_list = check_for_artist_ids(artist_list)
+                if artist_str_list:
+                    download_by_name(artist_str_list)
+                if artist_int_list:
+                    download_by_id(artist_int_list)
 
         self.download_queue(self.queue_list)
-        self.db.commit()
