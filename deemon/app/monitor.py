@@ -1,17 +1,16 @@
 from sqlite3 import OperationalError
 
-from deemon.app import Deemon, download
+from deemon.app import Deemon
 import logging
 import deezer
 
 logger = logging.getLogger(__name__)
 
 
-def monitor(profile, value, bitrate, r_type, remove=False, reset=False, alerts=None, dl_obj=False):
+def monitor(profile, value, bitrate, r_type, alerts, remove=False, reset=False, dl_obj=False):
 
     dz = deezer.Deezer()
     db = Deemon().db
-    config = Deemon().config
 
     def purge_playlist(i, title):
         values = {'id': api_result['id']}
