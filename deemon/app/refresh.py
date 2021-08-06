@@ -15,7 +15,8 @@ class Refresh:
         self.skip_download = skip_download
         self.time_machine = time_machine
         self.total_new_releases = 0
-        self.queue_list = []
+        self.dl = download.Download()
+        self.queue_list = self.dl.queue_list
         self.new_releases = []
         self.refresh_date = self.set_refresh_date()
         self.db = Deemon().db
@@ -54,8 +55,7 @@ class Refresh:
                 self.refresh_artists()
 
         if len(self.queue_list) > 0 and not self.skip_download:
-            dl = download.Download()
-            dl.download_queue(self.queue_list)
+            self.dl.download_queue()
 
         if len(self.new_releases) > 0 and self.config['alerts'] == 1:
             notification = notify.Notify(self.new_releases)
@@ -90,7 +90,7 @@ class Refresh:
                     new_track_count += 1
 
             if new_track_count > 0 and not new_playlist:
-                pl = {'id': playlist[0], 'title': playlist[1], 'url': playlist[2],'bitrate': playlist[3]}
+                pl = {'id': playlist[0], 'title': playlist[1], 'link': playlist[2],'bitrate': playlist[3]}
                 self.queue_list.append(download.QueueItem(pl['bitrate'], playlist=pl))
                 logger.info(f"Playlist '{playlist_api['title']}' has {new_track_count} new track(s)")
             else:
