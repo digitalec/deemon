@@ -54,8 +54,8 @@ def test():
 @click.argument('artist', nargs=-1)
 @click.option('-i', '--artist-id', multiple=True, metavar='ID', type=int, help='Download by artist ID')
 @click.option('-A', '--album-id', multiple=True, metavar='ID', type=int, help='Download by album ID')
-@click.option('-u', '--url', metavar='URL', multiple=True, help='Download by URL of artist/album/track')  # TODO playlist?
-@click.option('-f', '--file', metavar='FILE', help='Download batch of artists from file, one per line')  # TODO centralize function for processing files
+@click.option('-u', '--url', metavar='URL', multiple=True, help='Download by URL of artist/album/track/playlist')
+@click.option('-f', '--file', metavar='FILE', help='Download batch of artists and/or artist IDs from file')  # TODO centralize function for processing files
 @click.option('-b', '--bitrate', metavar='N', type=int, default=config["bitrate"],
               help='Set custom bitrate for this operation')
 @click.option('-t', '--record-type', type=click.Choice(['all', 'album', 'ep', 'single'], case_sensitive=False),
