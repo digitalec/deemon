@@ -58,6 +58,7 @@ class Download:
         self.queue_list = []
         self.bitrate = None
         self.verbose = os.environ.get("VERBOSE")
+        self.duplicate_id_count = 0
 
         if not self.di.login():
             sys.exit(1)
@@ -149,15 +150,16 @@ class Download:
             api_object['bitrate'] = bitrate
             filtered = filter_artist_by_record_type(api_object, record_type)
             for album in filtered:
-                if check_queue_item_exists(album['id']):
+                if not queue_item_exists(album['id']):
                     self.queue_list.append(QueueItem(api_object, album))
 
-        def check_queue_item_exists(i):
+        def queue_item_exists(i):
             for q in self.queue_list:
                 if q.album_id == i:
                     logger.debug(f"Album ID {i} is already in queue")
-                    return False
-            return True
+                    self.duplicate_id_count += 1
+                    return True
+            return False
 
         def read_file_as_csv(file):
             with open(file, 'r', encoding="utf8", errors="replace") as f:
@@ -200,10 +202,11 @@ class Download:
 
         if album_id:
             logger.debug("Downloading by Album ID")
+            logger.info(album_id)
             for i in album_id:
                 record_type = "all"
                 album_id_result = get_api_result(album_id=i)
-                if album_id_result:
+                if album_id_result and not queue_item_exists(album_id_result['id']):
                     album_id_result['bitrate'] = bitrate
                     self.queue_list.append(QueueItem(album=album_id_result))
 
@@ -217,4 +220,30 @@ class Download:
                 if artist_int_list:
                     download_by_id(artist_int_list)
 
+        if url:
+            for u in url:
+                id_type = ""
+                id = 0
+                try:
+                    id_type = "artist"
+                    id = u.split('/artist/')
+                except Exception as e:
+                    logger.error(e)
+
+                try:
+                    id_type = "album"
+                    id = u.split('/album/')
+                except Exception as e:
+                    logger.error(e)
+
+                try:
+                    id_type = "playlist"
+                    id = u.split('/playlist/')
+                except Exception as e:
+                    logger.error(e)
+
+            logger.info(f"id_type={id_type} ---- id={id}")
+
+        if self.duplicate_id_count > 0:
+            logger.info(f"Cleaned up {self.duplicate_id_count} duplicate release(s). See log for additional info.")
         self.download_queue(self.queue_list)
