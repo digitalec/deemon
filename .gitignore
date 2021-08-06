@@ -8,3 +8,5 @@ venv
 .cache
 tests.py
 **/.DS_Store
+artists.txt
+

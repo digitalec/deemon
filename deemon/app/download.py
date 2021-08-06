@@ -27,6 +27,9 @@ class QueueItem:
             self.url = artist["link"]
 
         if album:
+            if not artist:
+                self.artist_name = album["artist"]["name"]
+            self.bitrate = album["bitrate"]
             self.album_id = album["id"]
             self.album_title = album["title"]
             self.url = album["link"]
@@ -81,7 +84,7 @@ class Download:
             logger.error("Error: Plex library not found. See logs for additional info.")
             logger.debug(f"Error during Plex refresh: {e}")
 
-    def download_queue(self, queue):
+    def download_queue(self, queue):  # TODO - Add support for downloading just Artist
         if queue:
             plex = self.get_plex_server()
             print("----------------------------")
@@ -109,61 +112,90 @@ class Download:
                 self.queue_list.append(QueueItem(artist, _album))
 
     # TODO Re-write manual download option
-    def download(self, artist, artist_id, album_id, url, bitrate, record_type, file):
+    def download(self, artist, artist_id, album_id, url, bitrate, record_type, input_file):
 
-        # TODO URL needs to be reworked / self.di.download_url()
+        # TODO Download via URL needs to be reworked / self.di.download_url()
 
-        def filter_by_record_type(artist, record_type):
+        def filter_artist_by_record_type(artist, record_type):
             album_api = self.dz.api.get_artist_albums(artist['id'])['data']
             filtered_albums = []
             for album in album_api:
-                if album['record_type'] == record_type:
+                if (album['record_type'] == record_type) or record_type == "all":
                     filtered_albums.append(album)
             return filtered_albums
 
-        for a in artist:
-            try:
-                artist_api = self.dz.api.search_artist(a, limit=1)["data"][0]
-                artist_api['bitrate'] = bitrate
-                if record_type != "all":
-                    for release in filter_by_record_type(artist_api, record_type):
-                        self.queue_list.append(QueueItem(artist_api, release))
-                self.queue_list.append(QueueItem(artist_api))
-            except (deezer.api.DataException, IndexError):
-                logger.error(f"Artist {a} not found.")
+        def get_api_result(artist=None, artist_id=None, album_id=None):  # TODO Multiple try for detailed logging
+            if artist:
+                try:
+                    return self.dz.api.search_artist(artist, limit=1)["data"][0]  # TODO handle incorrect artist
+                except (deezer.api.DataException, IndexError):
+                    logger.error(f"Artist {artist} not found.")
+            if artist_id:
+                try:
+                    return self.dz.api.get_artist(artist_id)["data"][0]
+                except (deezer.api.DataException, IndexError):
+                    logger.error(f"Artist ID {artist_id} not found.")
+            if album_id:
+                try:
+                    return self.dz.api.get_album(album_id)
+                except (deezer.api.DataException, IndexError):
+                    logger.error(f"Album ID {album_id} not found.")
 
-        exit()
+        def queue_filtered_releases(api_object):
+            api_object['bitrate'] = bitrate
+            filtered = filter_artist_by_record_type(api_object, record_type)
+            for album in filtered:
+                self.queue_list.append(QueueItem(api_object, album))
 
-        if opt["file"]:
-            logger.info(f"Reading from file {opt['file']}")
-            if Path(opt['file']).exists():
-                with open(opt['file'], 'r', encoding="utf8", errors="replace") as f:
-                    make_csv = f.read().replace('\n', ',')
-                    csv_to_list = make_csv.split(',')
-                    artist_list = sorted(list(filter(None, csv_to_list)))
-                    for name in artist_list:
-                        try:
-                            artist = self.dz.api.search_artist(name, limit=1)['data'][0]
-                            album = self.dz.api.get_artist_albums(artist["id"])
-                            self.add_to_queue(artist, album)
-                            logger.info(f"Artist `{name}` added to queue")
-                        except IndexError:
-                            logger.warning(f"Artist '{name}' not found")
+        def read_file_as_csv(file):
+            with open(file, 'r', encoding="utf8", errors="replace") as f:
+                make_csv = f.read().replace('\n', ',')
+                csv_to_list = make_csv.split(',')
+                sorted_list = sorted(list(filter(None, csv_to_list)))
+                return sorted_list
 
-        if opt["artist_id"] or opt["artist"]:
-            if opt["artist_id"]:
-                artist = self.dz.api.get_artist(opt["artist_id"])
-            elif opt["artist"]:
-                artist = self.dz.api.search_artist(opt["artist"], limit=1)['data'][0]
-                opt["artist_id"] = artist["id"]
+        def check_for_artist_ids(artist_list):
+            int_artists = []
+            for i in range(len(artist_list)):
+                try:
+                    int_artists.append(int(artist_list[i]))
+                except ValueError:
+                    logger.debug("File contains non-integer values, assuming artist names...")
+                    return False
+            return int_artists
 
-            album = self.dz.api.get_artist_albums(opt["artist_id"])
-            self.add_to_queue(artist, album)
+        def download_by_name(artist):
+            for a in artist:
+                artist_result = get_api_result(artist=a)
+                queue_filtered_releases(artist_result)
 
-        if opt["album_id"]:
-            album = {'data': [self.dz.api.get_album(opt["album_id"])]}
-            artist["name"] = album["data"][0]["artist"]["name"]
-            self.add_to_queue(artist, album)
+        def download_by_id(artist_id):
+            for i in artist_id:
+                artist_id_result = get_api_result(artist_id=i)
+                queue_filtered_releases(artist_id_result)
+
+        if artist:
+            download_by_name(artist)
+
+        if artist_id:
+            download_by_id(artist_id)
+
+        if album_id:
+            for i in album_id:
+                record_type = "all"
+                bitrate = bitrate
+                album_id_result = get_api_result(album_id=i)
+                queue_filtered_releases(album_id_result)
+
+        if input_file:
+            logger.info(f"Reading from file {input_file}")
+            if Path(input_file).exists():
+                artist_list = read_file_as_csv(input_file)
+                artist_id_list = check_for_artist_ids(artist_list)
+                if artist_id_list:
+                    download_by_id(artist_id_list)
+                else:
+                    download_by_name(artist_list)
 
         self.download_queue(self.queue_list)
         self.db.commit()
