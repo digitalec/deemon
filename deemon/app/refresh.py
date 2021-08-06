@@ -22,10 +22,11 @@ class Refresh:
         self.dz = deezer.Deezer()
 
         if not dl_obj:
-            self.dl = download.Download()
+            self.dl = None
+            self.queue_list = []
         else:
             self.dl = dl_obj
-        self.queue_list = self.dl.queue_list
+            self.queue_list = self.dl.queue_list
 
         self.run()
 
@@ -60,7 +61,12 @@ class Refresh:
                 self.refresh_artists()
 
         if len(self.queue_list) > 0 and not self.skip_download:
-            self.dl.download_queue()
+            if not self.dl:
+                self.dl = download.Download()
+                self.dl.queue_list = self.queue_list
+                self.dl.download_queue()
+            else:
+                self.dl.download_queue()
 
         if len(self.new_releases) > 0:
             notification = notify.Notify(self.new_releases)
