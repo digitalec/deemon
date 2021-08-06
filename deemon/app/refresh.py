@@ -133,7 +133,7 @@ class Refresh:
             for album in artist_albums:
                 exists = self.db.get_album_by_id(album_id=album['id'])
                 if exists:
-                    if exists['future_release'] and (exists['release_date'] <= self.refresh_date):
+                    if exists['future_release'] and (exists['album_release'] <= self.refresh_date):
                         logger.debug(f"Pre-release released: {exists['album_release']} - {exists['album_name']}")
                         self.db.reset_future(exists['album_id'])
                     else:
