@@ -1,13 +1,13 @@
 from sqlite3 import OperationalError
 
-from deemon.app import Deemon
+from deemon.app import Deemon, download
 import logging
 import deezer
 
 logger = logging.getLogger(__name__)
 
 
-def monitor(profile, value, remove=False, reset=False, bitrate=None, r_type=None, alerts=None):
+def monitor(profile, value, remove=False, reset=False, bitrate=None, r_type=None, alerts=None, dl=False):
 
     dz = deezer.Deezer()
     db = Deemon().db
@@ -84,7 +84,8 @@ def monitor(profile, value, remove=False, reset=False, bitrate=None, r_type=None
             logger.info(e)
 
         logger.info(f"Now monitoring artist '{api_result['name']}'")
-
+        if dl:
+            dl.download(None, [api_result['id']], None, None, bitrate, r_type, None, False)
         db.commit()
         return api_result['id']
 
@@ -120,6 +121,7 @@ def monitor(profile, value, remove=False, reset=False, bitrate=None, r_type=None
             logger.error(e)
 
         logger.info(f"Now monitoring playlist '{api_result['title']}'")
-
+        if dl:
+            dl.download(None, None, None, [api_result['id']], bitrate, r_type, None, False)
         db.commit()
         return api_result['id']
