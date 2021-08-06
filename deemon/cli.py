@@ -1,3 +1,4 @@
+import deemon.app.download
 from deemon.app import settings, monitor, download, notify
 from deemon.app.logger import setup_logger
 from deemon.app.batch import BatchJobs
@@ -88,10 +89,10 @@ def download_command(artist, artist_id, album_id, url, file, bitrate, record_typ
 @click.option('-a', '--alerts', type=click.Choice(['0', '1']), default=str(config["alerts"]),
               help="Enable or disable alerts")
 @click.option('-n', '--no-refresh', is_flag=True, help='Skip refresh after adding or removing artist')
-@click.option('-D', '--download', is_flag=True, help='Download all releases matching record type')  # TODO Need to implement
+@click.option('-D', '--download', 'dl', is_flag=True, help='Download all releases matching record type')  # TODO Need to implement
 @click.option('-R', '--remove', is_flag=True, help='Stop monitoring an artist')
 @click.option('--reset', is_flag=True, help='Remove all artists/playlists from monitoring')
-def monitor_command(artist, playlist, no_refresh, bitrate, record_type, alerts, artist_id, remove, url, reset):
+def monitor_command(artist, playlist, no_refresh, bitrate, record_type, alerts, artist_id, remove, url, reset, dl):
     """
     Monitor artist for new releases by ID, URL or name.
 
@@ -111,6 +112,9 @@ def monitor_command(artist, playlist, no_refresh, bitrate, record_type, alerts, 
     alerts = int(alerts)
     bitrate = int(bitrate)
 
+    if dl:
+        dl = download.Download()
+
     if reset:
         logger.warning("** ALL ARTISTS AND PLAYLISTS WILL BE REMOVED! **")
         confirm = input("Type 'reset' to confirm: ")
@@ -122,13 +126,15 @@ def monitor_command(artist, playlist, no_refresh, bitrate, record_type, alerts, 
 
     if artist:
         for a in artists_to_csv(artist):
-            result = monitor.monitor("artist", a, remove=remove, r_type=record_type, bitrate=bitrate, alerts=alerts)
+            result = monitor.monitor("artist", a, remove=remove,
+                                     r_type=record_type, bitrate=bitrate, alerts=alerts, dl=dl)
             if type(result) == int:
                 new_artists.append(result)
 
     if artist_id:
         for aid in artist_id:
-            result = monitor.monitor("artist_id", aid, remove=remove, r_type=record_type, bitrate=bitrate, alerts=alerts)
+            result = monitor.monitor("artist_id", aid, remove=remove, r_type=record_type,
+                                     bitrate=bitrate, alerts=alerts, dl=dl)
             if type(result) == int:
                 new_artists.append(result)
 
@@ -140,20 +146,25 @@ def monitor_command(artist, playlist, no_refresh, bitrate, record_type, alerts, 
             except (IndexError, ValueError):
                 logger.error(f"Invalid URL -- {url}")
                 sys.exit(1)
-        result = monitor.monitor("artist_id", artist_id, remove=remove, r_type=record_type, bitrate=bitrate, alerts=alerts)
+        result = monitor.monitor("artist_id", artist_id, remove=remove, r_type=record_type,
+                                 bitrate=bitrate, alerts=alerts, dl=dl)
         if type(result) == int:
             new_artists.append(result)
 
     if playlists:
         for p in playlists:
-            result = monitor.monitor("playlist", p, remove=remove)
+            result = monitor.monitor("playlist", p, remove=remove, dl=dl)
             if type(result) == int:  # TODO is this needed? What return values are possible? if result > 0?
                 new_playlists.append(result)
+
     if (len(new_artists) > 0 or len(new_playlists) > 0) and not no_refresh:
         logger.debug("Requesting refresh, standby...")
         logger.debug(f"new_artists={new_artists}")
         logger.debug(f"new_playlists={new_playlists}")
         Refresh(artist_id=new_artists, playlist_id=new_playlists) # TODO will an empty list cause an issue?
+
+    if dl:
+        dl.download_queue()
 
 
 @run.command(name='refresh')
