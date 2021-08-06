@@ -105,9 +105,11 @@ class DBHelper:
             logger.debug("Database upgraded to version 1.1")
         # Upgrade database v1.1 to v1.3
         if current_ver < parse_version("1.3"):
-            sql_playlists = "ALTER TABLE playlists ADD COLUMN bitrate INTEGER"
+            sql_playlists_1 = "ALTER TABLE playlists ADD COLUMN bitrate INTEGER"
+            sql_playlists_2 = "ALTER TABLE playlists ADD COLUMN alerts INTEGER"
             sql_updatever = "INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('version', '1.3')"
-            self.query(sql_playlists)
+            self.query(sql_playlists_1)
+            self.query(sql_playlists_2)
             self.query(sql_updatever)
             self.commit()
             logger.debug(f"Database upgraded to version 1.3")

@@ -113,8 +113,9 @@ def monitor(profile, value, bitrate, r_type, remove=False, reset=False, alerts=N
             logger.warning(f"Playlist '{api_result['title']}' is already being monitored")
             return
         sql_values = {'id': api_result['id'], 'title': api_result['title'],
-                      'url': api_result['link'], 'bitrate': bitrate}
-        query = "INSERT INTO playlists ('id', 'title', 'url', 'bitrate') VALUES (:id, :title, :url, :bitrate)"
+                      'url': api_result['link'], 'bitrate': bitrate, 'alerts': alerts}
+        query = ("INSERT INTO playlists ('id', 'title', 'url', 'bitrate', 'alerts') "
+                 "VALUES (:id, :title, :url, :bitrate, :alerts)")
 
         try:
             db.query(query, sql_values)
