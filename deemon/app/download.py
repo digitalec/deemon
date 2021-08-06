@@ -25,7 +25,8 @@ class QueueItem:
 
         if artist:
             self.artist_name = artist["name"]
-            self.url = artist["link"]
+            if not album:
+                self.url = artist["link"]
 
         if album:
             if not artist:
@@ -35,7 +36,7 @@ class QueueItem:
             self.url = album["link"]
 
         if playlist:
-            self.url = playlist["url"]  # TODO - need consistency, should be LINK
+            self.url = playlist["link"]
             self.playlist_title = playlist["title"]
 
         self.print_queue_to_log()
@@ -192,8 +193,6 @@ class Download:
 
         def process_playlist_by_id(id):
             playlist_api = self.dz.api.get_playlist(id)
-            # Add new entries that QueueItem is looking for
-            playlist_api['url'] = playlist_api['link']
             self.queue_list.append(QueueItem(bitrate, playlist=playlist_api))
 
         def extract_id_from_url(url):
