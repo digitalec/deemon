@@ -59,7 +59,8 @@ class DBHelper:
                        "'record_type' TEXT, 'alerts' INTEGER)")
 
         sql_playlists = ("CREATE TABLE IF NOT EXISTS 'playlists' "
-                         "('id' INTEGER UNIQUE, 'title' TEXT, 'url' TEXT, 'bitrate' INTEGER)")
+                         "('id' INTEGER UNIQUE, 'title' TEXT, 'url' TEXT, "
+                         "'bitrate' INTEGER, 'alerts' INTEGER)")
 
         sql_playlist_tracks = ("CREATE TABLE IF NOT EXISTS 'playlist_tracks' "
                                "('track_id' INTEGER, 'playlist_id' INTEGER, 'artist_id' INTEGER, "

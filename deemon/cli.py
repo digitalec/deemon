@@ -89,7 +89,7 @@ def download_command(artist, artist_id, album_id, url, file, bitrate, record_typ
 @click.option('-a', '--alerts', type=click.Choice(['0', '1']), default=str(config["alerts"]),
               help="Enable or disable alerts")
 @click.option('-n', '--no-refresh', is_flag=True, help='Skip refresh after adding or removing artist')
-@click.option('-D', '--download', 'dl', is_flag=True, help='Download all releases matching record type')  # TODO Need to implement
+@click.option('-D', '--download', 'dl', is_flag=True, help='Download all releases matching record type')
 @click.option('-R', '--remove', is_flag=True, help='Stop monitoring an artist')
 @click.option('--reset', is_flag=True, help='Remove all artists/playlists from monitoring')
 def monitor_command(artist, playlist, no_refresh, bitrate, record_type, alerts, artist_id, remove, url, reset, dl):
@@ -119,20 +119,20 @@ def monitor_command(artist, playlist, no_refresh, bitrate, record_type, alerts, 
         logger.warning("** ALL ARTISTS AND PLAYLISTS WILL BE REMOVED! **")
         confirm = input("Type 'reset' to confirm: ")
         if confirm == "reset":
-            monitor.monitor(profile=None, value=None, reset=True)
+            monitor.monitor(None, None, None, None, None, reset=True)
         else:
             logger.info("Reset aborted. Database has NOT been modified.")
         return
 
     if artist:
         for a in artists_to_csv(artist):
-            result = monitor.monitor("artist", a, bitrate, record_type, remove=remove, alerts=alerts, dl_obj=dl)
+            result = monitor.monitor("artist", a, bitrate, record_type, alerts, remove=remove, dl_obj=dl)
             if type(result) == int:
                 new_artists.append(result)
 
     if artist_id:
         for aid in artist_id:
-            result = monitor.monitor("artist_id", aid, bitrate, record_type, remove=remove, alerts=alerts, dl_obj=dl)
+            result = monitor.monitor("artist_id", aid, bitrate, record_type, alerts, remove=remove, dl_obj=dl)
             if type(result) == int:
                 new_artists.append(result)
 
@@ -144,13 +144,13 @@ def monitor_command(artist, playlist, no_refresh, bitrate, record_type, alerts, 
             except (IndexError, ValueError):
                 logger.error(f"Invalid URL -- {url}")
                 sys.exit(1)
-        result = monitor.monitor("artist_id", artist_id, bitrate, record_type, remove=remove, alerts=alerts, dl_obj=dl)
+        result = monitor.monitor("artist_id", artist_id, bitrate, record_type, alerts, remove=remove, dl_obj=dl)
         if type(result) == int:
             new_artists.append(result)
 
     if playlists:
         for p in playlists:
-            result = monitor.monitor("playlist", p, bitrate, record_type, remove=remove, dl_obj=dl)
+            result = monitor.monitor("playlist", p, bitrate, record_type, alerts, remove=remove, dl_obj=dl)
             if type(result) == int:  # TODO is this needed? What return values are possible? if result > 0?
                 new_playlists.append(result)
 
