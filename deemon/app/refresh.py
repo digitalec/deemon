@@ -62,7 +62,7 @@ class Refresh:
         if len(self.queue_list) > 0 and not self.skip_download:
             self.dl.download_queue()
 
-        if len(self.new_releases) > 0 and self.config['alerts'] == 1:
+        if len(self.new_releases) > 0:
             notification = notify.Notify(self.new_releases)
             notification.send()
 
@@ -159,8 +159,9 @@ class Refresh:
                     artist_new_release_count += 1
                     self.queue_list.append(download.QueueItem(artist['bitrate'], artist, album))
                     logger.debug(f"Release {album['id']} added to queue")
-                    self.append_new_release(album['release_date'], artist['name'],
-                                            album['title'], album['cover_medium'])
+                    if artist["alerts"]:
+                        self.append_new_release(album['release_date'], artist['name'],
+                                                album['title'], album['cover_medium'])
                 else:
                     logger.debug(f"Release {album['id']} does not meet album_type "
                                  f"requirement of '{self.config['record_type']}'")
