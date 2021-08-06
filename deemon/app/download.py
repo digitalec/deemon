@@ -7,6 +7,7 @@ from deemon.app import Deemon
 import logging
 import deezer
 import sys
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +21,7 @@ class QueueItem:
         self.album_title = None
         self.url = None
         self.playlist_title = None
+        self.verbose = os.environ.get('VERBOSE').lower()
 
         if artist:
             self.artist_name = artist["name"]
@@ -29,7 +31,7 @@ class QueueItem:
         if album:
             if not artist:
                 self.artist_name = album["artist"]["name"]
-            self.bitrate = album["bitrate"]
+                self.bitrate = album["bitrate"]
             self.album_id = album["id"]
             self.album_title = album["title"]
             self.url = album["link"]
@@ -42,7 +44,8 @@ class QueueItem:
         self.print_queue_to_log()
 
     def print_queue_to_log(self):
-        logger.debug("Item created in queue: " + str(self.__dict__))
+        if self.verbose == "true":
+            logger.debug("Item created in queue: " + str(self.__dict__))
 
 
 class Download:
@@ -55,6 +58,7 @@ class Download:
         self.config = Deemon().config
         self.queue_list = []
         self.bitrate = None
+        self.verbose = os.environ.get("VERBOSE").lower()
 
         if not self.di.login():
             sys.exit(1)
@@ -91,7 +95,8 @@ class Download:
             logger.info("Sending " + str(len(queue)) + " release(s) to deemix for download:")
 
             for q in queue:
-                logger.debug(f"Processing queue item {vars(q)}")
+                if self.verbose == "true":
+                    logger.debug(f"Processing queue item {vars(q)}")
                 if q.artist_name:
                     logger.info(f"+ {q.artist_name} - {q.album_title}... ")
                 else:
@@ -132,7 +137,7 @@ class Download:
                     logger.error(f"Artist {artist} not found.")
             if artist_id:
                 try:
-                    return self.dz.api.get_artist(artist_id)["data"][0]
+                    return self.dz.api.get_artist(artist_id)
                 except (deezer.api.DataException, IndexError):
                     logger.error(f"Artist ID {artist_id} not found.")
             if album_id:
@@ -155,13 +160,15 @@ class Download:
                 return sorted_list
 
         def check_for_artist_ids(artist_list):
+            logger.debug("Processing file contents")
             int_artists = []
             for i in range(len(artist_list)):
                 try:
                     int_artists.append(int(artist_list[i]))
                 except ValueError:
-                    logger.debug("File contains non-integer values, assuming artist names...")
+                    logger.debug("Detected non-integer values, processing as artist names")
                     return False
+            logger.debug("Detected integer values, processing as artist IDs")
             return int_artists
 
         def download_by_name(artist):
