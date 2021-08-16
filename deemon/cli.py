@@ -1,11 +1,9 @@
-import deemon.app.download
-from deemon.app import settings, monitor, download, notify
+from deemon.app import settings, monitor, download, notify, utils
 from deemon.app.logger import setup_logger
 from deemon.app.refresh import Refresh
 from deemon.app.show import ShowStats
 from deemon import __version__
 from datetime import datetime
-from deemon.app import utils
 from pathlib import Path
 import tarfile
 import logging
@@ -54,9 +52,8 @@ def test():
 @click.option('-i', '--artist-id', multiple=True, metavar='ID', type=int, help='Download by artist ID')
 @click.option('-A', '--album-id', multiple=True, metavar='ID', type=int, help='Download by album ID')
 @click.option('-u', '--url', metavar='URL', multiple=True, help='Download by URL of artist/album/track/playlist')
-@click.option('-f', '--file', metavar='FILE', help='Download batch of artists and/or artist IDs from file')  # TODO centralize function for processing files
-@click.option('-b', '--bitrate', metavar='N', type=int, default=config["bitrate"],
-              help='Set custom bitrate for this operation')
+@click.option('-f', '--file', metavar='FILE', help='Download batch of artists and/or artist IDs from file')
+@click.option('-b', '--bitrate', default=config["bitrate"], help='Set custom bitrate for this operation')
 @click.option('-t', '--record-type', type=click.Choice(['all', 'album', 'ep', 'single'], case_sensitive=False),
               default=config["record_type"], help='Specify record types to download')
 def download_command(artist, artist_id, album_id, url, file, bitrate, record_type):
@@ -68,6 +65,8 @@ def download_command(artist, artist_id, album_id, url, file, bitrate, record_typ
         download Mozart
         download -i 100 -t album -b 9
     """
+    bitrate = utils.validate_bitrate(bitrate)
+
     artists = artists_to_csv(artist) if artist else None
     artist_ids = [x for x in artist_id] if artist_id else None
     album_ids = [x for x in album_id] if album_id else None
@@ -86,8 +85,7 @@ def download_command(artist, artist_id, album_id, url, file, bitrate, record_typ
 @click.option('-b', '--bitrate', default=config["bitrate"], help="Specify bitrate")
 @click.option('-t', '--record-type', type=click.Choice(['all', 'album', 'ep', 'single'], case_sensitive=False),
               default=config["record_type"], help='Specify record types to download')
-@click.option('-a', '--alerts', type=click.Choice(['0', '1']), default=str(config["alerts"]),
-              help="Enable or disable alerts")
+@click.option('-a', '--alerts', type=int, default=config["alerts"], help="Enable or disable alerts")
 @click.option('-n', '--no-refresh', is_flag=True, help='Skip refresh after adding or removing artist')
 @click.option('-D', '--download', 'dl', is_flag=True, help='Download all releases matching record type')
 @click.option('-R', '--remove', is_flag=True, help='Stop monitoring an artist')
@@ -109,11 +107,8 @@ def monitor_command(artist, im, playlist, no_refresh, bitrate, record_type, aler
     new_artists = []
     new_playlists = []
 
-    alerts = int(alerts)
-
+    alerts = utils.validate_alerts(alerts)
     bitrate = utils.validate_bitrate(bitrate)
-    if not bitrate:
-        return
 
     if dl:
         dl = download.Download()
