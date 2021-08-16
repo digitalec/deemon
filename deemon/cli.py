@@ -1,7 +1,6 @@
 import deemon.app.download
 from deemon.app import settings, monitor, download, notify
 from deemon.app.logger import setup_logger
-from deemon.app.batch import BatchJobs
 from deemon.app.refresh import Refresh
 from deemon.app.show import ShowStats
 from deemon import __version__
@@ -81,9 +80,10 @@ def download_command(artist, artist_id, album_id, url, file, bitrate, record_typ
 @run.command(name='monitor', context_settings={"ignore_unknown_options": True})
 @click.argument('artist', nargs=-1)
 @click.option('-i', '--artist-id', multiple=True, type=int, metavar="ID", help="Monitor artist by ID")
+@click.option('-I', '--import', 'im', metavar="PATH", help="Monitor artists/IDs from file or directory")
 @click.option('-u', '--url', multiple=True, metavar="URL", help='Monitor artist by URL')
 @click.option('-p', '--playlist', multiple=True, metavar="URL", help='Monitor Deezer playlist by URL')
-@click.option('-b', '--bitrate', type=click.Choice(['1', '3', '9']), default=config["bitrate"], help="Specify bitrate")
+@click.option('-b', '--bitrate', default=config["bitrate"], help="Specify bitrate")
 @click.option('-t', '--record-type', type=click.Choice(['all', 'album', 'ep', 'single'], case_sensitive=False),
               default=config["record_type"], help='Specify record types to download')
 @click.option('-a', '--alerts', type=click.Choice(['0', '1']), default=str(config["alerts"]),
@@ -92,7 +92,7 @@ def download_command(artist, artist_id, album_id, url, file, bitrate, record_typ
 @click.option('-D', '--download', 'dl', is_flag=True, help='Download all releases matching record type')
 @click.option('-R', '--remove', is_flag=True, help='Stop monitoring an artist')
 @click.option('--reset', is_flag=True, help='Remove all artists/playlists from monitoring')
-def monitor_command(artist, playlist, no_refresh, bitrate, record_type, alerts, artist_id, remove, url, reset, dl):
+def monitor_command(artist, im, playlist, no_refresh, bitrate, record_type, alerts, artist_id, remove, url, reset, dl):
     """
     Monitor artist for new releases by ID, URL or name.
 
@@ -110,7 +110,10 @@ def monitor_command(artist, playlist, no_refresh, bitrate, record_type, alerts, 
     new_playlists = []
 
     alerts = int(alerts)
-    bitrate = int(bitrate)
+
+    bitrate = utils.validate_bitrate(bitrate)
+    if not bitrate:
+        return
 
     if dl:
         dl = download.Download()
@@ -123,6 +126,30 @@ def monitor_command(artist, playlist, no_refresh, bitrate, record_type, alerts, 
         else:
             logger.info("Reset aborted. Database has NOT been modified.")
         return
+
+    if im:
+        if Path(im).is_file():
+            imported_file = utils.read_file_as_csv(im)
+            artist_int_list, artist_str_list = utils.process_input_file(imported_file)
+            if artist_str_list:
+                for a in artist_str_list:
+                    result = monitor.monitor("artist", a, bitrate, record_type, alerts, remove=remove, dl_obj=dl)
+                    if type(result) == int:
+                        new_artists.append(result)
+            if artist_int_list:
+                for aid in artist_int_list:
+                    result = monitor.monitor("artist_id", aid, bitrate, record_type, alerts, remove=remove, dl_obj=dl)
+                    if type(result) == int:
+                        new_artists.append(result)
+        elif Path(im).is_dir():
+            import_list = [x.relative_to(im) for x in sorted(Path(im).iterdir()) if x.is_dir()]
+            for a in import_list:
+                result = monitor.monitor("artist", a, bitrate, record_type, alerts, remove=remove, dl_obj=dl)
+                if type(result) == int:
+                    new_artists.append(result)
+        else:
+            logger.error(f"File or directory not found: {im}")
+            return
 
     if artist:
         for a in artists_to_csv(artist):
@@ -186,15 +213,6 @@ def show_command(artists, artist_ids, playlists, new_releases, csv):
         show.playlists(csv)
     elif new_releases:
         show.releases(new_releases)
-
-
-@run.command(name='import')
-@click.argument('path')
-@click.option('-i', '--artist-ids', is_flag=True, help='Import file of artist IDs')
-def import_cmd(path, artist_ids):
-    """Import artists from CSV, text file or directory"""
-    batch = BatchJobs()
-    batch.import_artists(path, artist_ids)
 
 
 @run.command()
