@@ -2,8 +2,7 @@ from pathlib import Path
 
 import plexapi.exceptions
 from plexapi.server import PlexServer
-from deemon.app import dmi
-from deemon.app import Deemon
+from deemon.app import dmi, Deemon, utils
 import logging
 import deezer
 import sys
@@ -151,25 +150,6 @@ class Download:
                     return True
             return False
 
-        def read_file_as_csv(file):
-            with open(file, 'r', encoding="utf8", errors="replace") as f:
-                make_csv = f.read().replace('\n', ',')
-                csv_to_list = make_csv.split(',')
-                sorted_list = sorted(list(filter(None, csv_to_list)))
-                return sorted_list
-
-        def process_input_file(artist_list):
-            logger.debug("Processing file contents")
-            int_artists = []
-            str_artists = []
-            for i in range(len(artist_list)):
-                try:
-                    int_artists.append(int(artist_list[i]))
-                except ValueError:
-                    str_artists.append(artist_list[i])
-            logger.debug(f"Detected {len(int_artists)} artist ID(s) and {len(str_artists)} artist name(s)")
-            return int_artists, str_artists
-
         def process_artist_by_name(name):
             logger.debug("Processing artists by name")
             artist_result = get_api_result(artist=name)
@@ -220,8 +200,8 @@ class Download:
         if input_file:
             logger.info(f"Reading from file {input_file}")
             if Path(input_file).exists():
-                artist_list = read_file_as_csv(input_file)
-                artist_int_list, artist_str_list = process_input_file(artist_list)
+                artist_list = utils.read_file_as_csv(input_file)
+                artist_int_list, artist_str_list = utils.process_input_file(artist_list)
                 if artist_str_list:
                     for artist in artist_str_list:
                         process_artist_by_name(artist)
