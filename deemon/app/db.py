@@ -125,7 +125,7 @@ class DBHelper:
         logger.debug("Clearing future_release flag from " + str(album_id))
         values = {'album_id': album_id}
         sql = "UPDATE 'releases' SET future_release = 0 WHERE album_id = :album_id"
-        result = self.query(sql, values)
+        self.query(sql, values)
 
     def get_all_monitored_artists(self):
         '''
