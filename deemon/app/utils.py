@@ -10,6 +10,37 @@ import os
 
 logger = logging.getLogger(__name__)
 
+ALLOWED_BITRATES = [1, 3, 9]
+
+
+def validate_bitrate(bitrate):
+    logger.debug(f"Bitrate requested: {bitrate}")
+    if isinstance(bitrate, str):
+        if "128" in bitrate:
+            bitrate = 1
+        elif "320" in bitrate:
+            bitrate = 3
+        elif "flac" in bitrate.lower():
+            bitrate = 9
+        else:
+            try:
+                bitrate = int(bitrate)
+            except ValueError:
+                logger.error(f"Unknown bitrate option: {bitrate} ({str(type(bitrate).__name__)})")
+                return False
+
+    if bitrate == 128:
+        bitrate = 1
+    if bitrate == 320:
+        bitrate = 3
+
+    if bitrate not in ALLOWED_BITRATES:
+        logger.error(f"Unknown bitrate option: {bitrate}")
+        return False
+
+    logger.debug(f"Bitrate is set to: {bitrate}")
+    return bitrate
+
 
 def get_appdata_dir():
     """
