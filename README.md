@@ -71,7 +71,7 @@ Default `config.json`:
     "arl": "",
     "release_by_date": 1,
     "release_max_days": 90,
-    "bitrate": "3",
+    "bitrate": 3,
     "alerts": 0,
     "record_type": "all",
     "smtp_server": "",
