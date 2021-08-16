@@ -100,6 +100,15 @@ def monitor_command(artist, im, playlist, no_refresh, bitrate, record_type, aler
         monitor --artist-id 100
         monitor --url https://www.deezer.com/us/artist/000
     """
+    if reset:
+        logger.warning("** ALL ARTISTS AND PLAYLISTS WILL BE REMOVED! **")
+        confirm = input("Type 'reset' to confirm: ")
+        if confirm == "reset":
+            monitor.monitor(None, None, None, None, None, reset=True)
+        else:
+            logger.info("Reset aborted. Database has NOT been modified.")
+        return
+
     artist_id = list(artist_id)
     url = list(url)
     playlists = list(playlist)
@@ -112,15 +121,6 @@ def monitor_command(artist, im, playlist, no_refresh, bitrate, record_type, aler
 
     if dl:
         dl = download.Download()
-
-    if reset:
-        logger.warning("** ALL ARTISTS AND PLAYLISTS WILL BE REMOVED! **")
-        confirm = input("Type 'reset' to confirm: ")
-        if confirm == "reset":
-            monitor.monitor(None, None, None, None, None, reset=True)
-        else:
-            logger.info("Reset aborted. Database has NOT been modified.")
-        return
 
     if im:
         if Path(im).is_file():
