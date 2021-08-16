@@ -152,23 +152,21 @@ def monitor_command(artist, im, playlist, no_refresh, bitrate, record_type, aler
             if type(result) == int:
                 new_artists.append(result)
 
+    if url:
+        for u in url:
+            id_from_url = u.split('/artist/')
+            try:
+                aid = int(id_from_url[1])
+            except (IndexError, ValueError):
+                logger.error(f"Invalid URL -- {url}")
+                sys.exit(1)
+            artist_id.append(aid)
+
     if artist_id:
         for aid in artist_id:
             result = monitor.monitor("artist_id", aid, bitrate, record_type, alerts, remove=remove, dl_obj=dl)
             if type(result) == int:
                 new_artists.append(result)
-
-    if url:  # TODO cleanup, merge with artist_id somehow?
-        for u in url:
-            id_from_url = u.split('/artist/')
-            try:
-                artist_id = int(id_from_url[1])
-            except (IndexError, ValueError):
-                logger.error(f"Invalid URL -- {url}")
-                sys.exit(1)
-        result = monitor.monitor("artist_id", artist_id, bitrate, record_type, alerts, remove=remove, dl_obj=dl)
-        if type(result) == int:
-            new_artists.append(result)
 
     if playlists:
         for p in playlists:
