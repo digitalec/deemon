@@ -31,16 +31,7 @@ def monitor(profile, value, bitrate, r_type, alerts, remove=False, reset=False, 
         logger.info(f"No longer monitoring artist '{name}'")
 
     if reset:
-        db.query("DELETE FROM monitor")
-        db.query("DELETE FROM releases")
-        db.commit()
-        logger.debug("All artists have been purged from database")
-
-        db.query("DELETE FROM playlists")
-        db.query("DELETE FROM playlist_tracks")
-        db.commit()
-        logger.debug("All playlists have been purge from database")
-        logger.info("Database has been reset")
+        db.reset_database()
         return
 
     if profile in ['artist', 'artist_id']:

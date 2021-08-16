@@ -221,3 +221,15 @@ class DBHelper:
         sql = "SELECT * FROM 'playlist_tracks' WHERE playlist_id = :id"
         result = self.query(sql, values).fetchone()
         return result
+
+    def reset_database(self):
+        self.query("DELETE FROM monitor")
+        self.query("DELETE FROM releases")
+        self.commit()
+        logger.debug("All artists have been purged from database")
+
+        self.query("DELETE FROM playlists")
+        self.query("DELETE FROM playlist_tracks")
+        self.commit()
+        logger.debug("All playlists have been purge from database")
+        logger.info("Database has been reset")
