@@ -1,5 +1,4 @@
-from deemon import __version__, __dbversion__
-from deemon.app import utils
+from deemon import __dbversion__
 from packaging.version import parse as parse_version
 from datetime import datetime
 from pathlib import Path
@@ -23,6 +22,12 @@ class DBHelper:
                 self.create_new_database()
             else:
                 self.open(db)
+
+        current_db_version = parse_version(self.get_db_version())
+        app_db_version = parse_version(__dbversion__)
+
+        if current_db_version < app_db_version:
+            self.do_upgrade(current_db_version)
 
     def __enter__(self):
         return self
