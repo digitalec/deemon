@@ -47,6 +47,7 @@ def validate_alerts(alerts):
     if alerts not in ALLOWED_ALERTS:
         logger.error(f"Invalid alert value of: {alerts}")
         sys.exit(1)
+    return alerts
 
 
 def get_appdata_dir():
