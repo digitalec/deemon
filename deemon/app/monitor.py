@@ -1,102 +1,119 @@
 from sqlite3 import OperationalError
-from deemon.app import Deemon, refresh
+
+from deemon.app import Deemon
 import logging
 import deezer
 
 logger = logging.getLogger(__name__)
 
 
-class Monitor(Deemon):
+def monitor(profile, value, bitrate, r_type, alerts, remove=False, reset=False, dl_obj=False):
 
-    def __init__(self, skip_refresh=False):
-        super().__init__()
-        self.artist = None
-        self.artist_id = None
-        self.playlist_id = None
-        self.dz = deezer.Deezer()
-        self.skip_refresh = skip_refresh
+    dz = deezer.Deezer()
+    db = Deemon().db
 
-    def get_artist_info(self):
-        if self.artist_id:
+    def purge_playlist(i, title):
+        values = {'id': api_result['id']}
+        db.query("DELETE FROM 'playlists' WHERE id = :id", values)
+        logger.debug(f"Playlist {i} removed from monitoring")
+        db.query("DELETE FROM 'playlist_tracks' WHERE playlist_id = :id", values)
+        logger.debug(f"All releases tracked for playlist {i} have been removed")
+        db.commit()
+        logger.info(f"No longer monitoring playlist '{title}'")
+
+    def purge_artist(i, name):
+        values = {'id': api_result['id']}
+        db.query("DELETE FROM 'monitor' WHERE artist_id = :id", values)
+        logger.debug(f"Artist {i} removed from monitoring")
+        db.query("DELETE FROM 'releases' WHERE artist_id = :id", values)
+        logger.debug(f"All releases tracked for artist {i} have been removed")
+        db.commit()
+        logger.info(f"No longer monitoring artist '{name}'")
+
+    if reset:
+        db.reset_database()
+        return
+
+    if profile in ['artist', 'artist_id']:
+        if profile == "artist":
             try:
-                artist = self.dz.api.get_artist(self.artist_id)
-                self.artist = artist["name"]
-                return True
+                api_result = dz.api.search_artist(value, limit=1)["data"][0]
+            except (deezer.api.DataException, IndexError):
+                logger.error(f"Artist {value} not found.")
+                return
+        else:
+            try:
+                api_result = dz.api.get_artist(value)
             except deezer.api.DataException:
-                logger.error(f"Artist ID '{self.artist_id}' not found.")
-
-        if self.artist:
-            try:
-                artist = self.dz.api.search_artist(self.artist, limit=1)["data"][0]
-                self.artist = artist["name"]
-                self.artist_id = artist["id"]
-                return True
-            except IndexError:
-                logger.error(f"Artist '{self.artist}' not found")
-
-    def start_monitoring(self):
-        artist_info = self.get_artist_info()
-        values = {'artist_name': self.artist}
-        sql = "SELECT * FROM monitor WHERE artist_name = ':artist_name'"
-        already_monitored = self.db.query(sql, values).fetchone()
-        if already_monitored:
-            logger.debug(f"Artist: {self.artist} is already monitored, skipping...")
+                logger.error(f"Artist ID {value} not found.")
+                return
+        sql_values = {'id': api_result['id']}
+        artist_exists = db.query("SELECT * FROM 'monitor' WHERE artist_id = :id", sql_values).fetchone()
+        if remove:
+            if not artist_exists:
+                logger.warning(f"{api_result['name']} is not being monitored yet")
+                return
+            purge_artist(api_result['id'], api_result['name'])
+            return True
+        if artist_exists:
+            logger.warning(f"Artist '{api_result['name']}' is already being monitored")
             return
-        if artist_info:
-            sql = ("INSERT OR REPLACE INTO monitor (artist_id, artist_name, bitrate, record_type, alerts) "
-                   "VALUES (:artist_id, :artist_name, :bitrate, :record_type, :alerts)")
-            values = {
-                'artist_id': self.artist_id,
-                'artist_name': self.artist,
-                'bitrate': self.config["bitrate"],
-                'record_type': self.config["record_type"],
-                'alerts': self.config["alerts"]
-            }
+        sql_values = {
+            'artist_id': api_result['id'],
+            'artist_name': api_result['name'],
+            'bitrate': bitrate,
+            'record_type': r_type,
+            'alerts': alerts
+        }
+        query = ("INSERT INTO monitor (artist_id, artist_name, bitrate, record_type, alerts) "
+                 "VALUES (:artist_id, :artist_name, :bitrate, :record_type, :alerts)")
 
-            try:
-                self.db.query(sql, values)
-            except OperationalError as e:
-                logger.error(e)
-
-            logger.info(f"Now monitoring {self.artist}")
-
-            self.db.commit()
-            return self.artist_id
-        else:
-            return
-
-    def stop_monitoring(self):
-        self.get_artist_info()
-        if self.artist_id:
-            values = {'artist_id': self.artist_id}
-            sql_monitor = "DELETE FROM 'monitor' WHERE artist_id = :artist_id"
-            sql_releases = "DELETE FROM 'releases' WHERE artist_id = :artist_id"
-        elif self.playlist_id:
-            values = {'playlist_id': self.playlist_id}
-            sql_monitor = "DELETE FROM 'playlists' WHERE id = :playlist_id"
-            sql_releases = "DELETE FROM 'playlist_tracks' WHERE playlist_id = :playlist_id"
-        else:
-            values = {'artist': self.artist}
-            sql_monitor = "DELETE FROM 'monitor' WHERE artist_name = ':artist' COLLATE NOCASE"
-            sql_releases = "DELETE FROM 'releases' WHERE artist_name = ':artist' COLLATE NOCASE"
-
-        result = self.db.query(sql_monitor, values)
-        if result.rowcount > 0:
-            print("Removing from database... ", end="")
-            print("done!")
-            self.db.query(sql_releases, values)
-        else:
-            logger.error(f"Can't stop monitoring, not found in database.")
-
-        self.db.commit()
-
-    def start_monitoring_playlist(self):
-        # TODO check if playlist ID is monitored
         try:
-            playlist = self.dz.api.get_playlist(self.playlist_id)
-            self.db.monitor_playlist(playlist)
-            logger.info("Playlist setup for monitoring")
-            return self.playlist_id
-        except deezer.api.DataException:
-            logger.error("Playlist ID not found")
+            db.query(query, sql_values)
+        except OperationalError as e:
+            logger.info(e)
+
+        logger.info(f"Now monitoring artist '{api_result['name']}'")
+        if dl_obj:
+            dl_obj.download(None, [api_result['id']], None, None, bitrate, r_type, None, False)
+        db.commit()
+        return api_result['id']
+
+    if profile == "playlist":
+        playlist_id_from_url = value.split('/playlist/')
+        try:
+            playlist_id = int(playlist_id_from_url[1])
+        except (IndexError, ValueError):
+            logger.error(f"Invalid playlist URL -- {playlist_id_from_url}")
             return
+        try:
+            api_result = dz.api.get_playlist(playlist_id)
+        except deezer.api.DataException:
+            logger.error(f"Playlist ID {playlist_id} not found.")
+            return
+        sql_values = {'id': api_result['id']}
+        playlist_exists = db.query("SELECT * FROM 'playlists' WHERE id = :id", sql_values).fetchone()
+        if remove:
+            if not playlist_exists:
+                logger.warning(f"Playlist '{api_result['title']}' is not being monitored yet")
+                return
+            purge_playlist(api_result['id'], api_result['title'])
+            return True
+        if playlist_exists:
+            logger.warning(f"Playlist '{api_result['title']}' is already being monitored")
+            return
+        sql_values = {'id': api_result['id'], 'title': api_result['title'],
+                      'url': api_result['link'], 'bitrate': bitrate, 'alerts': alerts}
+        query = ("INSERT INTO playlists ('id', 'title', 'url', 'bitrate', 'alerts') "
+                 "VALUES (:id, :title, :url, :bitrate, :alerts)")
+
+        try:
+            db.query(query, sql_values)
+        except OperationalError as e:
+            logger.error(e)
+
+        logger.info(f"Now monitoring playlist '{api_result['title']}'")
+        if dl_obj:
+            dl_obj.download(None, None, None, [api_result['link']], bitrate, r_type, None, False)
+        db.commit()
+        return api_result['id']
