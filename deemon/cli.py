@@ -232,6 +232,7 @@ def backup(include_logs):
         logger.info(f"Backed up to {backup_path / backup_tar}")
 
 
+# TODO @click.option does not support nargs=-1; unable to use spaces with quotations
 @run.command(name="api", help="View raw API data for artist, artist ID or playlist ID")
 @click.option('--artist', type=str, help='Get artist result via API')
 @click.option('--artist-id', type=int, help='Get artist ID result via API')
