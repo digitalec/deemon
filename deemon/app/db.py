@@ -74,12 +74,21 @@ class DBHelper:
         sql_releases = ("CREATE TABLE IF NOT EXISTS 'releases' "
                         "('artist_id' INTEGER, 'artist_name' TEXT, 'album_id' INTEGER, "
                         "'album_name' TEXT, 'album_release' TEXT, 'album_added' INTEGER, "
-                        "'future_release' INTEGER DEFAULT 0)")
+                        "'lyrics' INTEGER, 'explicit' INTEGER, 'future_release' INTEGER DEFAULT 0)")
+
+        sql_stats = ("CREATE TABLE IF NOT EXISTS 'stats' "
+                     "('stat' TEXT NOT NULL UNIQUE, 'count' INTEGER DEFAULT 0)")
+
+        sql_stats_data = ("INSERT INTO 'stats' ('stat', 'count') "
+                          "VALUES ('refresh', 0), ('total_artists', 0), ('new_releases', 0), "
+                          "('total_queued', 0), ('total_releases', 0)")
 
         self.query(sql_monitor)
         self.query(sql_playlists)
         self.query(sql_playlist_tracks)
         self.query(sql_releases)
+        self.query(sql_stats)
+        self.query(sql_stats_data)
         self.query("CREATE TABLE IF NOT EXISTS 'deemon' ('property' TEXT, 'value' TEXT)")
         self.query("CREATE UNIQUE INDEX 'idx_property' ON 'deemon' ('property')")
         self.query("CREATE UNIQUE INDEX 'idx_artist_id' ON 'monitor' ('artist_id')")
@@ -119,6 +128,23 @@ class DBHelper:
             self.query(sql_updatever)
             self.commit()
             logger.debug(f"Database upgraded to version 1.3")
+        # Upgrade database v1.3 to v1.4
+        if current_ver < parse_version("2"):
+            sql_releases_1 = "ALTER TABLE releases ADD COLUMN lyrics INTEGER"
+            sql_releases_2 = "ALTER TABLE releases ADD COLUMN explicit INTEGER"
+            sql_stats = ("CREATE TABLE IF NOT EXISTS 'stats' "
+                         "('stat' TEXT NOT NULL UNIQUE, 'count' INTEGER DEFAULT 0)")
+            sql_stats_data = ("INSERT INTO 'stats' ('stats', 'count') "
+                              "VALUES ('refresh', 0), ('total_artists', 0), ('new_releases', 0), "
+                              "('total_queued', 0), ('total_releases', 0)")
+            sql_updatever = "INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('version', '2')"
+            self.query(sql_releases_1)
+            self.query(sql_releases_2)
+            self.query(sql_stats)
+            self.query(sql_stats_data)
+            self.query(sql_updatever)
+            self.commit()
+            logger.debug(f"Database upgraded to version 2")
 
     def query(self, query, values=None):
         if values is None:
