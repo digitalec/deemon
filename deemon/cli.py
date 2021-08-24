@@ -195,7 +195,10 @@ def refresh_command(skip_download, time_machine):
 @click.option('-p', '--playlists', is_flag=True, help='Show playlists currently being monitored', hidden=True)
 @click.option('-c', '--csv', is_flag=True, help='Used with -a, -i, -p; output artists as CSV')
 @click.option('-n', '--new-releases', metavar='N', type=int, help='Show new releases from last N days')
-def show_command(artists, artist_ids, playlists, new_releases, csv):
+# TODO Implement subcommands for 'stats', 'new-releases', etc.
+@click.option('-s', '--stats', is_flag=True, help='Show various usage statistics')
+@click.option('-r', '--reset', is_flag=True, help='Reset usage stats')
+def show_command(artists, artist_ids, playlists, new_releases, csv, stats, reset):
     """
     Show monitored artists, latest new releases and various statistics
     """
