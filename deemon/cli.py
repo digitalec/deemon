@@ -228,6 +228,48 @@ def backup(include_logs):
         logger.info(f"Backed up to {backup_path / backup_tar}")
 
 
+@run.command(name="api", help="View raw API data for artist, artist ID or playlist ID")
+@click.option('--artist', type=str, help='Get artist result via API')
+@click.option('--artist-id', type=int, help='Get artist ID result via API')
+@click.option('--album-id', type=int, help='Get album ID result via API')
+@click.option('--playlist-id', type=int, help='Get playlist ID result via API')
+@click.option('--limit', type=int, help='Set max number of artist results; default=1', default=1)
+@click.option('--raw', is_flag=True, help='Dump as raw data returned from API')
+def api_test(artist, artist_id, album_id, playlist_id, limit, raw):
+    """View API result - for testing purposes"""
+    import deezer
+    dz = deezer.Deezer()
+    if artist or artist_id:
+        if artist:
+            result = dz.api.search_artist(artist, limit=limit)['data'][0]
+        else:
+            result = dz.api.get_artist(artist_id)
+
+        if raw:
+            for key, value in result.items():
+                print(f"{key}: {value}")
+        else:
+            print(f"Artist ID: {result['id']}\nArtist Name: {result['name']}")
+
+    if album_id:
+        result = dz.api.get_album(album_id)
+
+        if raw:
+            for key, value in result.items():
+                print(f"{key}: {value}")
+        else:
+            print(f"Album ID: {result['id']}\nAlbum Title: {result['title']}")
+
+    if playlist_id:
+        result = dz.api.get_playlist(playlist_id)
+
+        if raw:
+            for key, value in result.items():
+                print(f"{key}: {value}")
+        else:
+            print(f"Playlist ID: {result['id']}\nPlaylist Title: {result['title']}")
+
+
 def artists_to_csv(a):
     csv_artists = ' '.join(a)
     csv_artists = csv_artists.split(',')
