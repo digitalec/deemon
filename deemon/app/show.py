@@ -13,7 +13,8 @@ class ShowStats(Deemon):
     def __init__(self):
         super().__init__()
 
-    def artists(self, csv=False, artist_ids=False):
+    def artists(self, csv=False, artist_ids=False, extended=None):
+        # TODO extended is list of fields to grab from database; 'id', 'name', etc.
         monitored_artists = self.db.get_all_monitored_artists()
         if len(monitored_artists) == 0:
             logger.info("No artists are being monitored")

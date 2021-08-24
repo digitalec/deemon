@@ -76,6 +76,7 @@ def download_command(artist, artist_id, album_id, url, file, bitrate, record_typ
     dl.download(artists, artist_ids, album_ids, urls, bitrate, record_type, file)
 
 
+# TODO implement subcommands; add --include-featured-artists, --track-id options
 @run.command(name='monitor', context_settings={"ignore_unknown_options": True})
 @click.argument('artist', nargs=-1)
 @click.option('-i', '--artist-id', multiple=True, type=int, metavar="ID", help="Monitor artist by ID")
