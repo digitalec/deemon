@@ -167,7 +167,11 @@ class DBHelper:
         '''
         result = self.query(f"SELECT * FROM monitor")
         artists = set(x for x in result)
-        return sorted(artists, key=lambda x: x[1])
+        sorted_artists = sorted(artists, key=lambda x: x[1])
+        all_artists = []
+        for a in sorted_artists:
+            all_artists.append({'id': a[0], 'name': a[1], 'bitrate': a[2], 'record_type': a[3], 'alerts': a[4]})
+        return all_artists
 
     def get_monitored_artist_by_id(self, artist_id):
         '''
