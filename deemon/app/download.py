@@ -91,15 +91,18 @@ class Download:
             print("----------------------------")
             logger.info("Sending " + str(len(self.queue_list)) + " release(s) to deemix for download:")
 
+            current = 1
+            total = len(self.queue_list)
             for q in self.queue_list:
                 if self.verbose == "true":
                     logger.debug(f"Processing queue item {vars(q)}")
                 if q.artist_name:
-                    logger.info(f"+ {q.artist_name} - {q.album_title}... ")
+                    logger.info(f"[{current}/{total}] {q.artist_name} - {q.album_title}... ")
                     self.di.download_url([q.url], q.bitrate)
                 else:
                     logger.info(f"+ {q.playlist_title} (playlist)...")
                     self.di.download_url([q.url], q.bitrate, override_deemix=False)
+                current += 1
 
             print("")
             logger.info("Downloads complete!")
