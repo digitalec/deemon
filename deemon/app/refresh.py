@@ -121,8 +121,6 @@ class Refresh:
                              bar_format='{desc}...  {n_fmt}/{total_fmt} [{bar:40}] {percentage:3.0f}%')
 
         for artist in progress:
-            artist = {"id": artist[0], "name": artist[1], "bitrate": artist[2],
-                      "record_type": artist[3], "alerts": artist[4]}  # TODO This could be cleaned up using rowfactory
             artist_new_release_count = 0
             new_artist = self.existing_artist(artist['id'])
             progress.set_description_str("Refreshing artists")
