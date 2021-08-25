@@ -109,7 +109,11 @@ def check_version():
     except requests.exceptions.ConnectionError:
         return
     local_version = __version__
-    remote_version = response.json()["name"]
+    try:
+        remote_version = response.json()["name"]
+    except KeyError as e:
+        logger.debug(f"Invalid data returned from version check; too many requests? {e}")
+        return
     if parse_version(remote_version) > parse_version(local_version):
         return remote_version
 
