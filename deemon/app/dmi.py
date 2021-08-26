@@ -1,5 +1,4 @@
 from pathlib import Path
-from pprint import pprint
 import deemix
 from deezer import Deezer
 from deezer.api import APIError

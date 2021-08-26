@@ -7,7 +7,6 @@ import logging
 import deezer
 import sys
 import os
-from pprint import pprint
 
 logger = logging.getLogger(__name__)
 
