@@ -87,7 +87,7 @@ def download_command(artist, artist_id, album_id, url, file, bitrate, record_typ
               default=config["record_type"], help='Specify record types to download')
 @click.option('-a', '--alerts', type=int, default=config["alerts"], help="Enable or disable alerts")
 @click.option('-n', '--no-refresh', is_flag=True, help='Skip refresh after adding or removing artist')
-@click.option('-D', '--download', 'dl', metavar="PATH", help='Download all releases matching record type (Download Path optional)')
+@click.option('-D', '--download', 'dl', default=config["download_path"], help='Download all releases matching record type (Download Path optional)')
 @click.option('-R', '--remove', is_flag=True, help='Stop monitoring an artist')
 @click.option('--reset', is_flag=True, help='Remove all artists/playlists from monitoring')
 def monitor_command(artist, im, playlist, no_refresh, bitrate, record_type, alerts, artist_id, remove, url, reset, dl):
