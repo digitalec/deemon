@@ -120,6 +120,10 @@ def monitor_command(artist, im, playlist, no_refresh, bitrate, record_type, aler
     alerts = utils.validate_alerts(alerts)
     bitrate = utils.validate_bitrate(bitrate)
 
+    if download_path:
+        if not (Path(download_path).exists):
+            download_path = config["download_path"]
+
     if dl:
         dl = download.Download()
 

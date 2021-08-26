@@ -22,8 +22,7 @@ class QueueItem:
         self.url = None
         self.playlist_title = None
         self.verbose = os.environ.get('VERBOSE')
-        self.downloadPath = ""
-
+        self.downloadPath = downloadPath
 
         if artist:
             self.artist_name = artist["name"]
@@ -41,9 +40,6 @@ class QueueItem:
             self.url = playlist["link"]
             self.playlist_title = playlist["title"]
 
-        if downloadPath:
-            if (Path(downloadPath).exists):
-                self.downloadPath = downloadPath
 
         self.print_queue_to_log()
 

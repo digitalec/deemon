@@ -13,10 +13,6 @@ def monitor(profile, value, bitrate, r_type, alerts, remove=False, reset=False, 
     dz = deezer.Deezer()
     db = Deemon().db
 
-    if downloadPath != "":
-        if not (Path(downloadPath).exists):
-            downloadPath = ""
-
     def purge_playlist(i, title):
         values = {'id': api_result['id']}
         db.query("DELETE FROM 'playlists' WHERE id = :id", values)
