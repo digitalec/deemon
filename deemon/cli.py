@@ -32,7 +32,7 @@ def run(verbose):
     """
     setup_logger(log_level='DEBUG' if verbose else 'INFO', log_file=utils.get_log_file())
 
-    new_version = utils.check_version()
+    new_version = 0 #utils.check_version()
     if new_version:
         print("*" * 50)
         logger.info(f"* New version is available: v{__version__} -> v{new_version}")
@@ -87,7 +87,7 @@ def download_command(artist, artist_id, album_id, url, file, bitrate, record_typ
               default=config["record_type"], help='Specify record types to download')
 @click.option('-a', '--alerts', type=int, default=config["alerts"], help="Enable or disable alerts")
 @click.option('-n', '--no-refresh', is_flag=True, help='Skip refresh after adding or removing artist')
-@click.option('-D', '--download', 'dl', is_flag=True, help='Download all releases matching record type')
+@click.option('-D', '--download', 'dl', metavar="PATH", help='Download all releases matching record type (Download Path optional)')
 @click.option('-R', '--remove', is_flag=True, help='Stop monitoring an artist')
 @click.option('--reset', is_flag=True, help='Remove all artists/playlists from monitoring')
 def monitor_command(artist, im, playlist, no_refresh, bitrate, record_type, alerts, artist_id, remove, url, reset, dl):
@@ -113,6 +113,7 @@ def monitor_command(artist, im, playlist, no_refresh, bitrate, record_type, aler
     url = list(url)
     playlists = list(playlist)
 
+    downloadPath = ""
     new_artists = []
     new_playlists = []
 
@@ -120,6 +121,7 @@ def monitor_command(artist, im, playlist, no_refresh, bitrate, record_type, aler
     bitrate = utils.validate_bitrate(bitrate)
 
     if dl:
+        downloadPath = dl
         dl = download.Download()
 
     if im:
@@ -128,18 +130,18 @@ def monitor_command(artist, im, playlist, no_refresh, bitrate, record_type, aler
             artist_int_list, artist_str_list = utils.process_input_file(imported_file)
             if artist_str_list:
                 for a in artist_str_list:
-                    result = monitor.monitor("artist", a, bitrate, record_type, alerts, remove=remove, dl_obj=dl)
+                    result = monitor.monitor("artist", a, bitrate, record_type, alerts, remove=remove, dl_obj=dl, downloadPath=downloadPath)
                     if type(result) == int:
                         new_artists.append(result)
             if artist_int_list:
                 for aid in artist_int_list:
-                    result = monitor.monitor("artist_id", aid, bitrate, record_type, alerts, remove=remove, dl_obj=dl)
+                    result = monitor.monitor("artist_id", aid, bitrate, record_type, alerts, remove=remove, dl_obj=dl, downloadPath=downloadPath)
                     if type(result) == int:
                         new_artists.append(result)
         elif Path(im).is_dir():
             import_list = [x.relative_to(im) for x in sorted(Path(im).iterdir()) if x.is_dir()]
             for a in import_list:
-                result = monitor.monitor("artist", a, bitrate, record_type, alerts, remove=remove, dl_obj=dl)
+                result = monitor.monitor("artist", a, bitrate, record_type, alerts, remove=remove, dl_obj=dl, downloadPath=downloadPath)
                 if type(result) == int:
                     new_artists.append(result)
         else:
@@ -148,7 +150,7 @@ def monitor_command(artist, im, playlist, no_refresh, bitrate, record_type, aler
 
     if artist:
         for a in artists_to_csv(artist):
-            result = monitor.monitor("artist", a, bitrate, record_type, alerts, remove=remove, dl_obj=dl)
+            result = monitor.monitor("artist", a, bitrate, record_type, alerts, remove=remove, dl_obj=dl, downloadPath=downloadPath)
             if type(result) == int:
                 new_artists.append(result)
 
@@ -164,13 +166,13 @@ def monitor_command(artist, im, playlist, no_refresh, bitrate, record_type, aler
 
     if artist_id:
         for aid in artist_id:
-            result = monitor.monitor("artist_id", aid, bitrate, record_type, alerts, remove=remove, dl_obj=dl)
+            result = monitor.monitor("artist_id", aid, bitrate, record_type, alerts, remove=remove, dl_obj=dl, downloadPath=downloadPath)
             if type(result) == int:
                 new_artists.append(result)
 
     if playlists:
         for p in playlists:
-            result = monitor.monitor("playlist", p, bitrate, record_type, alerts, remove=remove, dl_obj=dl)
+            result = monitor.monitor("playlist", p, bitrate, record_type, alerts, remove=remove, dl_obj=dl, downloadPath=downloadPath)
             if type(result) == int:  # TODO is this needed? What return values are possible? if result > 0?
                 new_playlists.append(result)
 

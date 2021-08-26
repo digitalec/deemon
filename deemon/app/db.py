@@ -61,11 +61,11 @@ class DBHelper:
         # TODO MOVE TO ONE SQL STATEMENT OR BREAK INTO VERSIONED GROUPS
         sql_monitor = ("CREATE TABLE IF NOT EXISTS 'monitor' "
                        "('artist_id' INTEGER, 'artist_name' TEXT, 'bitrate' INTEGER, "
-                       "'record_type' TEXT, 'alerts' INTEGER)")
+                       "'record_type' TEXT, 'alerts' INTEGER, 'downloadPath' TEXT)")
 
         sql_playlists = ("CREATE TABLE IF NOT EXISTS 'playlists' "
                          "('id' INTEGER UNIQUE, 'title' TEXT, 'url' TEXT, "
-                         "'bitrate' INTEGER, 'alerts' INTEGER)")
+                         "'bitrate' INTEGER, 'alerts' INTEGER, 'downloadPath' TEXT)")
 
         sql_playlist_tracks = ("CREATE TABLE IF NOT EXISTS 'playlist_tracks' "
                                "('track_id' INTEGER, 'playlist_id' INTEGER, 'artist_id' INTEGER, "

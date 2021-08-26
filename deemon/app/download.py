@@ -7,13 +7,14 @@ import logging
 import deezer
 import sys
 import os
+from pprint import pprint
 
 logger = logging.getLogger(__name__)
 
 
 class QueueItem:
 
-    def __init__(self, bitrate, artist=None, album=None, playlist=None):  # TODO - Accept new playlist tracks for output/alerts
+    def __init__(self, bitrate, artist=None, album=None, playlist=None, downloadPath=""):  # TODO - Accept new playlist tracks for output/alerts
         self.artist_name = None
         self.bitrate = bitrate
         self.album_id = None
@@ -21,6 +22,8 @@ class QueueItem:
         self.url = None
         self.playlist_title = None
         self.verbose = os.environ.get('VERBOSE')
+        self.downloadPath = ""
+
 
         if artist:
             self.artist_name = artist["name"]
@@ -37,6 +40,10 @@ class QueueItem:
         if playlist:
             self.url = playlist["link"]
             self.playlist_title = playlist["title"]
+
+        if downloadPath:
+            if (Path(downloadPath).exists):
+                self.downloadPath = downloadPath
 
         self.print_queue_to_log()
 
@@ -96,17 +103,17 @@ class Download:
                     logger.debug(f"Processing queue item {vars(q)}")
                 if q.artist_name:
                     logger.info(f"+ {q.artist_name} - {q.album_title}... ")
-                    self.di.download_url([q.url], q.bitrate)
+                    self.di.download_url([q.url], q.bitrate, downloadPath=q.downloadPath)
                 else:
                     logger.info(f"+ {q.playlist_title} (playlist)...")
-                    self.di.download_url([q.url], q.bitrate, override_deemix=False)
+                    self.di.download_url([q.url], q.bitrate, override_deemix=False, downloadPath=q.downloadPath)
 
             print("")
             logger.info("Downloads complete!")
             if plex and (self.config["plex_library"] != ""):  # TODO - config validation should be done elsewhere
                 self.refresh_plex(plex)
 
-    def download(self, artist, artist_id, album_id, url, bitrate, record_type, input_file, auto=True):
+    def download(self, artist, artist_id, album_id, url, bitrate, record_type, input_file, auto=True, downloadPath=""):
 
         def filter_artist_by_record_type(artist, record_type):
             album_api = self.dz.api.get_artist_albums(artist['id'])['data']
@@ -140,7 +147,7 @@ class Download:
             filtered = filter_artist_by_record_type(api_object, record_type)
             for album in filtered:
                 if not queue_item_exists(album['id']):
-                    self.queue_list.append(QueueItem(bitrate, api_object, album))
+                    self.queue_list.append(QueueItem(bitrate, api_object, album, downloadPath=downloadPath))
 
         def queue_item_exists(i):
             for q in self.queue_list:
@@ -170,11 +177,11 @@ class Download:
             logger.debug(f"Requested Album: {id}, "
                          f"Found: {album_id_result['artist']['name']} - {album_id_result['title']}")
             if album_id_result and not queue_item_exists(album_id_result['id']):
-                self.queue_list.append(QueueItem(bitrate, album=album_id_result))
+                self.queue_list.append(QueueItem(bitrate, album=album_id_result, downloadPath=downloadPath))
 
         def process_playlist_by_id(id):
             playlist_api = self.dz.api.get_playlist(id)
-            self.queue_list.append(QueueItem(bitrate, playlist=playlist_api))
+            self.queue_list.append(QueueItem(bitrate, playlist=playlist_api, downloadPath=downloadPath))
 
         def extract_id_from_url(url):
             id_group = ['artist', 'album', 'playlist']

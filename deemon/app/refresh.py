@@ -101,8 +101,8 @@ class Refresh:
                     new_track_count += 1
 
             if new_track_count > 0 and not new_playlist:
-                pl = {'id': playlist[0], 'title': playlist[1], 'link': playlist[2],'bitrate': playlist[3]}
-                self.queue_list.append(download.QueueItem(pl['bitrate'], playlist=pl))
+                pl = {'id': playlist[0], 'title': playlist[1], 'link': playlist[2],'bitrate': playlist[3], 'downloadPath': playlist[5]}
+                self.queue_list.append(download.QueueItem(pl['bitrate'], playlist=pl, downloadPath=pl['downloadPath']))
                 logger.info(f"Playlist '{playlist_api['title']}' has {new_track_count} new track(s)")
             else:
                 logger.debug(f"No new tracks have been added to playlist '{playlist_api['title']}'")
@@ -121,15 +121,16 @@ class Refresh:
                              bar_format='{desc}...  {n_fmt}/{total_fmt} [{bar:40}] {percentage:3.0f}%')
 
         for artist in progress:
+            
             artist = {"id": artist[0], "name": artist[1], "bitrate": artist[2],
-                      "record_type": artist[3], "alerts": artist[4]}  # TODO This could be cleaned up using rowfactory
+                      "record_type": artist[3], "alerts": artist[4], "downloadPath": artist[5]}  # TODO This could be cleaned up using rowfactory
             artist_new_release_count = 0
             new_artist = self.existing_artist(artist['id'])
             progress.set_description_str("Refreshing artists")
             artist_albums = self.dz.api.get_artist_albums(artist['id'])['data']
 
             logger.debug(f"Artist settings for {artist['name']} ({artist['id']}): bitrate={artist['bitrate']}, "
-                         f"record_type={artist['record_type']}, alerts={artist['alerts']}")
+                         f"record_type={artist['record_type']}, alerts={artist['alerts']}, downloadPath={artist['downloadPath']}")
             for album in artist_albums:
                 exists = self.db.get_album_by_id(album_id=album['id'])
                 if exists:
@@ -154,7 +155,7 @@ class Refresh:
                         logger.warning(
                             f"WARNING: Artist '{artist['name']}' setup for monitoring but no releases were found.")
                     continue
-
+                    
                 if (artist['record_type'] == album['record_type']) or artist['record_type'] == "all":
                     if self.config['release_by_date']:
                         max_release_date = utils.get_max_release_date(self.config['release_max_days'])
@@ -163,7 +164,8 @@ class Refresh:
                             continue
                     self.total_new_releases += 1
                     artist_new_release_count += 1
-                    self.queue_list.append(download.QueueItem(artist['bitrate'], artist, album))
+
+                    self.queue_list.append(download.QueueItem(artist['bitrate'], artist, album, None, downloadPath=artist['downloadPath']))
                     logger.debug(f"Release {album['id']} added to queue")
                     if artist["alerts"]:
                         self.append_new_release(album['release_date'], artist['name'],

@@ -1,16 +1,21 @@
 from sqlite3 import OperationalError
+from pathlib import Path
 
-from deemon.app import Deemon
+from deemon.app import Deemon, download
 import logging
 import deezer
 
 logger = logging.getLogger(__name__)
 
 
-def monitor(profile, value, bitrate, r_type, alerts, remove=False, reset=False, dl_obj=False):
+def monitor(profile, value, bitrate, r_type, alerts, remove=False, reset=False, dl_obj=False, downloadPath=""):
 
     dz = deezer.Deezer()
     db = Deemon().db
+
+    if downloadPath != "":
+        if not (Path(downloadPath).exists):
+            downloadPath = ""
 
     def purge_playlist(i, title):
         values = {'id': api_result['id']}
@@ -58,15 +63,17 @@ def monitor(profile, value, bitrate, r_type, alerts, remove=False, reset=False, 
         if artist_exists:
             logger.warning(f"Artist '{api_result['name']}' is already being monitored")
             return
+
         sql_values = {
             'artist_id': api_result['id'],
             'artist_name': api_result['name'],
             'bitrate': bitrate,
             'record_type': r_type,
-            'alerts': alerts
+            'alerts': alerts,
+            'downloadPath': downloadPath
         }
-        query = ("INSERT INTO monitor (artist_id, artist_name, bitrate, record_type, alerts) "
-                 "VALUES (:artist_id, :artist_name, :bitrate, :record_type, :alerts)")
+        query = ("INSERT INTO monitor (artist_id, artist_name, bitrate, record_type, alerts, downloadPath) "
+                 "VALUES (:artist_id, :artist_name, :bitrate, :record_type, :alerts, :downloadPath)")
 
         try:
             db.query(query, sql_values)
@@ -75,7 +82,7 @@ def monitor(profile, value, bitrate, r_type, alerts, remove=False, reset=False, 
 
         logger.info(f"Now monitoring artist '{api_result['name']}'")
         if dl_obj:
-            dl_obj.download(None, [api_result['id']], None, None, bitrate, r_type, None, False)
+            dl_obj.download(None, [api_result['id']], None, None, bitrate, r_type, None, False, downloadPath=downloadPath)
         db.commit()
         return api_result['id']
 
@@ -103,9 +110,9 @@ def monitor(profile, value, bitrate, r_type, alerts, remove=False, reset=False, 
             logger.warning(f"Playlist '{api_result['title']}' is already being monitored")
             return
         sql_values = {'id': api_result['id'], 'title': api_result['title'],
-                      'url': api_result['link'], 'bitrate': bitrate, 'alerts': alerts}
-        query = ("INSERT INTO playlists ('id', 'title', 'url', 'bitrate', 'alerts') "
-                 "VALUES (:id, :title, :url, :bitrate, :alerts)")
+                      'url': api_result['link'], 'bitrate': bitrate, 'alerts': alerts, 'downloadPath': downloadPath}
+        query = ("INSERT INTO playlists ('id', 'title', 'url', 'bitrate', 'alerts', 'downloadPath') "
+                 "VALUES (:id, :title, :url, :bitrate, :alerts, :downloadPath)")
 
         try:
             db.query(query, sql_values)
@@ -114,6 +121,6 @@ def monitor(profile, value, bitrate, r_type, alerts, remove=False, reset=False, 
 
         logger.info(f"Now monitoring playlist '{api_result['title']}'")
         if dl_obj:
-            dl_obj.download(None, None, None, [api_result['link']], bitrate, r_type, None, False)
+            dl_obj.download(None, None, None, [api_result['link']], bitrate, r_type, None, False, downloadPath=downloadPath)
         db.commit()
         return api_result['id']

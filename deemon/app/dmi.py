@@ -1,4 +1,5 @@
 from pathlib import Path
+from pprint import pprint
 import deemix
 from deezer import Deezer
 from deezer.api import APIError
@@ -37,9 +38,23 @@ class DeemixInterface(Deemon):
         logger.debug(f"deemix Config Path: {self.config_dir}")
         logger.debug(f"deemix Download Path: {self.dx_settings['downloadLocation']}")
 
-    def download_url(self, url, bitrate, override_deemix=True):
+
+    def setDownloadPath(self, downloadLocationPath):
+        downloadLocationPath = str(downloadLocationPath)
+        if (Path(downloadLocationPath).exists):
+            self.dx_settings['downloadLocation'] = str(downloadLocationPath)
+            logger.debug(f"deemix Download Path changed to: {self.dx_settings['downloadLocation']}")
+        else:
+            logger.debug(f"User entered invalid Download Path (No change) : {self.dx_settings['downloadLocation']}")
+
+
+
+    def download_url(self, url, bitrate, override_deemix=True, downloadPath=""):
         if override_deemix:
             deemix.generatePlaylistItem = self.generatePlaylistItem
+        if downloadPath != "":
+            self.setDownloadPath(downloadPath)
+        
         links = []
         for link in url:
             if ';' in link:
