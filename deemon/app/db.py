@@ -93,6 +93,7 @@ class DBHelper:
         self.query("CREATE UNIQUE INDEX 'idx_property' ON 'deemon' ('property')")
         self.query("CREATE UNIQUE INDEX 'idx_artist_id' ON 'monitor' ('artist_id')")
         self.query(f"INSERT INTO 'deemon' ('property', 'value') VALUES ('version', '{__dbversion__}')")
+        self.query(f"INSERT INTO 'deemon' ('property', 'value') VALUES ('last_update_check', 0)")
         self.commit()
 
     def get_db_version(self):
@@ -116,7 +117,6 @@ class DBHelper:
             self.query(sql_playlists)
             self.query(sql_playlist_tracks)
             self.query("INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('version', '1.1')")
-            self.commit()
             logger.debug("Database upgraded to version 1.1")
         # Upgrade database v1.1 to v1.3
         if current_ver < parse_version("1.3"):
@@ -126,15 +126,14 @@ class DBHelper:
             self.query(sql_playlists_1)
             self.query(sql_playlists_2)
             self.query(sql_updatever)
-            self.commit()
             logger.debug(f"Database upgraded to version 1.3")
-        # Upgrade database v1.3 to v1.4
+        # Upgrade database v1.3 to v2
         if current_ver < parse_version("2"):
             sql_releases_1 = "ALTER TABLE releases ADD COLUMN lyrics INTEGER"
             sql_releases_2 = "ALTER TABLE releases ADD COLUMN explicit INTEGER"
             sql_stats = ("CREATE TABLE IF NOT EXISTS 'stats' "
                          "('stat' TEXT NOT NULL UNIQUE, 'count' INTEGER DEFAULT 0)")
-            sql_stats_data = ("INSERT INTO 'stats' ('stats', 'count') "
+            sql_stats_data = ("INSERT INTO 'stats' ('stat', 'count') "
                               "VALUES ('refresh', 0), ('total_artists', 0), ('new_releases', 0), "
                               "('total_queued', 0), ('total_releases', 0)")
             sql_updatever = "INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('version', '2')"
@@ -143,9 +142,11 @@ class DBHelper:
             self.query(sql_stats)
             self.query(sql_stats_data)
             self.query(sql_updatever)
-            self.commit()
             logger.debug(f"Database upgraded to version 2")
-
+        if current_ver < parse_version("2.1"):
+            self.query("INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('last_update_check', 0)")
+            self.query("INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('version', '2.1')")
+        self.commit()
     def query(self, query, values=None):
         if values is None:
             values = {}
@@ -268,3 +269,12 @@ class DBHelper:
         self.commit()
         logger.debug("All playlists have been purge from database")
         logger.info("Database has been reset")
+
+    def last_update_check(self):
+        result = self.query("SELECT value FROM 'deemon' WHERE property = 'last_update_check'").fetchone()
+        return int(result[0])
+
+    def set_last_update(self):
+        now = int(time.time())
+        self.query(f"UPDATE deemon SET value = {now} WHERE property = 'last_update_check'")
+        self.commit()

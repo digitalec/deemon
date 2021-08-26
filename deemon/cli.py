@@ -32,12 +32,18 @@ def run(verbose):
     """
     setup_logger(log_level='DEBUG' if verbose else 'INFO', log_file=utils.get_log_file())
 
-    new_version = utils.check_version()
-    if new_version:
-        print("*" * 50)
-        logger.info(f"* New version is available: v{__version__} -> v{new_version}")
-        logger.info("* To upgrade, run `pip install --upgrade deemon`")
-        print("*" * 50)
+    import deemon.app.db as database
+    db = database.DBHelper(settings.db_path)
+    last_checked = db.last_update_check()
+    check_interval = (config["check_update"] * 86400)
+    if last_checked < check_interval:
+        new_version = utils.check_version(last_checked)
+        if new_version:
+            print("*" * 50)
+            logger.info(f"* New version is available: v{__version__} -> v{new_version}")
+            logger.info("* To upgrade, run `pip install --upgrade deemon`")
+            print("*" * 50)
+        db.set_last_update()
 
 
 @run.command(name='test')

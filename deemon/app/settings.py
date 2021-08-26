@@ -6,6 +6,7 @@ import json
 logger = logging.getLogger(__name__)
 
 DEFAULT_SETTINGS = {
+    "check_update": 1,
     "plex_baseurl": "",
     "plex_token": "",
     "plex_library": "",

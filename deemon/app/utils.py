@@ -102,7 +102,8 @@ def get_max_release_date(days):
     return max_date
 
 
-def check_version():
+def check_version(last):
+    logger.debug("Checking for update...")
     latest_ver = "https://api.github.com/repos/digitalec/deemon/releases/latest"
     try:
         response = requests.get(latest_ver)
