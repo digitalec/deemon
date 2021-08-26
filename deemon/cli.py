@@ -54,9 +54,10 @@ def test():
 @click.option('-u', '--url', metavar='URL', multiple=True, help='Download by URL of artist/album/track/playlist')
 @click.option('-f', '--file', metavar='FILE', help='Download batch of artists and/or artist IDs from file')
 @click.option('-b', '--bitrate', default=config["bitrate"], help='Set custom bitrate for this operation')
+@click.option('--download-path', type=click.Path(), default=config["download_path"], metavar="PATH", help='Path where the artist/album/track/playlist will be saved')
 @click.option('-t', '--record-type', type=click.Choice(['all', 'album', 'ep', 'single'], case_sensitive=False),
               default=config["record_type"], help='Specify record types to download')
-def download_command(artist, artist_id, album_id, url, file, bitrate, record_type):
+def download_command(artist, artist_id, album_id, url, file, bitrate, record_type, download_path):
     """
     Download specific artist, album ID or by URL
 
@@ -67,13 +68,17 @@ def download_command(artist, artist_id, album_id, url, file, bitrate, record_typ
     """
     bitrate = utils.validate_bitrate(bitrate)
 
+    if download_path:
+        if not (Path(download_path).exists):
+            download_path = config["download_path"]
+
     artists = artists_to_csv(artist) if artist else None
     artist_ids = [x for x in artist_id] if artist_id else None
     album_ids = [x for x in album_id] if album_id else None
     urls = [x for x in url] if url else None
 
     dl = download.Download()
-    dl.download(artists, artist_ids, album_ids, urls, bitrate, record_type, file)
+    dl.download(artists, artist_ids, album_ids, urls, bitrate, record_type, file, downloadPath=download_path)
 
 
 @run.command(name='monitor', context_settings={"ignore_unknown_options": True})
