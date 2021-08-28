@@ -138,3 +138,9 @@ def process_input_file(artist_list):
             str_artists.append(artist_list[i])
     logger.debug(f"Detected {len(int_artists)} artist ID(s) and {len(str_artists)} artist name(s)")
     return int_artists, str_artists
+
+def artists_to_csv(a):
+    csv_artists = ' '.join(a)
+    csv_artists = csv_artists.split(',')
+    csv_artists = [x.lstrip() for x in csv_artists]
+    return csv_artists

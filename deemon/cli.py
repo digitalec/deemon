@@ -73,7 +73,7 @@ def download_command(artist, artist_id, album_id, url, file, bitrate, record_typ
     """
     bitrate = utils.validate_bitrate(bitrate)
 
-    artists = artists_to_csv(artist) if artist else None
+    artists = utils.artists_to_csv(artist) if artist else None
     artist_ids = [x for x in artist_id] if artist_id else None
     album_ids = [x for x in album_id] if album_id else None
     urls = [x for x in url] if url else None
@@ -154,7 +154,7 @@ def monitor_command(artist, im, playlist, no_refresh, bitrate, record_type, aler
             return
 
     if artist:
-        for a in artists_to_csv(artist):
+        for a in utils.artists_to_csv(artist):
             result = monitor.monitor("artist", a, bitrate, record_type, alerts, remove=remove, dl_obj=dl)
             if type(result) == int:
                 new_artists.append(result)
@@ -280,10 +280,3 @@ def api_test(artist, artist_id, album_id, playlist_id, limit, raw):
                 print(f"{key}: {value}")
         else:
             print(f"Playlist ID: {result['id']}\nPlaylist Title: {result['title']}")
-
-
-def artists_to_csv(a):
-    csv_artists = ' '.join(a)
-    csv_artists = csv_artists.split(',')
-    csv_artists = [x.lstrip() for x in csv_artists]
-    return csv_artists
