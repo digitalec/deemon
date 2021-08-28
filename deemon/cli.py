@@ -200,8 +200,8 @@ def refresh_command(skip_download, time_machine):
 @click.option('-a', '--artists', is_flag=True, help='Show artists currently being monitored')
 @click.option('-i', '--artist-ids', is_flag=True, help='Show artist IDs currently being monitored')
 @click.option('-p', '--playlists', is_flag=True, help='Show playlists currently being monitored', hidden=True)
-@click.option('-c', '--csv', is_flag=True, help='Used with -a, -i, -p; output artists as CSV')
-@click.option('-e', '--extended', is_flag=True, help='show extended artist data')
+@click.option('-c', '--csv', is_flag=True, help='Used with -a, -i; output artists as CSV')
+@click.option('-e', '--extended', is_flag=True, help='Show extended artist data')
 @click.option('-n', '--new-releases', metavar='N', type=int, help='Show new releases from last N days')
 # TODO Implement subcommands for 'stats', 'new-releases', etc.
 @click.option('-s', '--stats', is_flag=True, help='Show various usage statistics')
@@ -239,7 +239,7 @@ def backup(include_logs):
         logger.info(f"Backed up to {backup_path / backup_tar}")
 
 
-# TODO @click.option does not support nargs=-1; unable to use spaces with quotations
+# TODO @click.option does not support nargs=-1; unable to use spaces without quotations
 @run.command(name="api", help="View raw API data for artist, artist ID or playlist ID")
 @click.option('--artist', type=str, help='Get artist result via API')
 @click.option('--artist-id', type=int, help='Get artist ID result via API')
@@ -253,15 +253,25 @@ def api_test(artist, artist_id, album_id, playlist_id, limit, raw):
     dz = deezer.Deezer()
     if artist or artist_id:
         if artist:
-            result = dz.api.search_artist(artist, limit=limit)['data'][0]
+            result = dz.api.search_artist(artist, limit=limit)['data']
         else:
             result = dz.api.get_artist(artist_id)
 
         if raw:
-            for key, value in result.items():
-                print(f"{key}: {value}")
+            if isinstance(result, list):
+                for row in result:
+                    for key, value in row.items():
+                        print(f"{key}: {value}")
+                    print("\n")
+            else:
+                for key, value in result.items():
+                    print(f"{key}: {value}")
         else:
-            print(f"Artist ID: {result['id']}\nArtist Name: {result['name']}")
+            if isinstance(result, list):
+                for row in result:
+                    print(f"Artist ID: {row['id']}\nArtist Name: {row['name']}\n")
+            else:
+                print(f"Artist ID: {result['id']}\nArtist Name: {result['name']}")
 
     if album_id:
         result = dz.api.get_album(album_id)
