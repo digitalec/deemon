@@ -181,7 +181,9 @@ class DBHelper:
         '''
         values = {'id': artist_id}
         result = self.query(f"SELECT * FROM monitor WHERE artist_id = :id", values).fetchone()
-        return result
+        a = [x for x in result]
+        artist = {'id': a[0], 'name': a[1], 'bitrate': a[2], 'record_type': a[3], 'alerts': a[4]}
+        return artist
 
     def get_specified_artist(self, artist):
         if type(artist) is int:
