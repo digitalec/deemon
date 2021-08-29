@@ -173,7 +173,8 @@ class DBHelper:
         sorted_artists = sorted(artists, key=lambda x: x[1])
         all_artists = []
         for a in sorted_artists:
-            all_artists.append({'id': a[0], 'name': a[1], 'bitrate': a[2], 'record_type': a[3], 'alerts': a[4]})
+            all_artists.append({'id': a[0], 'name': a[1], 'bitrate': a[2], 'record_type': a[3], 'alerts': a[4],
+                                'download_path': a[5]})
         return all_artists
 
     def get_monitored_artist_by_id(self, artist_id):
@@ -186,7 +187,8 @@ class DBHelper:
         values = {'id': artist_id}
         result = self.query(f"SELECT * FROM monitor WHERE artist_id = :id", values).fetchone()
         a = [x for x in result]
-        artist = {'id': a[0], 'name': a[1], 'bitrate': a[2], 'record_type': a[3], 'alerts': a[4]}
+        artist = {'id': a[0], 'name': a[1], 'bitrate': a[2], 'record_type': a[3], 'alerts': a[4],
+                  'download_path': a[5]}
         return artist
 
     def get_specified_artist(self, artist):
