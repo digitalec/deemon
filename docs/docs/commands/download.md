@@ -18,7 +18,7 @@ deemon includes a command line interface to the deemix library allowing you to d
 
 ## By Artist
 ```bash
-$ deemon download --artist My Awesome Band
+$ deemon download My Awesome Band
 ```
 
 ## By Artist ID
