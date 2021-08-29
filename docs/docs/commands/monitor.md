@@ -58,6 +58,17 @@ $ deemon monitor --import file.csv
 ```bash
 $ deemon monitor --import /home/user/Music
 ```
+
+## Specify custom bitrate, record type and alerts
+**Options**: `-b, --bitrate; -t, --record-type; -a, --alerts`
+You can override the config.json and specify one-off settings for monitoring:
+
+```bash
+$ deemon monitor ArtistA --bitrate 9 --record-type album --alerts 0
+```
+
+_This will monitor `ArtistA` for new albums, download in FLAC without alerts._
+
 ## Stop Monitoring an Artist
 **Options**: `-R, --remove`
 
