@@ -61,11 +61,11 @@ class DBHelper:
         # TODO MOVE TO ONE SQL STATEMENT OR BREAK INTO VERSIONED GROUPS
         sql_monitor = ("CREATE TABLE IF NOT EXISTS 'monitor' "
                        "('artist_id' INTEGER, 'artist_name' TEXT, 'bitrate' INTEGER, "
-                       "'record_type' TEXT, 'alerts' INTEGER, 'downloadPath' TEXT)")
+                       "'record_type' TEXT, 'alerts' INTEGER, 'download_path' TEXT)")
 
         sql_playlists = ("CREATE TABLE IF NOT EXISTS 'playlists' "
                          "('id' INTEGER UNIQUE, 'title' TEXT, 'url' TEXT, "
-                         "'bitrate' INTEGER, 'alerts' INTEGER, 'downloadPath' TEXT)")
+                         "'bitrate' INTEGER, 'alerts' INTEGER, 'download_path' TEXT)")
 
         sql_playlist_tracks = ("CREATE TABLE IF NOT EXISTS 'playlist_tracks' "
                                "('track_id' INTEGER, 'playlist_id' INTEGER, 'artist_id' INTEGER, "
@@ -119,6 +119,11 @@ class DBHelper:
             self.query(sql_updatever)
             self.commit()
             logger.debug(f"Database upgraded to version 1.3")
+        if current_ver < parse_version("1.3.1"):
+            self.query("ALTER TABLE monitor ADD COLUMN download_path TEXT")
+            self.query("ALTER TABLE playlists ADD COLUMN download_path TEXT")
+            self.query("INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('version', '1.3.1')")
+            self.commit()
 
     def query(self, query, values=None):
         if values is None:
