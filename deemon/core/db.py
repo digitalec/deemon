@@ -61,11 +61,11 @@ class DBHelper:
         # TODO MOVE TO ONE SQL STATEMENT OR BREAK INTO VERSIONED GROUPS
         sql_monitor = ("CREATE TABLE IF NOT EXISTS 'monitor' "
                        "('artist_id' INTEGER, 'artist_name' TEXT, 'bitrate' INTEGER, "
-                       "'record_type' TEXT, 'alerts' INTEGER)")
+                       "'record_type' TEXT, 'alerts' INTEGER, 'download_path' TEXT)")
 
         sql_playlists = ("CREATE TABLE IF NOT EXISTS 'playlists' "
                          "('id' INTEGER UNIQUE, 'title' TEXT, 'url' TEXT, "
-                         "'bitrate' INTEGER, 'alerts' INTEGER)")
+                         "'bitrate' INTEGER, 'alerts' INTEGER, 'download_path' TEXT)")
 
         sql_playlist_tracks = ("CREATE TABLE IF NOT EXISTS 'playlist_tracks' "
                                "('track_id' INTEGER, 'playlist_id' INTEGER, 'artist_id' INTEGER, "
@@ -144,6 +144,10 @@ class DBHelper:
         if current_ver < parse_version("2.1"):
             self.query("INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('last_update_check', 0)")
             self.query("INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('version', '2.1')")
+        if current_ver < parse_version("2.2"):
+            self.query("ALTER TABLE monitor ADD COLUMN download_path TEXT")
+            self.query("ALTER TABLE playlists ADD COLUMN download_path TEXT")
+            self.query("INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('version', '2.2')")
         self.commit()
     def query(self, query, values=None):
         if values is None:
@@ -169,7 +173,8 @@ class DBHelper:
         sorted_artists = sorted(artists, key=lambda x: x[1])
         all_artists = []
         for a in sorted_artists:
-            all_artists.append({'id': a[0], 'name': a[1], 'bitrate': a[2], 'record_type': a[3], 'alerts': a[4]})
+            all_artists.append({'id': a[0], 'name': a[1], 'bitrate': a[2], 'record_type': a[3], 'alerts': a[4],
+                                'download_path': a[5]})
         return all_artists
 
     def get_monitored_artist_by_id(self, artist_id):
@@ -182,7 +187,8 @@ class DBHelper:
         values = {'id': artist_id}
         result = self.query(f"SELECT * FROM monitor WHERE artist_id = :id", values).fetchone()
         a = [x for x in result]
-        artist = {'id': a[0], 'name': a[1], 'bitrate': a[2], 'record_type': a[3], 'alerts': a[4]}
+        artist = {'id': a[0], 'name': a[1], 'bitrate': a[2], 'record_type': a[3], 'alerts': a[4],
+                  'download_path': a[5]}
         return artist
 
     def get_specified_artist(self, artist):

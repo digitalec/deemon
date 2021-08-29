@@ -29,7 +29,8 @@ class Notify(Deemon):
         self.passwd = self.config["smtp_pass"]
         self.sender = self.config["smtp_sender"]
         self.recipient = self.config["smtp_recipient"]
-        self.update = utils.check_version()
+        # TODO - Must pass flag when update is available
+        self.update = utils.check_version(0)
         self.subject = "New releases detected!"
         self.releases = new_releases
 
@@ -76,9 +77,9 @@ class Notify(Deemon):
         msg.attach(part2)
 
         logo = pkg_resources.resource_filename('deemon', 'assets/images/logo.png')
-        github =  pkg_resources.resource_filename('deemon', 'assets/images/github.png')
-        reddit =  pkg_resources.resource_filename('deemon', 'assets/images/reddit.png')
-        discord =  pkg_resources.resource_filename('deemon', 'assets/images/discord.png')
+        github = pkg_resources.resource_filename('deemon', 'assets/images/github.png')
+        reddit = pkg_resources.resource_filename('deemon', 'assets/images/reddit.png')
+        discord = pkg_resources.resource_filename('deemon', 'assets/images/discord.png')
 
         with open(logo, 'rb') as f:
             image = MIMEImage(f.read())
@@ -171,7 +172,7 @@ class Notify(Deemon):
 
             all_new_releases += new_release_list_header + new_release_list_item
 
-        index =  pkg_resources.resource_filename('deemon', 'assets/index.html')
+        index = pkg_resources.resource_filename('deemon', 'assets/index.html')
         with open(index, 'r') as f:
             html_output = f.read()
 
