@@ -60,9 +60,10 @@ def test():
 @click.option('-u', '--url', metavar='URL', multiple=True, help='Download by URL of artist/album/track/playlist')
 @click.option('-f', '--file', metavar='FILE', help='Download batch of artists and/or artist IDs from file')
 @click.option('-b', '--bitrate', default=config["bitrate"], help='Set custom bitrate for this operation')
+@click.option('-o', '--download-path', type=str, metavar="PATH", help='Specify custom download directory')
 @click.option('-t', '--record-type', type=click.Choice(['all', 'album', 'ep', 'single'], case_sensitive=False),
               default=config["record_type"], help='Specify record types to download')
-def download_command(artist, artist_id, album_id, url, file, bitrate, record_type):
+def download_command(artist, artist_id, album_id, url, file, bitrate, record_type, download_path):
     """
     Download specific artist, album ID or by URL
 
@@ -78,7 +79,14 @@ def download_command(artist, artist_id, album_id, url, file, bitrate, record_typ
     album_ids = [x for x in album_id] if album_id else None
     urls = [x for x in url] if url else None
 
-    dl = download.Download()
+    if download_path and download_path != "":
+        if Path(download_path).exists:
+            config["download_path"] = download_path
+            logger.debug(f"Download path has changed: {config['download_path']}")
+        else:
+            return logger.error(f"Invalid download path: {download_path}")
+
+    dl = download.Download(config)
     dl.download(artists, artist_ids, album_ids, urls, bitrate, record_type, file)
 
 
@@ -95,9 +103,11 @@ def download_command(artist, artist_id, album_id, url, file, bitrate, record_typ
 @click.option('-a', '--alerts', type=int, default=config["alerts"], help="Enable or disable alerts")
 @click.option('-n', '--no-refresh', is_flag=True, help='Skip refresh after adding or removing artist')
 @click.option('-D', '--download', 'dl', is_flag=True, help='Download all releases matching record type')
+@click.option('-o', '--download-path', type=str, metavar="PATH", help='Specify custom download directory')
 @click.option('-R', '--remove', is_flag=True, help='Stop monitoring an artist')
 @click.option('--reset', is_flag=True, help='Remove all artists/playlists from monitoring')
-def monitor_command(artist, im, playlist, no_refresh, bitrate, record_type, alerts, artist_id, remove, url, reset, dl):
+def monitor_command(artist, im, playlist, no_refresh, bitrate, record_type, alerts,
+                    artist_id, remove, url, reset, dl, download_path):
     """
     Monitor artist for new releases by ID, URL or name.
 
@@ -126,6 +136,13 @@ def monitor_command(artist, im, playlist, no_refresh, bitrate, record_type, aler
     alerts = utils.validate_alerts(alerts)
     bitrate = utils.validate_bitrate(bitrate)
 
+    if download_path and download_path != "":
+        if Path(download_path).exists:
+            config["download_path"] = download_path
+            logger.debug(f"Download path has changed: {config['download_path']}")
+        else:
+            return logger.error(f"Invalid download path: {download_path}")
+
     if dl:
         dl = download.Download()
 
@@ -135,18 +152,21 @@ def monitor_command(artist, im, playlist, no_refresh, bitrate, record_type, aler
             artist_int_list, artist_str_list = utils.process_input_file(imported_file)
             if artist_str_list:
                 for a in artist_str_list:
-                    result = monitor.monitor("artist", a, bitrate, record_type, alerts, remove=remove, dl_obj=dl)
+                    result = monitor.monitor("artist", a, bitrate, record_type, alerts, config,
+                                             remove=remove, dl_obj=dl)
                     if type(result) == int:
                         new_artists.append(result)
             if artist_int_list:
                 for aid in artist_int_list:
-                    result = monitor.monitor("artist_id", aid, bitrate, record_type, alerts, remove=remove, dl_obj=dl)
+                    result = monitor.monitor("artist_id", aid, bitrate, record_type, alerts, config,
+                                             remove=remove, dl_obj=dl)
                     if type(result) == int:
                         new_artists.append(result)
         elif Path(im).is_dir():
             import_list = [x.relative_to(im) for x in sorted(Path(im).iterdir()) if x.is_dir()]
             for a in import_list:
-                result = monitor.monitor("artist", a, bitrate, record_type, alerts, remove=remove, dl_obj=dl)
+                result = monitor.monitor("artist", a, bitrate, record_type, alerts, config,
+                                         remove=remove, dl_obj=dl)
                 if type(result) == int:
                     new_artists.append(result)
         else:
@@ -155,7 +175,8 @@ def monitor_command(artist, im, playlist, no_refresh, bitrate, record_type, aler
 
     if artist:
         for a in utils.artists_to_csv(artist):
-            result = monitor.monitor("artist", a, bitrate, record_type, alerts, remove=remove, dl_obj=dl)
+            result = monitor.monitor("artist", a, bitrate, record_type, alerts, config,
+                                     remove=remove, dl_obj=dl)
             if type(result) == int:
                 new_artists.append(result)
 
@@ -171,13 +192,15 @@ def monitor_command(artist, im, playlist, no_refresh, bitrate, record_type, aler
 
     if artist_id:
         for aid in artist_id:
-            result = monitor.monitor("artist_id", aid, bitrate, record_type, alerts, remove=remove, dl_obj=dl)
+            result = monitor.monitor("artist_id", aid, bitrate, record_type, alerts, config,
+                                     remove=remove, dl_obj=dl)
             if type(result) == int:
                 new_artists.append(result)
 
     if playlists:
         for p in playlists:
-            result = monitor.monitor("playlist", p, bitrate, record_type, alerts, remove=remove, dl_obj=dl)
+            result = monitor.monitor("playlist", p, bitrate, record_type, alerts, config,
+                                     remove=remove, dl_obj=dl)
             if type(result) == int:  # TODO is this needed? What return values are possible? if result > 0?
                 new_playlists.append(result)
 
@@ -185,7 +208,7 @@ def monitor_command(artist, im, playlist, no_refresh, bitrate, record_type, aler
         logger.debug("Requesting refresh, standby...")
         logger.debug(f"new_artists={new_artists}")
         logger.debug(f"new_playlists={new_playlists}")
-        Refresh(artist_id=new_artists, playlist_id=new_playlists, dl_obj=dl)
+        Refresh(config, artist_id=new_artists, playlist_id=new_playlists, dl_obj=dl)
 
 
 @run.command(name='refresh')
@@ -193,7 +216,7 @@ def monitor_command(artist, im, playlist, no_refresh, bitrate, record_type, aler
 @click.option('-t', '--time-machine', metavar='DATE', type=str, help='Refresh as if it were this date (YYYY-MM-DD)')
 def refresh_command(skip_download, time_machine):
     """Check artists for new releases"""
-    Refresh(skip_download=skip_download, time_machine=time_machine)
+    Refresh(config, skip_download=skip_download, time_machine=time_machine)
 
 
 @run.command(name='show')

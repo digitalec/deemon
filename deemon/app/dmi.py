@@ -5,7 +5,7 @@ from deezer.api import APIError
 from deezer.utils import map_user_playlist
 from deezer.gw import GWAPIError, LyricsStatus
 from deemix import generateDownloadObject
-from deemix.types.DownloadObjects import Single, Collection
+from deemix.types.DownloadObjects import Collection
 from deemix.downloader import Downloader
 from deemix.settings import load as loadSettings
 from deemon.app import Deemon
@@ -15,12 +15,12 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class DeemixInterface(Deemon):
-    def __init__(self):
-        super().__init__()
+class DeemixInterface:
+    def __init__(self, config):
         logger.debug("Initializing deemix library")
 
         self.dz = Deezer()
+        self.config = config
 
         if self.config["deemix_path"] == "":
             self.config_dir = localpaths.getConfigFolder()
@@ -37,9 +37,13 @@ class DeemixInterface(Deemon):
         logger.debug(f"deemix Config Path: {self.config_dir}")
         logger.debug(f"deemix Download Path: {self.dx_settings['downloadLocation']}")
 
-    def download_url(self, url, bitrate, override_deemix=True):
+    def download_url(self, url, bitrate, download_path, override_deemix=True):
         if override_deemix:
             deemix.generatePlaylistItem = self.generatePlaylistItem
+
+        if download_path and download_path != "":
+            self.dx_settings['downloadLocation'] = download_path
+
         links = []
         for link in url:
             if ';' in link:
