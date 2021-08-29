@@ -1,4 +1,6 @@
-from deemon.app import Deemon, utils, download, notify
+from deemon.cmd import download
+from deemon.core import Deemon
+from deemon.utils import notify, validate, dates
 import time
 import tqdm
 import logging
@@ -32,12 +34,12 @@ class Refresh:
 
     def set_refresh_date(self):
         if self.time_machine:
-            if utils.validate_date(self.time_machine):
+            if validate.validate_date(self.time_machine):
                 return self.time_machine
             else:
                 return False
         else:
-            return utils.get_todays_date()
+            return dates.get_todays_date()
 
     def run(self):
         logger.debug("Starting refresh...")
@@ -101,7 +103,7 @@ class Refresh:
                     new_track_count += 1
 
             if new_track_count > 0 and not new_playlist:
-                pl = {'id': playlist[0], 'title': playlist[1], 'link': playlist[2],'bitrate': playlist[3]}
+                pl = {'id': playlist[0], 'title': playlist[1], 'link': playlist[2], 'bitrate': playlist[3]}
                 self.queue_list.append(download.QueueItem(pl['bitrate'], playlist=pl))
                 logger.info(f"Playlist '{playlist_api['title']}' has {new_track_count} new track(s)")
             else:
@@ -155,7 +157,7 @@ class Refresh:
 
                 if (artist['record_type'] == album['record_type']) or artist['record_type'] == "all":
                     if self.config['release_by_date']:
-                        max_release_date = utils.get_max_release_date(self.config['release_max_days'])
+                        max_release_date = dates.get_max_release_date(self.config['release_max_days'])
                         if album['release_date'] < max_release_date:
                             logger.debug(f"Release {album['id']} outside of max_release_date, skipping...")
                             continue

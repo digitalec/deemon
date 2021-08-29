@@ -1,4 +1,4 @@
-from deemon.app import settings, db
+from deemon.core import db, settings
 
 
 class Deemon:
@@ -6,4 +6,3 @@ class Deemon:
         self.settings = settings.Settings()
         self.config = self.settings.config
         self.db = db.DBHelper(self.settings.db_path)
-

@@ -2,7 +2,9 @@ from pathlib import Path
 
 import plexapi.exceptions
 from plexapi.server import PlexServer
-from deemon.app import dmi, Deemon, utils
+from deemon.core import Deemon
+from deemon.utils import dmi
+from deemon import utils
 import logging
 import deezer
 import sys
@@ -203,7 +205,7 @@ class Download:
         if input_file:
             logger.info(f"Reading from file {input_file}")
             if Path(input_file).exists():
-                artist_list = utils.read_file_as_csv(input_file)
+                artist_list = utils.csv.read_file_as_csv(input_file)
                 artist_int_list, artist_str_list = utils.process_input_file(artist_list)
                 if artist_str_list:
                     for artist in artist_str_list:

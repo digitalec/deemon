@@ -5,10 +5,10 @@ from deezer.api import APIError
 from deezer.utils import map_user_playlist
 from deezer.gw import GWAPIError, LyricsStatus
 from deemix import generateDownloadObject
-from deemix.types.DownloadObjects import Single, Collection
+from deemix.types.DownloadObjects import Collection
 from deemix.downloader import Downloader
-from deemix.settings import load as loadSettings
-from deemon.app import Deemon
+from deemix.settings import load as LoadSettings
+from deemon.core import Deemon
 import deemix.utils.localpaths as localpaths
 import logging
 
@@ -27,7 +27,7 @@ class DeemixInterface(Deemon):
         else:
             self.config_dir = Path(self.config["deemix_path"])
 
-        self.dx_settings = loadSettings(self.config_dir)
+        self.dx_settings = LoadSettings(self.config_dir)
 
         if self.config["download_path"] != "":
             # TODO is this necessary?
@@ -133,7 +133,8 @@ class DeemixInterface(Deemon):
             trackAPI['SIZE'] = totalSize
             collection.append(trackAPI)
 
-        if 'explicit' not in playlistAPI: playlistAPI['explicit'] = False
+        if 'explicit' not in playlistAPI:
+            playlistAPI['explicit'] = False
 
         return Collection({
             'type': 'playlist',

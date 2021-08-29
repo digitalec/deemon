@@ -1,5 +1,4 @@
-from deemon.app import settings, db
-from deemon.app import Deemon
+from deemon.core import Deemon
 from operator import itemgetter
 import logging
 import time

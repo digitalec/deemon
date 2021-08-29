@@ -1,4 +1,4 @@
-from deemon.app import utils
+from deemon.utils import startup
 from pathlib import Path
 import logging
 import json
@@ -32,7 +32,7 @@ class Settings:
     def __init__(self, custom_path=None):
         self.config_file = 'config.json'
         self.db_file = 'deemon.db'
-        self.config_path = utils.get_appdata_dir()
+        self.config_path = startup.get_appdata_dir()
         self.db_path = Path(self.config_path / self.db_file)
 
         if not Path(self.config_path / self.config_file).exists():

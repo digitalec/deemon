@@ -1,13 +1,13 @@
 from sqlite3 import OperationalError
 
-from deemon.app import Deemon
+from deemon.core import Deemon
 import logging
 import deezer
 
 logger = logging.getLogger(__name__)
 
 
-def monitor(profile, value, bitrate, r_type, alerts, remove=False, reset=False, dl_obj=False):
+def monitor(profile, value, bitrate, r_type, alerts, remove=False, reset=False, dl_obj=None):
 
     dz = deezer.Deezer()
     db = Deemon().db

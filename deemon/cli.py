@@ -1,7 +1,9 @@
-from deemon.app import settings, monitor, download, notify, utils
-from deemon.app.logger import setup_logger
-from deemon.app.refresh import Refresh
-from deemon.app.show import ShowStats
+from deemon.cmd import monitor, download
+from deemon.utils import notify, startup, validate, dataprocessor
+from deemon.core import settings
+from deemon.core.logger import setup_logger
+from deemon.cmd.refresh import Refresh
+from deemon.cmd.show import ShowStats
 from deemon import __version__
 from datetime import datetime
 from pathlib import Path
@@ -12,8 +14,8 @@ import sys
 
 logger = logging.getLogger(__name__)
 
-appdata = utils.get_appdata_dir()
-utils.init_appdata_dir(appdata)
+appdata = startup.get_appdata_dir()
+startup.init_appdata_dir(appdata)
 settings = settings.Settings()
 settings.load_config()
 config = settings.config
@@ -30,14 +32,14 @@ def run(verbose):
     deemon is a free and open source tool. To report issues or to contribute,
     please visit https://github.com/digitalec/deemon
     """
-    setup_logger(log_level='DEBUG' if verbose else 'INFO', log_file=utils.get_log_file())
+    setup_logger(log_level='DEBUG' if verbose else 'INFO', log_file=startup.get_log_file())
 
-    import deemon.app.db as database
+    import deemon.core.db as database
     db = database.DBHelper(settings.db_path)
     last_checked = db.last_update_check()
     check_interval = (config["check_update"] * 86400)
     if last_checked < check_interval:
-        new_version = utils.check_version(last_checked)
+        new_version = startup.check_version()
         if new_version:
             print("*" * 50)
             logger.info(f"* New version is available: v{__version__} -> v{new_version}")
@@ -71,9 +73,9 @@ def download_command(artist, artist_id, album_id, url, file, bitrate, record_typ
         download Mozart
         download -i 100 -t album -b 9
     """
-    bitrate = utils.validate_bitrate(bitrate)
+    bitrate = validate.validate_bitrate(bitrate)
 
-    artists = utils.artists_to_csv(artist) if artist else None
+    artists = dataprocessor.artists_to_csv(artist) if artist else None
     artist_ids = [x for x in artist_id] if artist_id else None
     album_ids = [x for x in album_id] if album_id else None
     urls = [x for x in url] if url else None
@@ -123,16 +125,16 @@ def monitor_command(artist, im, playlist, no_refresh, bitrate, record_type, aler
     new_artists = []
     new_playlists = []
 
-    alerts = utils.validate_alerts(alerts)
-    bitrate = utils.validate_bitrate(bitrate)
+    alerts = validate.validate_alerts(alerts)
+    bitrate = validate.validate_bitrate(bitrate)
 
     if dl:
         dl = download.Download()
 
     if im:
         if Path(im).is_file():
-            imported_file = utils.read_file_as_csv(im)
-            artist_int_list, artist_str_list = utils.process_input_file(imported_file)
+            imported_file = dataprocessor.read_file_as_csv(im)
+            artist_int_list, artist_str_list = dataprocessor.process_input_file(imported_file)
             if artist_str_list:
                 for a in artist_str_list:
                     result = monitor.monitor("artist", a, bitrate, record_type, alerts, remove=remove, dl_obj=dl)
@@ -154,7 +156,7 @@ def monitor_command(artist, im, playlist, no_refresh, bitrate, record_type, aler
             return
 
     if artist:
-        for a in utils.artists_to_csv(artist):
+        for a in dataprocessor.artists_to_csv(artist):
             result = monitor.monitor("artist", a, bitrate, record_type, alerts, remove=remove, dl_obj=dl)
             if type(result) == int:
                 new_artists.append(result)

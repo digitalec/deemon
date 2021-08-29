@@ -11,8 +11,8 @@ from email.message import EmailMessage
 
 import pkg_resources
 
-from deemon.app import Deemon, utils
-from deemon import __version__
+from deemon.core import Deemon
+from deemon import __version__, utils
 
 logger = logging.getLogger(__name__)
 
