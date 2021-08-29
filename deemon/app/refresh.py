@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 class Refresh:
 
-    def __init__(self, artist_id=None, playlist_id=None, skip_download=False, time_machine=None, dl_obj=None):
+    def __init__(self, config, artist_id=None, playlist_id=None, skip_download=False, time_machine=None, dl_obj=None):
         self.artist_id = artist_id if artist_id else None
         self.playlist_id = playlist_id if playlist_id else None
         self.skip_download = skip_download
@@ -18,7 +18,7 @@ class Refresh:
         self.new_releases = []
         self.refresh_date = self.set_refresh_date()
         self.db = Deemon().db
-        self.config = Deemon().config
+        self.config = config
         self.dz = deezer.Deezer()
 
         if not dl_obj:
@@ -62,7 +62,7 @@ class Refresh:
 
         if len(self.queue_list) > 0 and not self.skip_download:
             if not self.dl:
-                self.dl = download.Download()
+                self.dl = download.Download(self.config)
                 self.dl.queue_list = self.queue_list
                 self.dl.download_queue()
             else:
@@ -101,8 +101,9 @@ class Refresh:
                     new_track_count += 1
 
             if new_track_count > 0 and not new_playlist:
-                pl = {'id': playlist[0], 'title': playlist[1], 'link': playlist[2],'bitrate': playlist[3], 'downloadPath': playlist[5]}
-                self.queue_list.append(download.QueueItem(pl['bitrate'], playlist=pl, downloadPath=pl['downloadPath']))
+                pl = {'id': playlist[0], 'title': playlist[1], 'link': playlist[2],'bitrate': playlist[3],
+                      'download_path': playlist[5]}
+                self.queue_list.append(download.QueueItem(pl['bitrate'], playlist=pl))
                 logger.info(f"Playlist '{playlist_api['title']}' has {new_track_count} new track(s)")
             else:
                 logger.debug(f"No new tracks have been added to playlist '{playlist_api['title']}'")
@@ -123,14 +124,15 @@ class Refresh:
         for artist in progress:
             
             artist = {"id": artist[0], "name": artist[1], "bitrate": artist[2],
-                      "record_type": artist[3], "alerts": artist[4], "downloadPath": artist[5]}  # TODO This could be cleaned up using rowfactory
+                      "record_type": artist[3], "alerts": artist[4], "download_path": artist[5]}
             artist_new_release_count = 0
             new_artist = self.existing_artist(artist['id'])
             progress.set_description_str("Refreshing artists")
             artist_albums = self.dz.api.get_artist_albums(artist['id'])['data']
 
             logger.debug(f"Artist settings for {artist['name']} ({artist['id']}): bitrate={artist['bitrate']}, "
-                         f"record_type={artist['record_type']}, alerts={artist['alerts']}, downloadPath={artist['downloadPath']}")
+                         f"record_type={artist['record_type']}, alerts={artist['alerts']}, "
+                         f"download_path={artist['download_path']}")
             for album in artist_albums:
                 exists = self.db.get_album_by_id(album_id=album['id'])
                 if exists:
@@ -165,7 +167,8 @@ class Refresh:
                     self.total_new_releases += 1
                     artist_new_release_count += 1
 
-                    self.queue_list.append(download.QueueItem(artist['bitrate'], artist, album, None, downloadPath=artist['downloadPath']))
+                    self.queue_list.append(download.QueueItem(artist['download_path'], artist['bitrate'],
+                                                              artist, album, None))
                     logger.debug(f"Release {album['id']} added to queue")
                     if artist["alerts"]:
                         self.append_new_release(album['release_date'], artist['name'],
