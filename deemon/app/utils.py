@@ -102,14 +102,19 @@ def get_max_release_date(days):
     return max_date
 
 
-def check_version():
+def check_version(last):
+    logger.debug("Checking for update...")
     latest_ver = "https://api.github.com/repos/digitalec/deemon/releases/latest"
     try:
         response = requests.get(latest_ver)
     except requests.exceptions.ConnectionError:
         return
     local_version = __version__
-    remote_version = response.json()["name"]
+    try:
+        remote_version = response.json()["name"]
+    except KeyError as e:
+        logger.debug(f"Invalid data returned from version check; too many requests? {e}")
+        return
     if parse_version(remote_version) > parse_version(local_version):
         return remote_version
 
@@ -133,3 +138,9 @@ def process_input_file(artist_list):
             str_artists.append(artist_list[i])
     logger.debug(f"Detected {len(int_artists)} artist ID(s) and {len(str_artists)} artist name(s)")
     return int_artists, str_artists
+
+def artists_to_csv(a):
+    csv_artists = ' '.join(a)
+    csv_artists = csv_artists.split(',')
+    csv_artists = [x.lstrip() for x in csv_artists]
+    return csv_artists

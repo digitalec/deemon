@@ -74,16 +74,26 @@ class DBHelper:
         sql_releases = ("CREATE TABLE IF NOT EXISTS 'releases' "
                         "('artist_id' INTEGER, 'artist_name' TEXT, 'album_id' INTEGER, "
                         "'album_name' TEXT, 'album_release' TEXT, 'album_added' INTEGER, "
-                        "'future_release' INTEGER DEFAULT 0)")
+                        "'explicit' INTEGER, 'future_release' INTEGER DEFAULT 0)")
+
+        sql_stats = ("CREATE TABLE IF NOT EXISTS 'stats' "
+                     "('stat' TEXT NOT NULL UNIQUE, 'count' INTEGER DEFAULT 0)")
+
+        sql_stats_data = ("INSERT INTO 'stats' ('stat', 'count') "
+                          "VALUES ('refresh', 0), ('total_artists', 0), ('new_releases', 0), "
+                          "('total_queued', 0), ('total_releases', 0)")
 
         self.query(sql_monitor)
         self.query(sql_playlists)
         self.query(sql_playlist_tracks)
         self.query(sql_releases)
+        self.query(sql_stats)
+        self.query(sql_stats_data)
         self.query("CREATE TABLE IF NOT EXISTS 'deemon' ('property' TEXT, 'value' TEXT)")
         self.query("CREATE UNIQUE INDEX 'idx_property' ON 'deemon' ('property')")
         self.query("CREATE UNIQUE INDEX 'idx_artist_id' ON 'monitor' ('artist_id')")
         self.query(f"INSERT INTO 'deemon' ('property', 'value') VALUES ('version', '{__dbversion__}')")
+        self.query(f"INSERT INTO 'deemon' ('property', 'value') VALUES ('last_update_check', 0)")
         self.commit()
 
     def get_db_version(self):
@@ -107,7 +117,6 @@ class DBHelper:
             self.query(sql_playlists)
             self.query(sql_playlist_tracks)
             self.query("INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('version', '1.1')")
-            self.commit()
             logger.debug("Database upgraded to version 1.1")
         # Upgrade database v1.1 to v1.3
         if current_ver < parse_version("1.3"):
@@ -117,14 +126,29 @@ class DBHelper:
             self.query(sql_playlists_1)
             self.query(sql_playlists_2)
             self.query(sql_updatever)
-            self.commit()
             logger.debug(f"Database upgraded to version 1.3")
-        if current_ver < parse_version("1.3.1"):
+        # Upgrade database v1.3 to v2
+        if current_ver < parse_version("2"):
+            sql_releases_1 = "ALTER TABLE releases ADD COLUMN explicit INTEGER"
+            sql_stats = ("CREATE TABLE IF NOT EXISTS 'stats' "
+                         "('stat' TEXT NOT NULL UNIQUE, 'count' INTEGER DEFAULT 0)")
+            sql_stats_data = ("INSERT INTO 'stats' ('stat', 'count') "
+                              "VALUES ('refresh', 0), ('total_artists', 0), ('new_releases', 0), "
+                              "('total_queued', 0), ('total_releases', 0)")
+            sql_updatever = "INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('version', '2')"
+            self.query(sql_releases_1)
+            self.query(sql_stats)
+            self.query(sql_stats_data)
+            self.query(sql_updatever)
+            logger.debug(f"Database upgraded to version 2")
+        if current_ver < parse_version("2.1"):
+            self.query("INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('last_update_check', 0)")
+            self.query("INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('version', '2.1')")
+        if current_ver < parse_version("2.2"):
             self.query("ALTER TABLE monitor ADD COLUMN download_path TEXT")
             self.query("ALTER TABLE playlists ADD COLUMN download_path TEXT")
-            self.query("INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('version', '1.3.1')")
-            self.commit()
-
+            self.query("INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('version', '2.2')")
+        self.commit()
     def query(self, query, values=None):
         if values is None:
             values = {}
@@ -146,7 +170,11 @@ class DBHelper:
         '''
         result = self.query(f"SELECT * FROM monitor")
         artists = set(x for x in result)
-        return sorted(artists, key=lambda x: x[1])
+        sorted_artists = sorted(artists, key=lambda x: x[1])
+        all_artists = []
+        for a in sorted_artists:
+            all_artists.append({'id': a[0], 'name': a[1], 'bitrate': a[2], 'record_type': a[3], 'alerts': a[4]})
+        return all_artists
 
     def get_monitored_artist_by_id(self, artist_id):
         '''
@@ -157,7 +185,9 @@ class DBHelper:
         '''
         values = {'id': artist_id}
         result = self.query(f"SELECT * FROM monitor WHERE artist_id = :id", values).fetchone()
-        return result
+        a = [x for x in result]
+        artist = {'id': a[0], 'name': a[1], 'bitrate': a[2], 'record_type': a[3], 'alerts': a[4]}
+        return artist
 
     def get_specified_artist(self, artist):
         if type(artist) is int:
@@ -243,3 +273,12 @@ class DBHelper:
         self.commit()
         logger.debug("All playlists have been purge from database")
         logger.info("Database has been reset")
+
+    def last_update_check(self):
+        result = self.query("SELECT value FROM 'deemon' WHERE property = 'last_update_check'").fetchone()
+        return int(result[0])
+
+    def set_last_update(self):
+        now = int(time.time())
+        self.query(f"UPDATE deemon SET value = {now} WHERE property = 'last_update_check'")
+        self.commit()

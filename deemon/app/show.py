@@ -13,19 +13,37 @@ class ShowStats(Deemon):
     def __init__(self):
         super().__init__()
 
-    def artists(self, csv=False, artist_ids=False):
+    def artists(self, csv=False, artist_ids=False, extended=None):
+        # TODO extended is list of fields to grab from database; 'id', 'name', etc.
         monitored_artists = self.db.get_all_monitored_artists()
+
         if len(monitored_artists) == 0:
             logger.info("No artists are being monitored")
             sys.exit(0)
 
-        if artist_ids:
-            artist_data = [str(artist[0]) for artist in monitored_artists]
+        if extended:
+            artist_data = monitored_artists
+            for artist in artist_data:
+                if csv:
+                    if artist_ids:
+                        print(str(artist['id']) + ", " + artist['name'])
+                    else:
+                        print(artist['name'] + ", " + str(artist['id']))
+                else:
+                    if artist_ids:
+                        print(f"{str(artist['id'])} ({artist['name']})")
+                    else:
+                        print(f"{artist['name']} ({str(artist['id'])})")
+                    print(f"    type: {artist['record_type'].upper()}, "
+                          f"bitrate: {artist['bitrate']}, alerts: {artist['alerts']}\n")
+            return
+        elif artist_ids:
+            artist_data = [str(artist['id']) for artist in monitored_artists]
         else:
-            artist_data = [artist[1] for artist in monitored_artists]
+            artist_data = [artist['name'] for artist in monitored_artists]
 
         if csv:
-            logger.info(','.join(artist_data))
+            logger.info(', '.join(artist_data))
         else:
             if len(artist_data) > 10:
                 if not artist_ids:

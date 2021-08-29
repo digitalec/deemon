@@ -32,12 +32,18 @@ def run(verbose):
     """
     setup_logger(log_level='DEBUG' if verbose else 'INFO', log_file=utils.get_log_file())
 
-    new_version = utils.check_version()
-    if new_version:
-        print("*" * 50)
-        logger.info(f"* New version is available: v{__version__} -> v{new_version}")
-        logger.info("* To upgrade, run `pip install --upgrade deemon`")
-        print("*" * 50)
+    import deemon.app.db as database
+    db = database.DBHelper(settings.db_path)
+    last_checked = db.last_update_check()
+    check_interval = (config["check_update"] * 86400)
+    if last_checked < check_interval:
+        new_version = utils.check_version(last_checked)
+        if new_version:
+            print("*" * 50)
+            logger.info(f"* New version is available: v{__version__} -> v{new_version}")
+            logger.info("* To upgrade, run `pip install --upgrade deemon`")
+            print("*" * 50)
+        db.set_last_update()
 
 
 @run.command(name='test')
@@ -68,7 +74,7 @@ def download_command(artist, artist_id, album_id, url, file, bitrate, record_typ
     """
     bitrate = utils.validate_bitrate(bitrate)
 
-    artists = artists_to_csv(artist) if artist else None
+    artists = utils.artists_to_csv(artist) if artist else None
     artist_ids = [x for x in artist_id] if artist_id else None
     album_ids = [x for x in album_id] if album_id else None
     urls = [x for x in url] if url else None
@@ -84,6 +90,7 @@ def download_command(artist, artist_id, album_id, url, file, bitrate, record_typ
     dl.download(artists, artist_ids, album_ids, urls, bitrate, record_type, file)
 
 
+# TODO implement subcommands; add --include-featured-artists, --track-id options
 @run.command(name='monitor', context_settings={"ignore_unknown_options": True})
 @click.argument('artist', nargs=-1)
 @click.option('-i', '--artist-id', multiple=True, type=int, metavar="ID", help="Monitor artist by ID")
@@ -167,7 +174,7 @@ def monitor_command(artist, im, playlist, no_refresh, bitrate, record_type, aler
             return
 
     if artist:
-        for a in artists_to_csv(artist):
+        for a in utils.artists_to_csv(artist):
             result = monitor.monitor("artist", a, bitrate, record_type, alerts, config,
                                      remove=remove, dl_obj=dl)
             if type(result) == int:
@@ -216,15 +223,19 @@ def refresh_command(skip_download, time_machine):
 @click.option('-a', '--artists', is_flag=True, help='Show artists currently being monitored')
 @click.option('-i', '--artist-ids', is_flag=True, help='Show artist IDs currently being monitored')
 @click.option('-p', '--playlists', is_flag=True, help='Show playlists currently being monitored', hidden=True)
-@click.option('-c', '--csv', is_flag=True, help='Used with -a, -i, -p; output artists as CSV')
+@click.option('-c', '--csv', is_flag=True, help='Used with -a, -i; output artists as CSV')
+@click.option('-e', '--extended', is_flag=True, help='Show extended artist data')
 @click.option('-n', '--new-releases', metavar='N', type=int, help='Show new releases from last N days')
-def show_command(artists, artist_ids, playlists, new_releases, csv):
+# TODO Implement subcommands for 'stats', 'new-releases', etc.
+@click.option('-s', '--stats', is_flag=True, help='Show various usage statistics')
+@click.option('-r', '--reset', is_flag=True, help='Reset usage stats')
+def show_command(artists, artist_ids, playlists, new_releases, csv, extended, stats, reset):
     """
     Show monitored artists, latest new releases and various statistics
     """
     show = ShowStats()
     if artists or artist_ids:
-        show.artists(csv, artist_ids)
+        show.artists(csv, artist_ids, extended)
     elif playlists:
         show.playlists(csv)
     elif new_releases:
@@ -251,8 +262,54 @@ def backup(include_logs):
         logger.info(f"Backed up to {backup_path / backup_tar}")
 
 
-def artists_to_csv(a):
-    csv_artists = ' '.join(a)
-    csv_artists = csv_artists.split(',')
-    csv_artists = [x.lstrip() for x in csv_artists]
-    return csv_artists
+# TODO @click.option does not support nargs=-1; unable to use spaces without quotations
+@run.command(name="api", help="View raw API data for artist, artist ID or playlist ID")
+@click.option('--artist', type=str, help='Get artist result via API')
+@click.option('--artist-id', type=int, help='Get artist ID result via API')
+@click.option('--album-id', type=int, help='Get album ID result via API')
+@click.option('--playlist-id', type=int, help='Get playlist ID result via API')
+@click.option('--limit', type=int, help='Set max number of artist results; default=1', default=1)
+@click.option('--raw', is_flag=True, help='Dump as raw data returned from API')
+def api_test(artist, artist_id, album_id, playlist_id, limit, raw):
+    """View API result - for testing purposes"""
+    import deezer
+    dz = deezer.Deezer()
+    if artist or artist_id:
+        if artist:
+            result = dz.api.search_artist(artist, limit=limit)['data']
+        else:
+            result = dz.api.get_artist(artist_id)
+
+        if raw:
+            if isinstance(result, list):
+                for row in result:
+                    for key, value in row.items():
+                        print(f"{key}: {value}")
+                    print("\n")
+            else:
+                for key, value in result.items():
+                    print(f"{key}: {value}")
+        else:
+            if isinstance(result, list):
+                for row in result:
+                    print(f"Artist ID: {row['id']}\nArtist Name: {row['name']}\n")
+            else:
+                print(f"Artist ID: {result['id']}\nArtist Name: {result['name']}")
+
+    if album_id:
+        result = dz.api.get_album(album_id)
+
+        if raw:
+            for key, value in result.items():
+                print(f"{key}: {value}")
+        else:
+            print(f"Album ID: {result['id']}\nAlbum Title: {result['title']}")
+
+    if playlist_id:
+        result = dz.api.get_playlist(playlist_id)
+
+        if raw:
+            for key, value in result.items():
+                print(f"{key}: {value}")
+        else:
+            print(f"Playlist ID: {result['id']}\nPlaylist Title: {result['title']}")
