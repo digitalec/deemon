@@ -51,7 +51,7 @@ Depending on your operating system, your config.json file will be located in one
 }
 ```
 
-###Windows Users - Please Read!
+### Windows Users - Please Read!
 When providing a path you **MUST** escape backslashes or use forward slashes.
 
 **Good**: `C:\\Music` - or - `C:/Music`
