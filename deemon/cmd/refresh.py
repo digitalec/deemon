@@ -1,6 +1,6 @@
 from deemon.cmd import download
 from deemon.core import Deemon
-from deemon.utils import notify, validate, dates
+from deemon.utils import notifier, validate, dates
 import time
 import tqdm
 import logging
@@ -71,7 +71,7 @@ class Refresh:
                 self.dl.download_queue()
 
         if len(self.new_releases) > 0:
-            notification = notify.Notify(self.new_releases)
+            notification = notifier.Notify(self.new_releases)
             notification.send()
 
         self.db.commit()

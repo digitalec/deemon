@@ -110,7 +110,7 @@ class Notify(Deemon):
         self.subject = "deemon Test Notification"
         message = "Congrats! You'll now receive new release notifications."
         msg = EmailMessage()
-        msg['To'] = self.recipient
+        msg['To'] = ', '.join(self.recipient)
         msg['From'] = formataddr(('deemon', self.sender))
         msg['Subject'] = self.subject
         msg.set_content(message)

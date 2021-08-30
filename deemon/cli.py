@@ -1,5 +1,5 @@
 from deemon.cmd import monitor, download
-from deemon.utils import notify, startup, validate, dataprocessor
+from deemon.utils import notifier, startup, validate, dataprocessor
 from deemon.core import settings
 from deemon.core.logger import setup_logger
 from deemon.cmd.refresh import Refresh
@@ -51,7 +51,7 @@ def run(verbose):
 @run.command(name='test')
 def test():
     """Test email server settings by sending a test notification"""
-    notification = notify.Notify()
+    notification = notifier.Notify()
     notification.test()
 
 
@@ -123,7 +123,7 @@ def monitor_command(artist, im, playlist, no_refresh, bitrate, record_type, aler
         logger.warning("** ALL ARTISTS AND PLAYLISTS WILL BE REMOVED! **")
         confirm = input("Type 'reset' to confirm: ")
         if confirm == "reset":
-            monitor.monitor(None, None, None, None, None, reset=True)
+            monitor.monitor(None, None, None, None, None, None, reset=True)
         else:
             logger.info("Reset aborted. Database has NOT been modified.")
         return
@@ -146,7 +146,7 @@ def monitor_command(artist, im, playlist, no_refresh, bitrate, record_type, aler
             return logger.error(f"Invalid download path: {download_path}")
 
     if dl:
-        dl = download.Download()
+        dl = download.Download(config)
 
     if im:
         if Path(im).is_file():
