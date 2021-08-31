@@ -41,7 +41,7 @@ class Config(object):
             try:
                 Config._CONFIG = json.load(f)
             except json.decoder.JSONDecodeError as e:
-                logger.exception(f"An error occured while reading from config {e}")
+                logger.exception(f"An error occured while reading from config: {e}")
                 raise
 
         if self.validate() > 0:
@@ -57,8 +57,8 @@ class Config(object):
         with open(Config._CONFIG_FILE, 'w') as f:
             json.dump(Config._CONFIG, f, indent=4)
 
-    # @staticmethod
-    def validate(self):
+    @staticmethod
+    def validate():
         modified = 0
         for key in DEFAULT_CONFIG:
             if key not in Config._CONFIG or Config._CONFIG[key] == "":
@@ -204,8 +204,3 @@ class UnknownValue(Exception):
 
 class InvalidConfig(Exception):
     pass
-
-
-# TESTING BELOW
-c = Config()
-print(c.get_config())

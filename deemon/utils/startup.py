@@ -1,9 +1,8 @@
-import logging
-
 from packaging.version import parse as parse_version
 from deemon import __version__
 from pathlib import Path
 import requests
+import logging
 import sys
 import os
 

@@ -11,7 +11,7 @@ from email.message import EmailMessage
 
 import pkg_resources
 
-from deemon.core import Deemon
+from deemon.core import Deemon, config
 from deemon import __version__, utils
 
 logger = logging.getLogger(__name__)
@@ -23,12 +23,13 @@ class Notify(Deemon):
         super().__init__()
         logger.debug("notify initialized")
         logger.debug(f"releases to notify on: {new_releases}")
-        self.server = self.config["smtp_server"]
-        self.port = self.config["smtp_port"]
-        self.user = self.config["smtp_user"]
-        self.passwd = self.config["smtp_pass"]
-        self.sender = self.config["smtp_sender"]
-        self.recipient = self.config["smtp_recipient"]
+        self.config = config.Config()
+        self.server = self.config.smtp_server()
+        self.port = self.config.smtp_port()
+        self.user = self.config.smtp_user()
+        self.passwd = self.config.smtp_pass()
+        self.sender = self.config.smtp_sender()
+        self.recipient = self.config.smtp_recipient()
         # TODO - Must pass flag when update is available
         self.update = utils.check_version(0)
         self.subject = "New releases detected!"
