@@ -1,8 +1,8 @@
-from deemon import cli
+from deemon import oldcli
 
 
 def main():
-    cli.run()
+    oldcli.run()
 
 
 if __name__ == "__main__":

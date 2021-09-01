@@ -13,8 +13,6 @@ DEFAULT_CONFIG = {
     "download_path": "",
     "deemix_path": "",
     "arl": "",
-    "release_by_date": True,
-    "release_max_days": 90,
     "bitrate": 3,
     "alerts": False,
     "record_type": "all",
