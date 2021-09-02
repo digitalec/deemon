@@ -1,9 +1,8 @@
 from pathlib import Path
-
 import plexapi.exceptions
 from plexapi.server import PlexServer
-from deemon.core import Deemon
-from deemon.utils import dmi
+from deemon.core import config
+from deemon.utils import dmi, dataprocessor
 from deemon import utils
 import logging
 import deezer
@@ -50,11 +49,11 @@ class QueueItem:
 
 class Download:
 
-    def __init__(self, config):
+    def __init__(self):
         super().__init__()
         self.dz = deezer.Deezer()
-        self.config = config
-        self.di = dmi.DeemixInterface(self.config)
+        self.config = config.Config()
+        self.di = dmi.DeemixInterface()
         self.queue_list = []
         self.bitrate = None
         self.verbose = os.environ.get("VERBOSE")
@@ -64,8 +63,8 @@ class Download:
             sys.exit(1)
 
     def get_plex_server(self):
-        baseurl = self.config["plex_baseurl"]
-        token = self.config["plex_token"]
+        baseurl = self.config.plex_baseurl()
+        token = self.config.plex_token()
         if (baseurl != "") and (token != ""):
             try:
                 print("Plex settings found, trying to connect (10s)... ", end="")
@@ -79,7 +78,7 @@ class Download:
 
     def refresh_plex(self, plexobj):
         try:
-            plexobj.library.section(self.config["plex_library"]).update()
+            plexobj.library.section(self.config.plex_library()).update()
             logger.debug("Plex library refreshed successfully")
         except plexapi.exceptions.BadRequest as e:
             logger.error("Error occurred while refreshing your library. See logs for additional info.")
@@ -108,7 +107,7 @@ class Download:
                 current += 1
             print("")
             logger.info("Downloads complete!")
-            if plex and (self.config["plex_library"] != ""):  # TODO - config validation should be done elsewhere
+            if plex and (self.config.plex_library() != ""):
                 self.refresh_plex(plex)
 
     def download(self, artist, artist_id, album_id, url, bitrate, record_type, input_file, auto=True):
@@ -145,7 +144,7 @@ class Download:
             filtered = filter_artist_by_record_type(api_object, record_type)
             for album in filtered:
                 if not queue_item_exists(album['id']):
-                    self.queue_list.append(QueueItem(self.config['download_path'], bitrate, api_object, album))
+                    self.queue_list.append(QueueItem(self.config.download_path(), bitrate, api_object, album))
 
         def queue_item_exists(i):
             for q in self.queue_list:
@@ -175,11 +174,11 @@ class Download:
             logger.debug(f"Requested Album: {i}, "
                          f"Found: {album_id_result['artist']['name']} - {album_id_result['title']}")
             if album_id_result and not queue_item_exists(album_id_result['id']):
-                self.queue_list.append(QueueItem(self.config['download_path'], bitrate, album=album_id_result))
+                self.queue_list.append(QueueItem(self.config.download_path(), bitrate, album=album_id_result))
 
         def process_playlist_by_id(id):
             playlist_api = self.dz.api.get_playlist(id)
-            self.queue_list.append(QueueItem(self.config['download_path'], bitrate, playlist=playlist_api))
+            self.queue_list.append(QueueItem(self.config.download_path(), bitrate, playlist=playlist_api))
 
         def extract_id_from_url(url):
             id_group = ['artist', 'album', 'playlist']
@@ -205,8 +204,8 @@ class Download:
         if input_file:
             logger.info(f"Reading from file {input_file}")
             if Path(input_file).exists():
-                artist_list = utils.csv.read_file_as_csv(input_file)
-                artist_int_list, artist_str_list = utils.process_input_file(artist_list)
+                artist_list = utils.dataprocessor.read_file_as_csv(input_file)
+                artist_int_list, artist_str_list = utils.dataprocessor.process_input_file(artist_list)
                 if artist_str_list:
                     for artist in artist_str_list:
                         process_artist_by_name(artist)

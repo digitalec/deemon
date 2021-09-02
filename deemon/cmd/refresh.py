@@ -1,5 +1,5 @@
 from deemon.cmd import download
-from deemon.core import Deemon
+from deemon.core import Deemon, config
 from deemon.utils import notifier, validate, dates
 import time
 import tqdm
@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 class Refresh:
 
-    def __init__(self, config, artist_id=None, playlist_id=None, skip_download=False, time_machine=None, dl_obj=None):
+    def __init__(self, artist_id=None, playlist_id=None, skip_download=False, time_machine=None, dl_obj=None):
         self.artist_id = artist_id if artist_id else None
         self.playlist_id = playlist_id if playlist_id else None
         self.skip_download = skip_download
@@ -20,7 +20,7 @@ class Refresh:
         self.new_releases = []
         self.refresh_date = self.set_refresh_date()
         self.db = Deemon().db
-        self.config = config
+        self.config = config.Config()
         self.dz = deezer.Deezer()
 
         if not dl_obj:
@@ -64,7 +64,7 @@ class Refresh:
 
         if len(self.queue_list) > 0 and not self.skip_download:
             if not self.dl:
-                self.dl = download.Download(self.config)
+                self.dl = download.Download()
                 self.dl.queue_list = self.queue_list
                 self.dl.download_queue()
             else:
@@ -158,8 +158,8 @@ class Refresh:
                     continue
                     
                 if (artist['record_type'] == album['record_type']) or artist['record_type'] == "all":
-                    if self.config['release_by_date']:
-                        max_release_date = dates.get_max_release_date(self.config['release_max_days'])
+                    if self.config.release_by_date():
+                        max_release_date = dates.get_max_release_date(self.config.release_max_days())
                         if album['release_date'] < max_release_date:
                             logger.debug(f"Release {album['id']} outside of max_release_date, skipping...")
                             continue
@@ -174,7 +174,7 @@ class Refresh:
                                                 album['title'], album['cover_medium'])
                 else:
                     logger.debug(f"Release {album['id']} does not meet album_type "
-                                 f"requirement of '{self.config['record_type']}'")
+                                 f"requirement of '{self.config.record_type()}'")
             if artist_new_release_count > 0:
                 logger.info(f"{artist['name']}: {artist_new_release_count} new release(s)")
             else:

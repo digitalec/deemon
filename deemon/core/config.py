@@ -35,12 +35,13 @@ class Config(object):
         if not Config._CONFIG_FILE.exists():
             self.__create_default_config()
 
-        with open(Config._CONFIG_FILE, 'r') as f:
-            try:
-                Config._CONFIG = json.load(f)
-            except json.decoder.JSONDecodeError as e:
-                logger.exception(f"An error occured while reading from config: {e}")
-                raise
+        if Config._CONFIG is None:
+            with open(Config._CONFIG_FILE, 'r') as f:
+                try:
+                    Config._CONFIG = json.load(f)
+                except json.decoder.JSONDecodeError as e:
+                    logger.exception(f"An error occured while reading from config: {e}")
+                    raise
 
         if self.validate() > 0:
             self.__write_modified_config()
@@ -190,6 +191,10 @@ class Config(object):
     @staticmethod
     def debug_mode() -> bool:
         return Config._CONFIG.get('debug_mode')
+
+    @staticmethod
+    def set(property, value):
+        Config._CONFIG[property] = value
 
 
 class PropertyTypeMismatch(Exception):
