@@ -36,6 +36,10 @@ def get_config():
     return get_appdata_dir() / 'config.json'
 
 
+def get_database():
+    return get_appdata_dir() / 'deemon.db'
+
+
 def get_log_file():
     """
     Get path to log file

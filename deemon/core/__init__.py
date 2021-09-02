@@ -1,8 +1,7 @@
-from deemon.core import db, oldsettings
+from deemon.core import db
+from deemon.utils import startup
 
 
 class Deemon:
     def __init__(self):
-        self.settings = oldsettings.Settings()
-        self.config = self.settings.config
-        self.db = db.DBHelper(self.settings.db_path)
+        self.db = db.DBHelper(startup.get_database())

@@ -1,4 +1,5 @@
 from deemon import __dbversion__
+from deemon.utils import startup
 from packaging.version import parse as parse_version
 from datetime import datetime
 from pathlib import Path

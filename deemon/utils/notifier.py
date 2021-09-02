@@ -12,7 +12,8 @@ from email.message import EmailMessage
 import pkg_resources
 
 from deemon.core import Deemon, config
-from deemon import __version__, utils
+from deemon.utils import startup
+from deemon import __version__
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +32,7 @@ class Notify(Deemon):
         self.sender = self.config.smtp_sender()
         self.recipient = self.config.smtp_recipient()
         # TODO - Must pass flag when update is available
-        self.update = utils.check_version(0)
+        self.update = startup.check_version()
         self.subject = "New releases detected!"
         self.releases = new_releases
 
