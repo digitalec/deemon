@@ -1,7 +1,8 @@
 from deemon.cmd import monitor, download
-from deemon.utils import notifier, startup, validate, dataprocessor
-from deemon.core.config import Config
 from deemon.core.logger import setup_logger
+from deemon.utils import notifier, startup, validate, dataprocessor
+from deemon.core.db import Database
+from deemon.core.config import Config
 from deemon.cmd.refresh import Refresh
 from deemon.cmd.show import ShowStats
 from deemon import __version__
@@ -17,6 +18,7 @@ logger = logging.getLogger(__name__)
 appdata = startup.get_appdata_dir()
 startup.init_appdata_dir(appdata)
 config = Config()
+db = Database(startup.get_database())
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 

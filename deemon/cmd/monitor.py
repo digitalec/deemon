@@ -1,7 +1,8 @@
 from sqlite3 import OperationalError
 from pathlib import Path
-from deemon.core import Deemon
-from deemon.core.config import Config
+from deemon.core.db import Database
+from deemon.core.config import Config as config
+from deemon.utils import startup
 import logging
 import deezer
 
@@ -11,8 +12,7 @@ logger = logging.getLogger(__name__)
 def monitor(profile, value, bitrate, r_type, alerts, remove=False, reset=False, dl_obj=None):
 
     dz = deezer.Deezer()
-    db = Deemon().db
-    config = Config()
+    db = Database(startup.get_database())
 
     def purge_playlist(i, title):
         values = {'id': api_result['id']}

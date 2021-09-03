@@ -4,4 +4,4 @@ from deemon.utils import startup
 
 class Deemon:
     def __init__(self):
-        self.db = db.DBHelper(startup.get_database())
+        self.db = db.Database(startup.get_database())

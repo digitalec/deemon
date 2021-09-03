@@ -11,18 +11,17 @@ import time
 logger = logging.getLogger(__name__)
 
 
-class DBHelper:
+class Database(object):
 
-    def __init__(self, db=None):
-
+    def __init__(self, db):
         self.conn = None
         self.cursor = None
-        if db:
-            if not Path(db).exists():
-                self.open(db)
-                self.create_new_database()
-            else:
-                self.open(db)
+
+        if not Path(db).exists():
+            self.connect(db)
+            self.create_new_database()
+        else:
+            self.connect(db)
 
         current_db_version = parse_version(self.get_db_version())
         app_db_version = parse_version(__dbversion__)
@@ -33,12 +32,20 @@ class DBHelper:
     def __enter__(self):
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self):
         self.close()
 
-    def open(self, name):
+    @staticmethod
+    def dict_factory(cursor, row):
+        d = {}
+        for idx, col in enumerate(cursor.description):
+            d[col[0]] = row[idx]
+        return d
+
+    def connect(self, db):
         try:
-            self.conn = sqlite3.connect(name)
+            self.conn = sqlite3.connect(db)
+            self.conn.row_factory = self.dict_factory
             self.cursor = self.conn.cursor()
         except sqlite3.OperationalError as e:
             logger.error(f"Error opening database: {e}")
@@ -46,7 +53,6 @@ class DBHelper:
     def close(self):
         if self.conn:
             self.conn.commit()
-            self.cursor.close()
             self.conn.close()
 
     def commit(self):
@@ -58,30 +64,80 @@ class DBHelper:
         self.close()
 
     def create_new_database(self):
-        logger.debug("Updating database structure")
-        # TODO MOVE TO ONE SQL STATEMENT OR BREAK INTO VERSIONED GROUPS
-        sql_monitor = ("CREATE TABLE IF NOT EXISTS 'monitor' "
-                       "('artist_id' INTEGER, 'artist_name' TEXT, 'bitrate' INTEGER, "
-                       "'record_type' TEXT, 'alerts' INTEGER, 'download_path' TEXT)")
+        logger.debug("Creating database")
 
-        sql_playlists = ("CREATE TABLE IF NOT EXISTS 'playlists' "
-                         "('id' INTEGER UNIQUE, 'title' TEXT, 'url' TEXT, "
-                         "'bitrate' INTEGER, 'alerts' INTEGER, 'download_path' TEXT)")
+        self.query("CREATE TABLE monitor ("
+                   "'artist_id' INTEGER,"
+                   "'artist_name' TEXT,"
+                   "'bitrate' INTEGER,"
+                   "'record_type' TEXT,"
+                   "'alerts' INTEGER,"
+                   "'download_path' TEXT)")
 
-        sql_playlist_tracks = ("CREATE TABLE IF NOT EXISTS 'playlist_tracks' "
-                               "('track_id' INTEGER, 'playlist_id' INTEGER, 'artist_id' INTEGER, "
-                               "'artist_name' TEXT, 'track_name' TEXT, 'track_added' TEXT)")
+        self.query("CREATE TABLE playlists ("
+                   "'id' INTEGER UNIQUE,"
+                   "'title' TEXT,"
+                   "'url' TEXT,"
+                   "'bitrate' INTEGER,"
+                   "'alerts' INTEGER,"
+                   "'download_path' TEXT)")
 
-        sql_releases = ("CREATE TABLE IF NOT EXISTS 'releases' "
-                        "('artist_id' INTEGER, 'artist_name' TEXT, 'album_id' INTEGER, "
-                        "'album_name' TEXT, 'album_release' TEXT, 'album_added' INTEGER, "
-                        "'explicit' INTEGER, 'future_release' INTEGER DEFAULT 0)")
+        self.query("CREATE TABLE playlist_tracks ("
+                   "'track_id' INTEGER,"
+                   "'playlist_id' INTEGER,"
+                   "'artist_id' INTEGER,"
+                   "'artist_name' TEXT,"
+                   "'track_name' TEXT,"
+                   "'track_added' TEXT)")
 
-        self.query(sql_monitor)
-        self.query(sql_playlists)
-        self.query(sql_playlist_tracks)
-        self.query(sql_releases)
-        self.query("CREATE TABLE IF NOT EXISTS 'deemon' ('property' TEXT, 'value' TEXT)")
+        self.query("CREATE TABLE releases ("
+                   "'artist_id' INTEGER,"
+                   "'artist_name' TEXT,"
+                   "'album_id' INTEGER,"
+                   "'album_name' TEXT,"
+                   "'album_release' TEXT,"
+                   "'album_added' INTEGER,"
+                   "'explicit' INTEGER,"
+                   "'future_release' INTEGER DEFAULT 0)")
+
+        self.query("CREATE TABLE monitor ("
+                   "'artist_id' INTEGER,"
+                   "'artist_name' TEXT,"
+                   "'bitrate' INTEGER,"
+                   "'record_type' TEXT,"
+                   "'alerts' INTEGER,"
+                   "'download_path' TEXT)")
+
+        self.query("CREATE TABLE playlists ("
+                   "'id' INTEGER UNIQUE,"
+                   "'title' TEXT,"
+                   "'url' TEXT,"
+                   "'bitrate' INTEGER,"
+                   "'alerts' INTEGER,"
+                   "'download_path' TEXT)")
+
+        self.query("CREATE TABLE playlist_tracks ("
+                   "'track_id' INTEGER,"
+                   "'playlist_id' INTEGER,"
+                   "'artist_id' INTEGER,"
+                   "'artist_name' TEXT,"
+                   "'track_name' TEXT,"
+                   "'track_added' TEXT)")
+
+        self.query("CREATE TABLE releases ("
+                   "'artist_id' INTEGER,"
+                   "'artist_name' TEXT,"
+                   "'album_id' INTEGER,"
+                   "'album_name' TEXT,"
+                   "'album_release' TEXT,"
+                   "'album_added' INTEGER,"
+                   "'explicit' INTEGER,"
+                   "'future_release' INTEGER DEFAULT 0)")
+
+        self.query("CREATE TABLE 'deemon' ("
+                   "'property' TEXT,"
+                   "'value' TEXT)")
+
         self.query("CREATE UNIQUE INDEX 'idx_property' ON 'deemon' ('property')")
         self.query("CREATE UNIQUE INDEX 'idx_artist_id' ON 'monitor' ('artist_id')")
         self.query(f"INSERT INTO 'deemon' ('property', 'value') VALUES ('version', '{__dbversion__}')")
@@ -90,7 +146,7 @@ class DBHelper:
 
     def get_db_version(self):
         try:
-            version = self.query(f"SELECT value FROM deemon WHERE property = 'version'").fetchone()[0]
+            version = self.query(f"SELECT value FROM deemon WHERE property = 'version'").fetchone()['value']
         except sqlite3.OperationalError:
             version = '0.0.0'
 
@@ -127,11 +183,11 @@ class DBHelper:
             self.query("ALTER TABLE playlists ADD COLUMN download_path TEXT")
             self.query("INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('version', '2.2')")
         self.commit()
+
     def query(self, query, values=None):
         if values is None:
             values = {}
-        result = self.cursor.execute(query, values)
-        return result
+        return self.conn.execute(query, values)
 
     def reset_future(self, album_id):
         logger.debug("Clearing future_release flag from " + str(album_id))
@@ -140,20 +196,8 @@ class DBHelper:
         self.query(sql, values)
 
     def get_all_monitored_artists(self):
-        '''
-        Get unique set of artists stored in database
-
-        :return: Unique set of all artists
-        :rtype: set
-        '''
-        result = self.query(f"SELECT * FROM monitor")
-        artists = set(x for x in result)
-        sorted_artists = sorted(artists, key=lambda x: x[1])
-        all_artists = []
-        for a in sorted_artists:
-            all_artists.append({'id': a[0], 'name': a[1], 'bitrate': a[2], 'record_type': a[3], 'alerts': a[4],
-                                'download_path': a[5]})
-        return all_artists
+        result = self.query(f"SELECT * FROM monitor").fetchall()
+        return sorted(result, key=lambda x: x['artist_name'])
 
     def get_monitored_artist_by_id(self, artist_id):
         '''
@@ -163,20 +207,15 @@ class DBHelper:
         :rtype: set
         '''
         values = {'id': artist_id}
-        result = self.query(f"SELECT * FROM monitor WHERE artist_id = :id", values).fetchone()
-        a = [x for x in result]
-        artist = {'id': a[0], 'name': a[1], 'bitrate': a[2], 'record_type': a[3], 'alerts': a[4],
-                  'download_path': a[5]}
-        return artist
+        return self.query(f"SELECT * FROM monitor WHERE artist_id = :id", values).fetchone()
 
     def get_specified_artist(self, artist):
         if type(artist) is int:
             values = {'artist': artist}
-            result = self.query("SELECT * FROM monitor WHERE artist_id = :artist", values).fetchone()
+            return self.query("SELECT * FROM monitor WHERE artist_id = :artist", values).fetchone()
         else:
             values = {'artist': artist}
-            result = self.query("SELECT * FROM monitor WHERE artist_name = ':artist' COLLATE NOCASE", values).fetchone()
-        return result
+            return self.query("SELECT * FROM monitor WHERE artist_name = ':artist' COLLATE NOCASE", values).fetchone()
 
     def add_new_release(self, artist_id, artist_name, album_id, album_name, release_date, future_release):
         timestamp = int(time.time())
@@ -199,25 +238,17 @@ class DBHelper:
         from_date = datetime.utcfromtimestamp(from_date_ts).strftime('%Y-%m-%d')
         values = {'from': from_date, 'today': today_date}
         sql = "SELECT * FROM 'releases' WHERE album_release >= :from AND album_release <= :today"
-        result = self.query(sql, values)
-        return result
+        return self.query(sql, values)
 
     def get_artist_by_id(self, artist_id):
         values = {'id': artist_id}
         sql = "SELECT * FROM 'releases' WHERE artist_id = :id"
-        result = self.query(sql, values).fetchone()
-        return result
+        return self.query(sql, values).fetchone()
 
     def get_album_by_id(self, album_id):
         values = {'id': album_id}
         sql = "SELECT * FROM 'releases' WHERE album_id = :id"
-        result = self.query(sql, values).fetchone()
-        if result:
-            album = {'artist_id': result[0], 'artist_name': result[1],
-                     'album_id': result[2], 'album_name': result[3],
-                     'album_release': result[4], 'album_added': result[5],
-                     'future_release': result[6]}
-            return album
+        return self.query(sql, values).fetchone()
 
     def monitor_playlist(self, playlist):
         values = {'id': playlist['id'], 'title': playlist['title'],
@@ -227,20 +258,16 @@ class DBHelper:
         self.commit()
 
     def get_all_monitored_playlists(self):
-        result = self.query("SELECT * FROM playlists")
-        playlists = [x for x in result]
-        return playlists
+        return self.query("SELECT * FROM playlists")
 
     def get_monitored_playlists_by_id(self, playlist_id):
         values = {'id': playlist_id}
-        result = self.query("SELECT * FROM playlists WHERE id = :id", values).fetchone()
-        return result
+        return self.query("SELECT * FROM playlists WHERE id = :id", values).fetchone()
 
     def get_playlist_by_id(self, playlist_id):
         values = {'id': playlist_id}
         sql = "SELECT * FROM 'playlist_tracks' WHERE playlist_id = :id"
-        result = self.query(sql, values).fetchone()
-        return result
+        return self.query(sql, values).fetchone()
 
     def reset_database(self):
         self.query("DELETE FROM monitor")
@@ -255,8 +282,7 @@ class DBHelper:
         logger.info("Database has been reset")
 
     def last_update_check(self):
-        result = self.query("SELECT value FROM 'deemon' WHERE property = 'last_update_check'").fetchone()
-        return int(result[0])
+        return self.query("SELECT value FROM 'deemon' WHERE property = 'last_update_check'").fetchone()['value']
 
     def set_last_update(self):
         now = int(time.time())

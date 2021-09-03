@@ -1,5 +1,6 @@
 from deemon.cmd import download
-from deemon.core import Deemon, config
+from deemon.core.db import Database as db
+from deemon.core.config import Config as config
 from deemon.utils import notifier, validate, dates
 import time
 import tqdm
@@ -19,8 +20,6 @@ class Refresh:
         self.total_new_releases = 0
         self.new_releases = []
         self.refresh_date = self.set_refresh_date()
-        self.db = Deemon().db
-        self.config = config.Config()
         self.dz = deezer.Deezer()
 
         if not dl_obj:
@@ -74,17 +73,17 @@ class Refresh:
             notification = notifier.Notify(self.new_releases)
             notification.send()
 
-        self.db.commit()
+        db.commit()
 
     def refresh_playlists(self):
         if self.playlist_id:
             logger.debug("Playlist ID(s) have been passed, refreshing only those...")
             monitored = []
             for i in self.playlist_id:
-                monitored.append(self.db.get_monitored_playlists_by_id(i))
+                monitored.append(db.get_monitored_playlists_by_id(i))
         else:
             logger.debug("Refreshing all monitored playlists...")
-            monitored = self.db.get_all_monitored_playlists()
+            monitored = db.get_all_monitored_playlists()
 
         progress = tqdm.tqdm(monitored, ascii=" #",
                              bar_format='{desc}...  {n_fmt}/{total_fmt} [{bar:40}] {percentage:3.0f}%')
@@ -105,7 +104,9 @@ class Refresh:
             if new_track_count > 0 and not new_playlist:
                 pl = {'id': playlist[0], 'title': playlist[1], 'link': playlist[2],'bitrate': playlist[3],
                       'download_path': playlist[5]}
-                self.queue_list.append(download.QueueItem(pl['bitrate'], playlist=pl))
+                self.queue_list.append(
+                    download.QueueItem(download_path=pl['download_path'], bitrate=pl['bitrate'], playlist=pl)
+                )
                 logger.info(f"Playlist '{playlist_api['title']}' has {new_track_count} new track(s)")
             else:
                 logger.debug(f"No new tracks have been added to playlist '{playlist_api['title']}'")
@@ -115,10 +116,10 @@ class Refresh:
             logger.debug("Artist ID(s) have been passed, refreshing only those...")
             monitored = []
             for i in self.artist_id:
-                monitored.append(self.db.get_monitored_artist_by_id(i))
+                monitored.append(db.get_monitored_artist_by_id(i))
         else:
             logger.debug("Refreshing all monitored artists...")
-            monitored = self.db.get_all_monitored_artists()
+            monitored = db.get_all_monitored_artists()
 
         progress = tqdm.tqdm(monitored, ascii=" #",
                              bar_format='{desc}...  {n_fmt}/{total_fmt} [{bar:40}] {percentage:3.0f}%')
@@ -133,11 +134,11 @@ class Refresh:
                          f"record_type={artist['record_type']}, alerts={artist['alerts']}, "
                          f"download_path={artist['download_path']}")
             for album in artist_albums:
-                exists = self.db.get_album_by_id(album_id=album['id'])
+                exists = db.get_album_by_id(album_id=album['id'])
                 if exists:
                     if exists['future_release'] and (exists['album_release'] <= self.refresh_date):
                         logger.debug(f"Pre-release released: {exists['album_release']} - {exists['album_name']}")
-                        self.db.reset_future(exists['album_id'])
+                        db.reset_future(exists['album_id'])
                     else:
                         continue
 
@@ -148,7 +149,7 @@ class Refresh:
                         continue
                     logger.debug(f"Pre-release detected: {artist['name']} - {album['title']} [{album['release_date']}]")
 
-                self.db.add_new_release(artist['id'], artist['name'], album['id'],
+                db.add_new_release(artist['id'], artist['name'], album['id'],
                                         album['title'], album['release_date'], future_release=future)
 
                 if new_artist:
@@ -158,8 +159,8 @@ class Refresh:
                     continue
                     
                 if (artist['record_type'] == album['record_type']) or artist['record_type'] == "all":
-                    if self.config.release_by_date():
-                        max_release_date = dates.get_max_release_date(self.config.release_max_days())
+                    if config.release_by_date():
+                        max_release_date = dates.get_max_release_date(config.release_max_days())
                         if album['release_date'] < max_release_date:
                             logger.debug(f"Release {album['id']} outside of max_release_date, skipping...")
                             continue
@@ -174,7 +175,7 @@ class Refresh:
                                                 album['title'], album['cover_medium'])
                 else:
                     logger.debug(f"Release {album['id']} does not meet album_type "
-                                 f"requirement of '{self.config.record_type()}'")
+                                 f"requirement of '{config.record_type()}'")
             if artist_new_release_count > 0:
                 logger.info(f"{artist['name']}: {artist_new_release_count} new release(s)")
             else:
@@ -189,13 +190,13 @@ class Refresh:
 
     def monitoring_playlists(self):
         query = "SELECT * FROM 'playlists'"
-        result = self.db.query(query).fetchall()
+        result = db.query(query).fetchall()
         if result and len(result) > 0:
             return True
 
     def monitoring_artists(self):
         query = "SELECT * FROM 'monitor'"
-        result = self.db.query(query).fetchall()
+        result = db.query(query).fetchall()
         if result and len(result) > 0:
             return True
 
@@ -203,7 +204,7 @@ class Refresh:
         sql_values = {'artist_id': artist_id}
         # TODO BUG - issue #25 - Artist treated as new artist until at least one release has been seen
         query = "SELECT * FROM 'releases' WHERE artist_id = :artist_id"
-        artist_exists = self.db.query(query, sql_values).fetchone()
+        artist_exists = db.query(query, sql_values).fetchone()
         if not artist_exists:
             logger.debug(f"New artist {artist_id}")
             return True
@@ -212,7 +213,7 @@ class Refresh:
         sql_values = {'playlist_id': playlist_id}
         # TODO BUG - issue #25 - Artist treated as new artist until at least one release has been seen
         query = "SELECT * FROM 'playlist_tracks' WHERE playlist_id = :playlist_id"
-        playlist_exists = self.db.query(query, sql_values).fetchone()
+        playlist_exists = db.query(query, sql_values).fetchone()
         if not playlist_exists:
             logger.debug(f"Found new playlist {playlist_id}")
             return True
@@ -220,7 +221,7 @@ class Refresh:
     def existing_playlist_track(self, playlist_id, track_id):
         values = {'pid': playlist_id, 'tid': track_id}
         query = "SELECT * FROM 'playlist_tracks' WHERE track_id = :tid AND playlist_id = :pid"
-        result = self.db.query(query, values).fetchone()
+        result = db.query(query, values).fetchone()
         if result:
             return True
 
@@ -230,7 +231,7 @@ class Refresh:
         query = ("INSERT INTO 'playlist_tracks' "
                  "('track_id', 'playlist_id', 'artist_id', 'artist_name', 'track_name', 'track_added') "
                  "VALUES (:tid, :pid, :aid, :aname, :tname, :time)")
-        result = self.db.query(query, values)
+        result = db.query(query, values)
         return result
 
     def append_new_release(self, release_date, artist, album, cover):

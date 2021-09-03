@@ -1,7 +1,6 @@
 from logging.handlers import RotatingFileHandler
 import logging
 import tqdm
-import sys
 
 LOG_FORMATS = {
     'DEBUG': '%(asctime)s [%(levelname)s] %(name)s: %(message)s',
