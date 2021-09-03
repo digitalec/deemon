@@ -2,7 +2,7 @@ from sqlite3 import OperationalError
 from pathlib import Path
 from deemon.core.db import Database
 from deemon.core.config import Config as config
-from deemon.utils import startup
+from deemon.utils import startup, menu
 import logging
 import deezer
 
@@ -32,6 +32,24 @@ def monitor(profile, value, bitrate, r_type, alerts, remove=False, reset=False, 
         db.commit()
         logger.info(f"No longer monitoring artist '{name}'")
 
+    def get_best_result(api_data):
+        matches: list = []
+        for idx, artist in enumerate(api_result):
+            if value == artist['name']:
+                matches.append(artist)
+        if len(matches) == 1:
+            return matches[0]
+        elif len(matches) > 1:
+            m = menu.Menu("Multiple exact matches found: ", matches)
+            ask_user = m.get_user_choice()
+            if type(ask_user) is int:
+                return matches[ask_user]
+        else:
+            m = menu.Menu("Showing closest results, please choose:", api_result)
+            ask_user = m.get_user_choice()
+            if type(ask_user) is int:
+                return api_result[ask_user]
+
     if reset:
         db.reset_database()
         return
@@ -42,9 +60,12 @@ def monitor(profile, value, bitrate, r_type, alerts, remove=False, reset=False, 
     if profile in ['artist', 'artist_id']:
         if profile == "artist":
             try:
-                api_result = dz.api.search_artist(value, limit=1)["data"][0]
+                api_result = dz.api.search_artist(value, limit=10)["data"]
             except (deezer.api.DataException, IndexError):
                 logger.error(f"Artist {value} not found.")
+                return
+            api_result = get_best_result(api_result)
+            if not api_result:
                 return
         else:
             try:
@@ -59,7 +80,7 @@ def monitor(profile, value, bitrate, r_type, alerts, remove=False, reset=False, 
                 logger.warning(f"{api_result['name']} is not being monitored yet")
                 return
             purge_artist(api_result['id'], api_result['name'])
-            return True
+            return
         if artist_exists:
             logger.warning(f"Artist '{api_result['name']}' is already being monitored")
             return
