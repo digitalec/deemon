@@ -203,7 +203,3 @@ class PropertyTypeMismatch(Exception):
 
 class UnknownValue(Exception):
     pass
-
-
-class InvalidConfig(Exception):
-    pass
