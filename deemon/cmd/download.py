@@ -170,6 +170,7 @@ class Download:
 
         def process_album_by_id(i):
             logger.debug("Processing album by name")
+            # TODO handle album_id_result = None when not found
             album_id_result = get_api_result(album_id=i)
             logger.debug(f"Requested Album: {i}, "
                          f"Found: {album_id_result['artist']['name']} - {album_id_result['title']}")
