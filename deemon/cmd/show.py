@@ -32,6 +32,10 @@ class ShowStats(Deemon):
                     if artist_ids:
                         print(f"{str(artist['artist_id'])} ({artist['artist_name']})")
                     else:
+                        print(f"{artist['artist_name']} ({str(artist['artist_id'])}) | "
+                              f"type: {artist['record_type'].upper()}, "
+                              f"bitrate: {artist['bitrate']}, alerts: {artist['alerts']}, "
+                              f"path: {artist['download_path']}\n")
             return
         elif artist_ids:
             artist_data = [str(artist['artist_id']) for artist in monitored_artists]
