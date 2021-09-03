@@ -199,13 +199,7 @@ class Database(object):
         result = self.query(f"SELECT * FROM monitor").fetchall()
         return sorted(result, key=lambda x: x['artist_name'])
 
-    def get_monitored_artist_by_id(self, artist_id):
-        '''
-        Get unique set of artists stored in database
-
-        :return: Unique set of all artists
-        :rtype: set
-        '''
+    def get_monitored_artist_by_id(self, artist_id: int):
         values = {'id': artist_id}
         return self.query(f"SELECT * FROM monitor WHERE artist_id = :id", values).fetchone()
 
