@@ -25,21 +25,18 @@ class ShowStats(Deemon):
             for artist in artist_data:
                 if csv:
                     if artist_ids:
-                        print(str(artist['id']) + ", " + artist['name'])
+                        print(str(artist['artist_id']) + ", " + artist['artist_name'])
                     else:
-                        print(artist['name'] + ", " + str(artist['id']))
+                        print(artist['artist_name'] + ", " + str(artist['artist_id']))
                 else:
                     if artist_ids:
-                        print(f"{str(artist['id'])} ({artist['name']})")
+                        print(f"{str(artist['artist_id'])} ({artist['artist_name']})")
                     else:
-                        print(f"{artist['name']} ({str(artist['id'])})")
-                    print(f"    type: {artist['record_type'].upper()}, "
-                          f"bitrate: {artist['bitrate']}, alerts: {artist['alerts']}\n")
             return
         elif artist_ids:
-            artist_data = [str(artist['id']) for artist in monitored_artists]
+            artist_data = [str(artist['artist_id']) for artist in monitored_artists]
         else:
-            artist_data = [artist['name'] for artist in monitored_artists]
+            artist_data = [artist['artist_name'] for artist in monitored_artists]
 
         if csv:
             logger.info(', '.join(artist_data))
