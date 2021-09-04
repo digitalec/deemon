@@ -3,6 +3,7 @@ from deemon.core.logger import setup_logger
 from deemon.utils import notifier, startup, validate, dataprocessor
 from deemon.core.db import Database
 from deemon.core.config import Config
+from deemon.cmd.search import search
 from deemon.cmd.refresh import Refresh
 from deemon.cmd.show import ShowStats
 from deemon import __version__
@@ -61,11 +62,12 @@ def test():
 @click.option('-A', '--album-id', multiple=True, metavar='ID', type=int, help='Download by album ID')
 @click.option('-u', '--url', metavar='URL', multiple=True, help='Download by URL of artist/album/track/playlist')
 @click.option('-f', '--file', metavar='FILE', help='Download batch of artists and/or artist IDs from file')
+@click.option('-s', '--search', 'search_cmd', is_flag=True, help='Interactively search for and download')
 @click.option('-b', '--bitrate', default=config.bitrate(), help='Set custom bitrate for this operation')
 @click.option('-o', '--download-path', type=str, metavar="PATH", help='Specify custom download directory')
 @click.option('-t', '--record-type', type=click.Choice(['all', 'album', 'ep', 'single'], case_sensitive=False),
               default=config.record_type(), help='Specify record types to download')
-def download_command(artist, artist_id, album_id, url, file, bitrate, record_type, download_path):
+def download_command(artist, artist_id, album_id, url, file, search_cmd, bitrate, record_type, download_path):
     """
     Download specific artist, album ID or by URL
 
@@ -75,6 +77,16 @@ def download_command(artist, artist_id, album_id, url, file, bitrate, record_typ
         download -i 100 -t album -b 9
     """
     bitrate = validate.validate_bitrate(bitrate)
+    if bitrate:
+        config.set('bitrate', bitrate)
+
+    if search_cmd:
+        if artist:
+            search_artist = ' '.join(artist)
+            search(search_artist)
+        else:
+            logger.error("Artist name must be specified")
+        return
 
     artists = dataprocessor.artists_to_csv(artist) if artist else None
     artist_ids = [x for x in artist_id] if artist_id else None
