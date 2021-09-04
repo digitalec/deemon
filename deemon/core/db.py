@@ -7,27 +7,21 @@ import logging
 import sqlite3
 import time
 
-
 logger = logging.getLogger(__name__)
 
 
 class Database(object):
 
-    def __init__(self, db):
+    def __init__(self):
         self.conn = None
         self.cursor = None
+        self.db = startup.get_database()
 
-        if not Path(db).exists():
-            self.connect(db)
+        if not Path(self.db).exists():
+            self.connect()
             self.create_new_database()
         else:
-            self.connect(db)
-
-        current_db_version = parse_version(self.get_db_version())
-        app_db_version = parse_version(__dbversion__)
-
-        if current_db_version < app_db_version:
-            self.do_upgrade(current_db_version)
+            self.connect()
 
     def __enter__(self):
         return self
@@ -42,9 +36,9 @@ class Database(object):
             d[col[0]] = row[idx]
         return d
 
-    def connect(self, db):
+    def connect(self):
         try:
-            self.conn = sqlite3.connect(db)
+            self.conn = sqlite3.connect(self.db)
             self.conn.row_factory = self.dict_factory
             self.cursor = self.conn.cursor()
         except sqlite3.OperationalError as e:
@@ -64,7 +58,7 @@ class Database(object):
         self.close()
 
     def create_new_database(self):
-        logger.debug("Creating database")
+        logger.debug("DATABASE CREATION IN PROGRESS!")
 
         self.query("CREATE TABLE monitor ("
                    "'artist_id' INTEGER,"
@@ -72,6 +66,7 @@ class Database(object):
                    "'bitrate' INTEGER,"
                    "'record_type' TEXT,"
                    "'alerts' INTEGER,"
+                   "'user_id' INTEGER DEFAULT 1,"
                    "'download_path' TEXT)")
 
         self.query("CREATE TABLE playlists ("
@@ -80,6 +75,7 @@ class Database(object):
                    "'url' TEXT,"
                    "'bitrate' INTEGER,"
                    "'alerts' INTEGER,"
+                   "'user_id' INTEGER DEFAULT 1,"
                    "'download_path' TEXT)")
 
         self.query("CREATE TABLE playlist_tracks ("
@@ -88,6 +84,7 @@ class Database(object):
                    "'artist_id' INTEGER,"
                    "'artist_name' TEXT,"
                    "'track_name' TEXT,"
+                   "'user_id' INTEGER DEFAULT 1,"
                    "'track_added' TEXT)")
 
         self.query("CREATE TABLE releases ("
@@ -98,50 +95,30 @@ class Database(object):
                    "'album_release' TEXT,"
                    "'album_added' INTEGER,"
                    "'explicit' INTEGER,"
-                   "'future_release' INTEGER DEFAULT 0)")
-
-        self.query("CREATE TABLE monitor ("
-                   "'artist_id' INTEGER,"
-                   "'artist_name' TEXT,"
-                   "'bitrate' INTEGER,"
-                   "'record_type' TEXT,"
-                   "'alerts' INTEGER,"
-                   "'download_path' TEXT)")
-
-        self.query("CREATE TABLE playlists ("
-                   "'id' INTEGER UNIQUE,"
-                   "'title' TEXT,"
-                   "'url' TEXT,"
-                   "'bitrate' INTEGER,"
-                   "'alerts' INTEGER,"
-                   "'download_path' TEXT)")
-
-        self.query("CREATE TABLE playlist_tracks ("
-                   "'track_id' INTEGER,"
-                   "'playlist_id' INTEGER,"
-                   "'artist_id' INTEGER,"
-                   "'artist_name' TEXT,"
-                   "'track_name' TEXT,"
-                   "'track_added' TEXT)")
-
-        self.query("CREATE TABLE releases ("
-                   "'artist_id' INTEGER,"
-                   "'artist_name' TEXT,"
-                   "'album_id' INTEGER,"
-                   "'album_name' TEXT,"
-                   "'album_release' TEXT,"
-                   "'album_added' INTEGER,"
-                   "'explicit' INTEGER,"
+                   "'user_id' INTEGER DEFAULT 1,"
                    "'future_release' INTEGER DEFAULT 0)")
 
         self.query("CREATE TABLE 'deemon' ("
                    "'property' TEXT,"
                    "'value' TEXT)")
 
+        self.query("CREATE TABLE 'users' ("
+                   "'id' INTEGER,"
+                   "'name' TEXT,"
+                   "'email' TEXT,"
+                   "'active' INTEGER,"
+                   "'alerts' INTEGER,"
+                   "'bitrate' INTEGER,"
+                   "'record_type' TEXT,"
+                   "'plex_url' TEXT,"
+                   "'plex_token' TEXT,"
+                   "'plex_library' TEXT,"
+                   "PRIMARY KEY('id' AUTOINCREMENT))")
+
         self.query("CREATE UNIQUE INDEX 'idx_property' ON 'deemon' ('property')")
-        self.query("CREATE UNIQUE INDEX 'idx_artist_id' ON 'monitor' ('artist_id')")
         self.query(f"INSERT INTO 'deemon' ('property', 'value') VALUES ('version', '{__dbversion__}')")
         self.query(f"INSERT INTO 'deemon' ('property', 'value') VALUES ('last_update_check', 0)")
+        self.query(f"INSERT INTO 'users' ('name') VALUES ('default')")
         self.commit()
 
     def get_db_version(self):
@@ -153,7 +130,14 @@ class Database(object):
         logger.debug(f"Database version {version}")
         return version
 
-    def do_upgrade(self, current_ver):
+    def do_upgrade(self):
+        current_ver = parse_version(self.get_db_version())
+        app_db_version = parse_version(__dbversion__)
+
+        if current_ver == app_db_version:
+            return
+
+        logger.debug("DATABASE UPGRADE IN PROGRESS!")
         # Upgrade database v1.0 to v1.1
         if current_ver < parse_version("1.1"):
             sql_playlists = ("CREATE TABLE IF NOT EXISTS 'playlists' "
@@ -165,7 +149,8 @@ class Database(object):
             self.query(sql_playlists)
             self.query(sql_playlist_tracks)
             self.query("INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('version', '1.1')")
-            logger.debug("Database upgraded to version 1.1")
+            self.commit()
+
         # Upgrade database v1.1 to v1.3
         if current_ver < parse_version("1.3"):
             sql_playlists_1 = "ALTER TABLE playlists ADD COLUMN bitrate INTEGER"
@@ -174,15 +159,52 @@ class Database(object):
             self.query(sql_playlists_1)
             self.query(sql_playlists_2)
             self.query(sql_updatever)
-            logger.debug(f"Database upgraded to version 1.3")
+            self.commit()
+
         if current_ver < parse_version("2.1"):
             self.query("INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('last_update_check', 0)")
             self.query("INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('version', '2.1')")
+            self.commit()
+
         if current_ver < parse_version("2.2"):
             self.query("ALTER TABLE monitor ADD COLUMN download_path TEXT")
             self.query("ALTER TABLE playlists ADD COLUMN download_path TEXT")
             self.query("INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('version', '2.2')")
-        self.commit()
+            self.commit()
+
+        # Upgrade database to v3
+        if current_ver < parse_version("3.0"):
+            self.query("CREATE TABLE 'users' ("
+                       "'id' INTEGER,"
+                       "'name' TEXT,"
+                       "'email' TEXT,"
+                       "'active' INTEGER,"
+                       "'alerts' INTEGER,"
+                       "'bitrate' INTEGER,"
+                       "'record_type' TEXT,"
+                       "'plex_url' TEXT,"
+                       "'plex_token' TEXT,"
+                       "'plex_library' TEXT,"
+                       "PRIMARY KEY('id' AUTOINCREMENT))")
+            self.query("INSERT INTO 'users' ('name') VALUES ('default')")
+            self.query("ALTER TABLE monitor ADD COLUMN user_id INTEGER DEFAULT 1")
+            self.query("ALTER TABLE releases ADD COLUMN user_id INTEGER DEFAULT 1")
+            self.query("ALTER TABLE playlists ADD COLUMN user_id INTEGER DEFAULT 1")
+            self.query("ALTER TABLE playlist_tracks ADD COLUMN user_id INTEGER DEFAULT 1")
+            self.query("CREATE TABLE monitor_tmp ("
+                       "'artist_id' INTEGER,"
+                       "'artist_name' TEXT,"
+                       "'bitrate' INTEGER,"
+                       "'record_type' TEXT,"
+                       "'alerts' INTEGER,"
+                       "'download_path' TEXT,"
+                       "'user_id' INTEGER DEFAULT 1)")
+            self.query("INSERT INTO monitor_tmp SELECT * FROM monitor")
+            self.query("DROP TABLE monitor")
+            self.query("ALTER TABLE monitor_tmp RENAME TO monitor")
+            self.query("INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('version', '3.0')")
+            self.commit()
+            logger.debug(f"Database upgraded to version 3.0")
 
     def query(self, query, values=None):
         if values is None:
