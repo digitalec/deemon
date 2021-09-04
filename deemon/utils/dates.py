@@ -17,3 +17,6 @@ def get_max_release_date(days):
     max_date_ts = int(time.time()) - input_days_in_secs
     max_date = datetime.utcfromtimestamp(max_date_ts).strftime('%Y-%m-%d')
     return max_date
+
+def get_year(release_date: str):
+    return datetime.strptime(release_date, '%Y-%m-%d').year
