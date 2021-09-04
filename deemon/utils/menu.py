@@ -19,7 +19,7 @@ class Menu(object):
         self.desc: bool = True
         self.config = Config()
         self.artist_id = artist_id
-        self.db = Database(startup.get_database())
+        self.db = Database()
 
     def display_menu(self):
         print(self.question)

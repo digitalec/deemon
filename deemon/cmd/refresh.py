@@ -1,7 +1,7 @@
 from deemon.cmd import download
 from deemon.core.db import Database
 from deemon.core.config import Config as config
-from deemon.utils import notifier, validate, dates, startup
+from deemon.utils import notifier, validate, dates
 import time
 import tqdm
 import logging
@@ -21,7 +21,7 @@ class Refresh:
         self.new_releases = []
         self.refresh_date = self.set_refresh_date()
         self.dz = deezer.Deezer()
-        self.db = Database(startup.get_database())
+        self.db = Database()
 
         if not dl_obj:
             self.dl = None
@@ -130,7 +130,6 @@ class Refresh:
             new_artist = self.existing_artist(artist['artist_id'])
             progress.set_description_str("Refreshing artists")
             artist_albums = self.dz.api.get_artist_albums(artist['artist_id'])['data']
-
             logger.debug(f"Artist settings for {artist['artist_name']} ({artist['artist_id']}): bitrate={artist['bitrate']}, "
                          f"record_type={artist['record_type']}, alerts={artist['alerts']}, "
                          f"download_path={artist['download_path']}")

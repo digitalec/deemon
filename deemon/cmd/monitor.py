@@ -3,7 +3,7 @@ from sqlite3 import OperationalError
 from pathlib import Path
 from deemon.core.db import Database
 from deemon.core.config import Config as config
-from deemon.utils import startup, menu
+from deemon.utils import menu
 import logging
 import deezer
 
@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 def monitor(profile, value, bitrate, r_type, alerts, remove=False, reset=False, dl_obj=None, search=False):
 
     dz = deezer.Deezer()
-    db = Database(startup.get_database())
+    db = Database()
 
     def purge_playlist(i, title):
         values = {'id': api_result['id']}
@@ -69,6 +69,9 @@ def monitor(profile, value, bitrate, r_type, alerts, remove=False, reset=False, 
 
             if not remove:
                 api_result = get_best_result(api_result)
+            else:
+                # TODO --remove shouldn't use API
+                api_result = api_result[0]
 
             if not api_result:
                 logger.error(f"No result selected")
@@ -79,6 +82,7 @@ def monitor(profile, value, bitrate, r_type, alerts, remove=False, reset=False, 
             except deezer.api.DataException:
                 logger.error(f"Artist ID {value} not found.")
                 return
+
         sql_values = {'id': api_result['id']}
         artist_exists = db.query("SELECT * FROM 'monitor' WHERE artist_id = :id", sql_values).fetchone()
         if remove:
