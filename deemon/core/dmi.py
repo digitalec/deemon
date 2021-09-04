@@ -20,8 +20,7 @@ logger = logging.getLogger(__name__)
 class DeemixInterface:
     def __init__(self):
         logger.debug("Initializing deemix library")
-        self.db = Database(startup.get_database())
-
+        self.db = Database()
         self.dz = Deezer()
         self.config = Config()
 
