@@ -111,7 +111,7 @@ class Menu(object):
     def show_artist_menu(self):
         print(self.question)
         for idx, option in enumerate(self.filtered_choices, start=1):
-            print(f"{idx}. {option['name']} {option['id']}")
+            print(f"{idx}. {option['name']}")
         print("")
 
     def gen_artist_menu(self):

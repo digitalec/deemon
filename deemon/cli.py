@@ -111,6 +111,7 @@ def download_command(artist, artist_id, album_id, url, file, search_cmd, bitrate
 @click.option('-I', '--import', 'im', metavar="PATH", help="Monitor artists/IDs from file or directory")
 @click.option('-u', '--url', multiple=True, metavar="URL", help='Monitor artist by URL')
 @click.option('-p', '--playlist', multiple=True, metavar="URL", help='Monitor Deezer playlist by URL')
+@click.option('-s', '--search', 'search_flag', is_flag=True, help='Show similar artist results to choose from')
 @click.option('-b', '--bitrate', default=config.bitrate(), help="Specify bitrate")
 @click.option('-t', '--record-type', type=click.Choice(['all', 'album', 'ep', 'single'], case_sensitive=False),
               default=config.record_type(), help='Specify record types to download')
@@ -121,7 +122,7 @@ def download_command(artist, artist_id, album_id, url, file, search_cmd, bitrate
 @click.option('-R', '--remove', is_flag=True, help='Stop monitoring an artist')
 @click.option('--reset', is_flag=True, help='Remove all artists/playlists from monitoring')
 def monitor_command(artist, im, playlist, no_refresh, bitrate, record_type, alerts,
-                    artist_id, remove, url, reset, dl, download_path):
+                    artist_id, remove, url, reset, dl, download_path, search_flag):
     """
     Monitor artist for new releases by ID, URL or name.
 
@@ -166,18 +167,21 @@ def monitor_command(artist, im, playlist, no_refresh, bitrate, record_type, aler
             artist_int_list, artist_str_list = dataprocessor.process_input_file(imported_file)
             if artist_str_list:
                 for a in artist_str_list:
-                    result = monitor.monitor("artist", a, bitrate, record_type, alerts, remove=remove, dl_obj=dl)
+                    result = monitor.monitor("artist", a, bitrate, record_type, alerts, remove=remove, dl_obj=dl,
+                                             search=search_flag)
                     if type(result) == int:
                         new_artists.append(result)
             if artist_int_list:
                 for aid in artist_int_list:
-                    result = monitor.monitor("artist_id", aid, bitrate, record_type, alerts, remove=remove, dl_obj=dl)
+                    result = monitor.monitor("artist_id", aid, bitrate, record_type, alerts, remove=remove, dl_obj=dl,
+                                             search=search_flag)
                     if type(result) == int:
                         new_artists.append(result)
         elif Path(im).is_dir():
             import_list = [x.relative_to(im) for x in sorted(Path(im).iterdir()) if x.is_dir()]
             for a in import_list:
-                result = monitor.monitor("artist", a, bitrate, record_type, alerts, remove=remove, dl_obj=dl)
+                result = monitor.monitor("artist", a, bitrate, record_type, alerts, remove=remove, dl_obj=dl,
+                                         search=search_flag)
                 if type(result) == int:
                     new_artists.append(result)
         else:
@@ -186,7 +190,8 @@ def monitor_command(artist, im, playlist, no_refresh, bitrate, record_type, aler
 
     if artist:
         for a in dataprocessor.artists_to_csv(artist):
-            result = monitor.monitor("artist", a, bitrate, record_type, alerts, remove=remove, dl_obj=dl)
+            result = monitor.monitor("artist", a, bitrate, record_type, alerts, remove=remove, dl_obj=dl,
+                                     search=search_flag)
             if isinstance(result, int):
                 new_artists.append(result)
 
@@ -202,13 +207,15 @@ def monitor_command(artist, im, playlist, no_refresh, bitrate, record_type, aler
 
     if artist_id:
         for aid in artist_id:
-            result = monitor.monitor("artist_id", aid, bitrate, record_type, alerts, remove=remove, dl_obj=dl)
+            result = monitor.monitor("artist_id", aid, bitrate, record_type, alerts, remove=remove, dl_obj=dl,
+                                     search=search_flag)
             if isinstance(result, int):
                 new_artists.append(result)
 
     if playlists:
         for p in playlists:
-            result = monitor.monitor("playlist", p, bitrate, record_type, alerts, remove=remove, dl_obj=dl)
+            result = monitor.monitor("playlist", p, bitrate, record_type, alerts, remove=remove, dl_obj=dl,
+                                     search=search_flag)
             if isinstance(result, int):
                 new_playlists.append(result)
 

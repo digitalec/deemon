@@ -1,3 +1,4 @@
+import sys
 from sqlite3 import OperationalError
 from pathlib import Path
 from deemon.core.db import Database
@@ -9,7 +10,7 @@ import deezer
 logger = logging.getLogger(__name__)
 
 
-def monitor(profile, value, bitrate, r_type, alerts, remove=False, reset=False, dl_obj=None):
+def monitor(profile, value, bitrate, r_type, alerts, remove=False, reset=False, dl_obj=None, search=False):
 
     dz = deezer.Deezer()
     db = Database(startup.get_database())
@@ -35,20 +36,21 @@ def monitor(profile, value, bitrate, r_type, alerts, remove=False, reset=False, 
     def get_best_result(api_data):
         matches: list = []
         for idx, artist in enumerate(api_result):
-            if value == artist['name']:
+            if value.lower() == artist['name'].lower():
                 matches.append(artist)
         if len(matches) == 1:
             return matches[0]
-        elif len(matches) > 1:
+        elif len(matches) > 1 and search:
             m = menu.Menu("Multiple exact matches found: ", matches)
-            ask_user = m.get_user_choice()
-            if type(ask_user) is int:
-                return matches[ask_user]
-        else:
+            ask_user = m.gen_artist_menu()
+            return ask_user[0]
+        elif search:
             m = menu.Menu("Showing closest results, please choose:", api_result)
-            ask_user = m.get_user_choice()
-            if type(ask_user) is int:
-                return api_result[ask_user]
+            ask_user = m.gen_artist_menu()
+            return ask_user[0]
+        else:
+            logger.error(f"Artist {value} not found. Try again using --search")
+            sys.exit(1)
 
     if reset:
         db.reset_database()
@@ -64,8 +66,12 @@ def monitor(profile, value, bitrate, r_type, alerts, remove=False, reset=False, 
             except (deezer.api.DataException, IndexError):
                 logger.error(f"Artist {value} not found.")
                 return
-            api_result = get_best_result(api_result)
+
+            if not remove:
+                api_result = get_best_result(api_result)
+
             if not api_result:
+                logger.error(f"No result selected")
                 return
         else:
             try:
