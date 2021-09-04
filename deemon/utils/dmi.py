@@ -8,7 +8,9 @@ from deemix import generateDownloadObject
 from deemix.types.DownloadObjects import Collection
 from deemix.downloader import Downloader
 from deemix.settings import load as LoadSettings
-from deemon.core import Deemon
+from deemon.core.config import Config
+from deemon.core.db import Database
+from deemon.utils import startup
 import deemix.utils.localpaths as localpaths
 import logging
 
@@ -16,22 +18,23 @@ logger = logging.getLogger(__name__)
 
 
 class DeemixInterface:
-    def __init__(self, config):
+    def __init__(self):
         logger.debug("Initializing deemix library")
+        self.db = Database(startup.get_database())
 
         self.dz = Deezer()
-        self.config = config
+        self.config = Config()
 
-        if self.config["deemix_path"] == "":
+        if self.config.deemix_path() == "":
             self.config_dir = localpaths.getConfigFolder()
         else:
-            self.config_dir = Path(self.config["deemix_path"])
+            self.config_dir = Path(self.config.deemix_path())
 
         self.dx_settings = LoadSettings(self.config_dir)
 
-        if self.config["download_path"] != "":
+        if self.config.download_path() != "":
             # TODO is this necessary?
-            self.download_path = Path(self.config["download_path"])
+            self.download_path = Path(self.config.download_path())
             self.dx_settings['downloadLocation'] = str(self.download_path)
 
         logger.debug(f"deemix Config Path: {self.config_dir}")
@@ -70,10 +73,10 @@ class DeemixInterface:
 
     def login(self):
         logger.debug("Looking for ARL...")
-        if self.config["arl"]:
+        if self.config.arl():
             logger.debug("ARL found in deemon config")
             print("Found ARL in deemon config, checking... ", end="")
-            if self.verify_arl(self.config["arl"]):
+            if self.verify_arl(self.config.arl()):
                 return True
 
         if self.config_dir.is_dir():
@@ -122,12 +125,11 @@ class DeemixInterface:
         totalSize = len(playlistTracksAPI)
         playlistAPI['nb_tracks'] = totalSize
         collection = []
-        dn = Deemon()
         for pos, trackAPI in enumerate(playlistTracksAPI, start=1):
             # Check if release has been seen already and skip it
             vals = {'track_id': trackAPI['SNG_ID'], 'playlist_id': playlistAPI['id']}
             sql = "SELECT * FROM 'playlist_tracks' WHERE track_id = :track_id AND playlist_id = :playlist_id"
-            result = dn.db.query(sql, vals).fetchone()
+            result = self.db.query(sql, vals).fetchone()
             if result:
                 continue
             if trackAPI.get('EXPLICIT_TRACK_CONTENT', {}).get('EXPLICIT_LYRICS_STATUS', LyricsStatus.UNKNOWN) in [
