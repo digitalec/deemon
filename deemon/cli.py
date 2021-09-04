@@ -14,26 +14,26 @@ import logging
 import click
 import sys
 
-logger = logging.getLogger(__name__)
-
 appdata = startup.get_appdata_dir()
 startup.init_appdata_dir(appdata)
 config = Config()
-db = Database(startup.get_database())
+setup_logger(log_level='DEBUG' if config.debug_mode() else 'INFO', log_file=startup.get_log_file())
+logger = logging.getLogger(__name__)
+
+db = Database()
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
 
 @click.group(context_settings=CONTEXT_SETTINGS)
-@click.option('-v', '--verbose', is_flag=True, help='Enable verbose output')
 @click.version_option(__version__, '-V', '--version', message='deemon %(version)s')
-def run(verbose):
+def run():
     """Monitoring and alerting tool for new music releases using the Deezer API.
 
     deemon is a free and open source tool. To report issues or to contribute,
     please visit https://github.com/digitalec/deemon
     """
-    setup_logger(log_level='DEBUG' if verbose else 'INFO', log_file=startup.get_log_file())
+    db.do_upgrade()
 
     # import deemon.core.db as database
     # db = database.DBHelper(settings.db_path)
