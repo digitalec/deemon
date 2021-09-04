@@ -1,8 +1,8 @@
 from pathlib import Path
 import plexapi.exceptions
 from plexapi.server import PlexServer
-from deemon.core import config
-from deemon.utils import dmi, dataprocessor
+from deemon.core import config, dmi
+from deemon.utils import dataprocessor
 from deemon import utils
 import logging
 import deezer
