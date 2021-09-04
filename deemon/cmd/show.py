@@ -1,4 +1,5 @@
-from deemon.core import Deemon
+from deemon.core.db import Database
+from deemon.utils import startup
 from operator import itemgetter
 import logging
 import time
@@ -7,10 +8,10 @@ import sys
 logger = logging.getLogger(__name__)
 
 
-class ShowStats(Deemon):
+class ShowStats:
 
     def __init__(self):
-        super().__init__()
+        self.db = Database(startup.get_database())
 
     def artists(self, csv=False, artist_ids=False, extended=None):
         # TODO extended is list of fields to grab from database; 'id', 'name', etc.
