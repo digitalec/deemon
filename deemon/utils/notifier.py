@@ -11,17 +11,16 @@ from email.message import EmailMessage
 
 import pkg_resources
 
-from deemon.core import Deemon, config
+from deemon.core import config
 from deemon.utils import startup
 from deemon import __version__
 
 logger = logging.getLogger(__name__)
 
 
-class Notify(Deemon):
+class Notify:
 
     def __init__(self, new_releases: list = None):
-        super().__init__()
         logger.debug("notify initialized")
         logger.debug(f"releases to notify on: {new_releases}")
         self.config = config.Config()
