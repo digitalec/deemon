@@ -21,7 +21,7 @@ DEFAULT_CONFIG = {
     "smtp_user": "",
     "smtp_pass": "",
     "smtp_sender": "",
-    "smtp_recipient": [],
+    "email": "",
     "check_update": 1,
     "debug_mode": False
 }
@@ -30,6 +30,7 @@ DEFAULT_CONFIG = {
 class Config(object):
     _CONFIG_FILE: Optional[Path] = startup.get_config()
     _CONFIG: Optional[dict] = None
+    _USER_CONFIG: Optional[dict] = None
 
     def __init__(self):
         if not Config._CONFIG_FILE.exists():
@@ -38,13 +39,17 @@ class Config(object):
         if Config._CONFIG is None:
             with open(Config._CONFIG_FILE, 'r') as f:
                 try:
-                    Config._CONFIG = json.load(f)
+                    Config._USER_CONFIG = json.load(f)
                 except json.decoder.JSONDecodeError as e:
                     logger.exception(f"An error occured while reading from config: {e}")
                     raise
+            Config._CONFIG = DEFAULT_CONFIG.copy()
 
         if self.validate() > 0:
             self.__write_modified_config()
+
+        # Set as default user for init
+        self.set('user_id', 1)
 
     @staticmethod
     def __create_default_config():
@@ -56,8 +61,13 @@ class Config(object):
         with open(Config._CONFIG_FILE, 'w') as f:
             json.dump(Config._CONFIG, f, indent=4)
 
-    @staticmethod
-    def validate():
+    def check_unknown_settings(self):
+        for key in Config._USER_CONFIG:
+            if key not in DEFAULT_CONFIG:
+                logger.debug(f"Your config contains an unknown setting and will be ignored: {key}")
+
+    def validate(self):
+        self.check_unknown_settings()
         modified = 0
         for key in DEFAULT_CONFIG:
             if key not in Config._CONFIG or Config._CONFIG[key] == "":
@@ -67,6 +77,10 @@ class Config(object):
                     modified += 1
             else:
                 # Convert previous configuration values to new 2.x values
+                if key == "email":
+                    Config._CONFIG['email'] = Config._CONFIG.get('smtp_recipients')
+                    modified += 1
+
                 if key == "release_by_date" and isinstance(Config._CONFIG[key], int):
                     if Config._CONFIG[key] == 1:
                         Config._CONFIG[key] = True
@@ -81,10 +95,6 @@ class Config(object):
                         Config._CONFIG[key] = 3
                     elif Config._CONFIG[key].upper() == "FLAC":
                         Config._CONFIG[key] = 9
-                    modified += 1
-
-                if key == "smtp_recipient" and isinstance(Config._CONFIG[key], str):
-                    Config._CONFIG[key] = Config._CONFIG[key].split(" ")
                     modified += 1
 
                 if not isinstance(DEFAULT_CONFIG[key], type(Config._CONFIG[key])):
