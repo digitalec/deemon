@@ -10,7 +10,7 @@ import deezer
 logger = logging.getLogger(__name__)
 
 
-def monitor(profile, value, bitrate, r_type, alerts, remove=False, reset=False, dl_obj=None, search=False):
+def monitor(profile, value, bitrate, r_type, alerts, remove=False, dl_obj=None, search=False):
 
     dz = deezer.Deezer()
     db = Database()
@@ -47,25 +47,23 @@ def monitor(profile, value, bitrate, r_type, alerts, remove=False, reset=False, 
         elif search:
             m = menu.Menu("Showing closest results, please choose:", api_result)
             ask_user = m.gen_artist_menu()
-            return ask_user[0]
+            if ask_user:
+                return ask_user[0]
         else:
             logger.error(f"Artist {value} not found. Try again using --search")
             sys.exit(1)
-
-    if reset:
-        db.reset_database()
-        return
 
     if not Path(config.download_path()).exists:
         return logger.error(f"Invalid download path: {config.download_path()}")
 
     if profile in ['artist', 'artist_id']:
         if profile == "artist":
-            try:
-                api_result = dz.api.search_artist(value, limit=10)["data"]
-            except (deezer.api.DataException, IndexError):
-                logger.error(f"Artist {value} not found.")
-                return
+            api_result = dz.api.search_artist(value, limit=10)["data"]
+
+            if len(api_result) == 0:
+                if search:
+                    return logger.error("No results found for " + value)
+                return logger.error(f"Artist {value} not found.")
 
             if not remove:
                 api_result = get_best_result(api_result)
@@ -83,8 +81,10 @@ def monitor(profile, value, bitrate, r_type, alerts, remove=False, reset=False, 
                 logger.error(f"Artist ID {value} not found.")
                 return
 
-        sql_values = {'id': api_result['id']}
-        artist_exists = db.query("SELECT * FROM 'monitor' WHERE artist_id = :id", sql_values).fetchone()
+        # TODO move this to db.py
+        sql_values = {'id': api_result['id'], 'user_id': config.user_id()}
+        artist_exists = db.query("SELECT * FROM 'monitor' WHERE artist_id = :id "
+                                 "AND user_id = :user_id", sql_values).fetchone()
         if remove:
             if not artist_exists:
                 logger.warning(f"{api_result['name']} is not being monitored yet")
@@ -101,10 +101,11 @@ def monitor(profile, value, bitrate, r_type, alerts, remove=False, reset=False, 
             'bitrate': bitrate,
             'record_type': r_type,
             'alerts': alerts,
-            'download_path': config.download_path()
+            'download_path': config.download_path(),
+            'user_id': config.user_id()
         }
-        query = ("INSERT INTO monitor (artist_id, artist_name, bitrate, record_type, alerts, download_path) "
-                 "VALUES (:artist_id, :artist_name, :bitrate, :record_type, :alerts, :download_path)")
+        query = ("INSERT INTO monitor (artist_id, artist_name, bitrate, record_type, alerts, download_path, user_id) "
+                 "VALUES (:artist_id, :artist_name, :bitrate, :record_type, :alerts, :download_path, :user_id)")
 
         try:
             db.query(query, sql_values)
@@ -131,8 +132,9 @@ def monitor(profile, value, bitrate, r_type, alerts, remove=False, reset=False, 
         except deezer.api.DataException:
             logger.error(f"Playlist ID {playlist_id} not found.")
             return
-        sql_values = {'id': api_result['id']}
-        playlist_exists = db.query("SELECT * FROM 'playlists' WHERE id = :id", sql_values).fetchone()
+        sql_values = {'id': api_result['id'], 'user_id': config.user_id()}
+        playlist_exists = db.query("SELECT * FROM 'playlists' WHERE id = :id "
+                                   "AND user_id = :user_id", sql_values).fetchone()
         if remove:
             if not playlist_exists:
                 logger.warning(f"Playlist '{api_result['title']}' is not being monitored yet")
@@ -142,10 +144,13 @@ def monitor(profile, value, bitrate, r_type, alerts, remove=False, reset=False, 
         if playlist_exists:
             logger.warning(f"Playlist '{api_result['title']}' is already being monitored")
             return
+
+        # TODO move this to db.py
         sql_values = {'id': api_result['id'], 'title': api_result['title'], 'url': api_result['link'],
-                      'bitrate': bitrate, 'alerts': alerts, 'download_path': config.download_path()}
+                      'bitrate': bitrate, 'alerts': alerts, 'download_path': config.download_path(),
+                      'user_id': config.user_id()}
         query = ("INSERT INTO playlists ('id', 'title', 'url', 'bitrate', 'alerts', 'download_path') "
-                 "VALUES (:id, :title, :url, :bitrate, :alerts, :download_path)")
+                 "VALUES (:id, :title, :url, :bitrate, :alerts, :download_path, :user_id)")
 
         try:
             db.query(query, sql_values)

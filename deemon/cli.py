@@ -3,6 +3,7 @@ from deemon.core.logger import setup_logger
 from deemon.utils import notifier, startup, validate, dataprocessor
 from deemon.core.db import Database
 from deemon.core.config import Config
+from deemon.core.settings import UserConfig, AppConfig, LoadUser
 from deemon.cmd.search import search
 from deemon.cmd.refresh import Refresh
 from deemon.cmd.show import ShowStats
@@ -121,9 +122,8 @@ def download_command(artist, artist_id, album_id, url, file, search_cmd, bitrate
 @click.option('-D', '--download', 'dl', is_flag=True, help='Download all releases matching record type')
 @click.option('-o', '--download-path', type=str, metavar="PATH", help='Specify custom download directory')
 @click.option('-R', '--remove', is_flag=True, help='Stop monitoring an artist')
-@click.option('--reset', is_flag=True, help='Remove all artists/playlists from monitoring')
 def monitor_command(artist, im, playlist, no_refresh, user, bitrate, record_type, alerts,
-                    artist_id, remove, url, reset, dl, download_path, search_flag):
+                    artist_id, remove, url, dl, download_path, search_flag):
     """
     Monitor artist for new releases by ID, URL or name.
 
@@ -134,20 +134,11 @@ def monitor_command(artist, im, playlist, no_refresh, user, bitrate, record_type
         monitor --url https://www.deezer.com/us/artist/000
     """
     if user:
-        user_exists = db.get_user(user)
-        if not user_exists:
-            print(user_exists)
+        user_settings = db.get_user(user)
+        if user_settings:
+            LoadUser(user_settings)
+        else:
             return logger.error(f"User {user} does not exist.")
-        else:
-            return logger.info(user_exists)
-    if reset:
-        logger.warning("** ALL ARTISTS AND PLAYLISTS WILL BE REMOVED! **")
-        confirm = input("Type 'reset' to confirm: ")
-        if confirm == "reset":
-            monitor.monitor(None, None, None, None, None, None, reset=True)
-        else:
-            logger.info("Reset aborted. Database has NOT been modified.")
-        return
 
     artist_id = list(artist_id)
     url = list(url)
@@ -243,28 +234,42 @@ def refresh_command(skip_download, time_machine, user):
     Refresh(skip_download=skip_download, time_machine=time_machine)
 
 
-@run.command(name='show')
+@click.group(name="show")
 @click.option('-a', '--artists', is_flag=True, help='Show artists currently being monitored')
 @click.option('-i', '--artist-ids', is_flag=True, help='Show artist IDs currently being monitored')
 @click.option('-p', '--playlists', is_flag=True, help='Show playlists currently being monitored', hidden=True)
 @click.option('-c', '--csv', is_flag=True, help='Used with -a, -i; output artists as CSV')
 @click.option('-e', '--extended', is_flag=True, help='Show extended artist data')
-@click.option('-n', '--new-releases', metavar='N', type=int, help='Show new releases from last N days')
-# TODO Implement subcommands for 'stats', 'new-releases', etc.
-@click.option('-U', '--user', help="Specify user to show from")
-@click.option('-s', '--stats', is_flag=True, help='Show various usage statistics')
-@click.option('-r', '--reset', is_flag=True, help='Reset usage stats')
-def show_command(artists, artist_ids, playlists, new_releases, csv, extended, user, stats, reset):
+def show_command(artists, artist_ids, playlists, csv, extended):
     """
-    Show monitored artists, latest new releases and various statistics
+    Show monitored artists and latest releases
     """
     show = ShowStats()
     if artists or artist_ids:
         show.artists(csv, artist_ids, extended)
     elif playlists:
         show.playlists(csv)
-    elif new_releases:
-        show.releases(new_releases)
+
+
+@show_command.command(name="releases")
+@click.argument('N', default=7)
+def show_releases(n):
+    """
+    Show list of new releases
+    """
+    show = ShowStats()
+    show.releases(n)
+
+@show_command.command(name="users")
+def show_users():
+    """
+    Show list of users and their settings
+    """
+    show = ShowStats()
+    show.user_list()
+
+
+run.add_command(show_command)
 
 
 @run.command()
@@ -338,3 +343,50 @@ def api_test(artist, artist_id, album_id, playlist_id, limit, raw):
                 print(f"{key}: {value}")
         else:
             print(f"Playlist ID: {result['id']}\nPlaylist Title: {result['title']}")
+
+
+@run.command(name="reset")
+def reset_db():
+    logger.warning("** ALL ARTISTS AND PLAYLISTS WILL BE REMOVED! **")
+    confirm = input("Type 'reset' to confirm: ")
+    if confirm.lower() == "reset":
+        db.reset_database()
+    else:
+        logger.info("Reset aborted. Database has NOT been modified.")
+    return
+
+
+
+@click.group(name='config', help='Modify deemon configuration and users')
+def config_command():
+    pass
+
+
+@click.group(name="users")
+def config_users():
+    """Add, modify and delete users"""
+
+@config_users.command(name='add')
+@click.argument('user')
+def add(user):
+    """Add a new user"""
+    uc = UserConfig(user)
+    uc.add()
+
+@config_users.command(name='edit')
+@click.argument('user')
+def edit(user):
+    """Modify existing users"""
+    uc = UserConfig(user)
+    uc.edit()
+
+@config_users.command(name="delete")
+@click.argument('user')
+def delete(user):
+    """Delete an existing user"""
+    uc = UserConfig(user)
+    uc.delete()
+
+
+config_command.add_command(config_users)
+run.add_command(config_command)

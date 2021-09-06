@@ -30,7 +30,6 @@ DEFAULT_CONFIG = {
 class Config(object):
     _CONFIG_FILE: Optional[Path] = startup.get_config()
     _CONFIG: Optional[dict] = None
-    _USER_CONFIG: Optional[dict] = None
 
     def __init__(self):
         if not Config._CONFIG_FILE.exists():
@@ -39,11 +38,10 @@ class Config(object):
         if Config._CONFIG is None:
             with open(Config._CONFIG_FILE, 'r') as f:
                 try:
-                    Config._USER_CONFIG = json.load(f)
+                    Config._CONFIG = json.load(f)
                 except json.decoder.JSONDecodeError as e:
                     logger.exception(f"An error occured while reading from config: {e}")
                     raise
-            Config._CONFIG = DEFAULT_CONFIG.copy()
 
         if self.validate() > 0:
             self.__write_modified_config()
@@ -61,26 +59,29 @@ class Config(object):
         with open(Config._CONFIG_FILE, 'w') as f:
             json.dump(Config._CONFIG, f, indent=4)
 
-    def check_unknown_settings(self):
-        for key in Config._USER_CONFIG:
-            if key not in DEFAULT_CONFIG:
-                logger.debug(f"Your config contains an unknown setting and will be ignored: {key}")
-
-    def validate(self):
-        self.check_unknown_settings()
+    @staticmethod
+    def validate():
         modified = 0
-        for key in DEFAULT_CONFIG:
-            if key not in Config._CONFIG or Config._CONFIG[key] == "":
-                if not DEFAULT_CONFIG[key] == "":
-                    logger.debug(f"Key '{key}' not set, using default value: {DEFAULT_CONFIG[key]}")
-                    Config._CONFIG[key] = DEFAULT_CONFIG[key]
+
+        # Convert previous configuration keys to new 2.x values, removing unused
+        temp_config = Config._CONFIG.copy()
+        for key in temp_config:
+            if key not in DEFAULT_CONFIG:
+                if key == "smtp_recipient":
+                    Config._CONFIG['email'] = Config._CONFIG.pop('smtp_recipient')
                     modified += 1
-            else:
-                # Convert previous configuration values to new 2.x values
-                if key == "email":
-                    Config._CONFIG['email'] = Config._CONFIG.get('smtp_recipients')
+                else:
+                    logger.debug(f"Your config contains an unknown setting and will be removed: {key}")
+                    del Config._CONFIG[key]
                     modified += 1
 
+        # Convert previous configuration values to new 2.x values
+        for key in DEFAULT_CONFIG:
+            if key not in Config._CONFIG:
+                logger.debug(f"Key '{key}' not set, using default value: {DEFAULT_CONFIG[key]}")
+                Config._CONFIG[key] = DEFAULT_CONFIG[key]
+                modified += 1
+            else:
                 if key == "release_by_date" and isinstance(Config._CONFIG[key], int):
                     if Config._CONFIG[key] == 1:
                         Config._CONFIG[key] = True
@@ -98,6 +99,7 @@ class Config(object):
                     modified += 1
 
                 if not isinstance(DEFAULT_CONFIG[key], type(Config._CONFIG[key])):
+                    print(type(DEFAULT_CONFIG[key]), type(Config._CONFIG[key]))
                     raise PropertyTypeMismatch(f"Type mismatch on property '{key}'")
 
                 if key == "record_type":
@@ -203,7 +205,12 @@ class Config(object):
         return Config._CONFIG.get('debug_mode')
 
     @staticmethod
+    def user_id() -> int:
+        return Config._CONFIG.get('user_id')
+
+    @staticmethod
     def set(property, value):
+        # TODO - validation
         Config._CONFIG[property] = value
 
 

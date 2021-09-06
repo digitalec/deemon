@@ -80,11 +80,21 @@ class ShowStats:
         if len(release_list) > 0:
             logger.info(f"New releases found within last {days} day(s):")
             print("")
-            release_list.sort(key=itemgetter(4), reverse=True)
+            release_list.sort(key=lambda x: x['album_release'], reverse=True)
             for release in release_list:
-                print('+ [%-10s] %s - %s' % (release[4], release[1], release[3]))
+                print('+ [%-10s] %s - %s' % (release['album_release'], release['artist_name'], release['album_name']))
         else:
             logger.info(f"No releases found in that timeframe")
 
     def stats(self):
         pass
+
+    def user_list(self):
+        users = self.db.get_all_users()
+        for user in users:
+            for k, v in user.items():
+                k = k.replace("_", " ")
+                if not v:
+                    v = ""
+                print(k.title() + ": " + str(v))
+            print("")

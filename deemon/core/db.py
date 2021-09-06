@@ -1,4 +1,5 @@
 from deemon import __dbversion__
+from deemon.core.config import Config as config
 from deemon.utils import startup
 from packaging.version import parse as parse_version
 from datetime import datetime
@@ -220,83 +221,77 @@ class Database(object):
         self.query(sql, values)
 
     def get_all_monitored_artists(self):
-        result = self.query(f"SELECT * FROM monitor").fetchall()
+        vals = {'user_id': config.user_id()}
+        result = self.query(f"SELECT * FROM monitor WHERE user_id = :user_id", vals).fetchall()
         return sorted(result, key=lambda x: x['artist_name'])
 
     def get_monitored_artist_by_id(self, artist_id: int):
-        values = {'id': artist_id}
-        return self.query(f"SELECT * FROM monitor WHERE artist_id = :id", values).fetchone()
+        values = {'id': artist_id, 'user_id': config.user_id()}
+        return self.query(f"SELECT * FROM monitor WHERE artist_id = :id AND user_id = :user_id", values).fetchone()
 
     def get_specified_artist(self, artist):
+        values = {'artist': artist, 'user_id': config.user_id()}
         if type(artist) is int:
-            values = {'artist': artist}
-            return self.query("SELECT * FROM monitor WHERE artist_id = :artist", values).fetchone()
+            return self.query("SELECT * FROM monitor WHERE artist_id = :artist "
+                              "AND user_id = :user_id", values).fetchone()
         else:
-            values = {'artist': artist}
-            return self.query("SELECT * FROM monitor WHERE artist_name = ':artist' COLLATE NOCASE", values).fetchone()
+            return self.query("SELECT * FROM monitor WHERE artist_name = ':artist' "
+                              "AND user_id = :user_id COLLATE NOCASE", values).fetchone()
 
     def add_new_release(self, artist_id, artist_name, album_id, album_name, release_date, future_release):
         timestamp = int(time.time())
         values = {'artist_id': artist_id, 'artist_name': artist_name, 'album_id': album_id,
-                  'album_name': album_name, 'release_date': release_date, 'future': future_release}
+                  'album_name': album_name, 'release_date': release_date, 'future': future_release,
+                  'user_id': config.user_id()}
         sql = (f"INSERT INTO releases ('artist_id', 'artist_name', 'album_id', "
-               f"'album_name', 'album_release', 'album_added', 'future_release') "
+               f"'album_name', 'album_release', 'album_added', 'future_release', 'user_id') "
                f"VALUES (:artist_id, :artist_name, :album_id, :album_name, "
-               f":release_date, {timestamp}, :future)")
+               f":release_date, {timestamp}, :future, :user_id)")
         self.query(sql, values)
-
-    def is_monitored(self, artist_id):
-        result = self.query(f"SELECT artist_id, artist_name FROM monitor WHERE artist_id = {artist_id}").fetchone()
-        if result:
-            logger.info(f"Artist {result[1]} ({result[0]}) is already being monitored")
-            return True
 
     def show_new_releases(self, from_date_ts, now_ts):
         today_date = datetime.utcfromtimestamp(now_ts).strftime('%Y-%m-%d')
         from_date = datetime.utcfromtimestamp(from_date_ts).strftime('%Y-%m-%d')
-        values = {'from': from_date, 'today': today_date}
-        sql = "SELECT * FROM 'releases' WHERE album_release >= :from AND album_release <= :today"
-        return self.query(sql, values)
+        values = {'from': from_date, 'today': today_date, 'user_id': config.user_id()}
+        sql = "SELECT * FROM 'releases' WHERE album_release >= :from AND album_release <= :today AND user_id = :user_id"
+        return self.query(sql, values).fetchall()
 
     def get_artist_by_id(self, artist_id):
-        values = {'id': artist_id}
-        sql = "SELECT * FROM 'releases' WHERE artist_id = :id"
+        values = {'id': artist_id, 'user_id': config.user_id()}
+        sql = "SELECT * FROM 'releases' WHERE artist_id = :id AND user_id = :user_id"
         return self.query(sql, values).fetchone()
 
     def get_album_by_id(self, album_id):
-        values = {'id': album_id}
-        sql = "SELECT * FROM 'releases' WHERE album_id = :id"
+        values = {'id': album_id, 'user_id': config.user_id()}
+        sql = "SELECT * FROM 'releases' WHERE album_id = :id AND user_id = :user_id"
         return self.query(sql, values).fetchone()
 
     def monitor_playlist(self, playlist):
         values = {'id': playlist['id'], 'title': playlist['title'],
-                  'url': playlist['link']}
-        sql = "INSERT OR REPLACE INTO playlists ('id', 'title', 'url') VALUES (:id, :title, :url)"
+                  'url': playlist['link'], 'user_id': config.user_id()}
+        sql = "INSERT OR REPLACE INTO playlists ('id', 'title', 'url', 'user_id') VALUES (:id, :title, :url, :user_id)"
         self.query(sql, values)
         self.commit()
 
     def get_all_monitored_playlists(self):
-        return self.query("SELECT * FROM playlists")
+        vals = {'user_id': config.user_id()}
+        return self.query("SELECT * FROM playlists WHERE user_id = :user_id", vals)
 
     def get_monitored_playlists_by_id(self, playlist_id):
-        values = {'id': playlist_id}
-        return self.query("SELECT * FROM playlists WHERE id = :id", values).fetchone()
+        values = {'id': playlist_id, 'user_id': config.user_id()}
+        return self.query("SELECT * FROM playlists WHERE id = :id AND user_id = :user_id", values).fetchone()
 
     def get_playlist_by_id(self, playlist_id):
-        values = {'id': playlist_id}
-        sql = "SELECT * FROM 'playlist_tracks' WHERE playlist_id = :id"
+        values = {'id': playlist_id, 'user_id': config.user_id()}
+        sql = "SELECT * FROM 'playlist_tracks' WHERE playlist_id = :id AND user_id = :user_id"
         return self.query(sql, values).fetchone()
 
     def reset_database(self):
         self.query("DELETE FROM monitor")
         self.query("DELETE FROM releases")
-        self.commit()
-        logger.debug("All artists have been purged from database")
-
         self.query("DELETE FROM playlists")
         self.query("DELETE FROM playlist_tracks")
         self.commit()
-        logger.debug("All playlists have been purge from database")
         logger.info("Database has been reset")
 
     def last_update_check(self):
@@ -309,4 +304,30 @@ class Database(object):
 
     def get_user(self, user_name: str):
         vals = {'user': user_name}
-        return self.query("SELECT * FROM users WHERE name = :user", vals).fetchone()
+        return self.query("SELECT * FROM users WHERE name = :user COLLATE NOCASE", vals).fetchone()
+
+    def update_user(self, settings: dict):
+        self.query("UPDATE users SET name = :name, email = :email, alerts = :alerts, bitrate = :bitrate,"
+                   "record_type = :record_type, plex_baseurl = :plex_baseurl, plex_token = :plex_token,"
+                   "plex_library = :plex_library, download_path = :download_path "
+                   "WHERE user_id = :user_id", settings)
+        self.commit()
+
+    def create_user(self, settings: dict):
+        self.query("INSERT INTO users (name, email, alerts, bitrate, record_type, plex_baseurl, plex_token,"
+                   "plex_library, download_path) VALUES (:name, :email, :alerts, :bitrate, :record_type,"
+                   ":plex_baseurl, :plex_token, :plex_library, :download_path)", settings)
+        self.commit()
+
+    def delete_user(self, user_name: str):
+        user = self.get_user(user_name)
+        vals = {'user_id': user['user_id']}
+        self.query("DELETE FROM monitor WHERE user_id = :user_id", vals)
+        self.query("DELETE FROM releases WHERE user_id = :user_id", vals)
+        self.query("DELETE FROM playlists WHERE user_id = :user_id", vals)
+        self.query("DELETE FROM playlist_tracks WHERE user_id = :user_id", vals)
+        self.query("DELETE FROM users WHERE user_id = :user_id", vals)
+        self.commit()
+
+    def get_all_users(self):
+        return self.query("SELECT * FROM users").fetchall()
