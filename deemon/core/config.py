@@ -16,6 +16,8 @@ DEFAULT_CONFIG = {
     "bitrate": 3,
     "alerts": False,
     "record_type": "all",
+    "release_by_date": True,
+    "release_max_days": 90,
     "smtp_server": "",
     "smtp_port": 465,
     "smtp_user": "",

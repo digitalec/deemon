@@ -28,14 +28,21 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
 @click.group(context_settings=CONTEXT_SETTINGS)
 @click.version_option(__version__, '-V', '--version', message='deemon %(version)s')
-def run():
+@click.option('-U', '--user', help="Specify user to run deemon as")
+def run(user):
     """Monitoring and alerting tool for new music releases using the Deezer API.
 
     deemon is a free and open source tool. To report issues or to contribute,
     please visit https://github.com/digitalec/deemon
     """
     db.do_upgrade()
-
+    if user:
+        user_settings = db.get_user(user)
+        if user_settings:
+            LoadUser(user_settings)
+        else:
+            logger.error(f"User {user} does not exist.")
+            sys.exit(1)
     # import deemon.core.db as database
     # db = database.DBHelper(settings.db_path)
     # last_checked = db.last_update_check()
@@ -113,7 +120,6 @@ def download_command(artist, artist_id, album_id, url, file, search_cmd, bitrate
 @click.option('-u', '--url', multiple=True, metavar="URL", help='Monitor artist by URL')
 @click.option('-p', '--playlist', multiple=True, metavar="URL", help='Monitor Deezer playlist by URL')
 @click.option('-s', '--search', 'search_flag', is_flag=True, help='Show similar artist results to choose from')
-@click.option('-U', '--user', help="Specify user to monitor as")
 @click.option('-b', '--bitrate', default=config.bitrate(), help="Specify bitrate")
 @click.option('-t', '--record-type', type=click.Choice(['all', 'album', 'ep', 'single'], case_sensitive=False),
               default=config.record_type(), help='Specify record types to download')
@@ -122,7 +128,7 @@ def download_command(artist, artist_id, album_id, url, file, search_cmd, bitrate
 @click.option('-D', '--download', 'dl', is_flag=True, help='Download all releases matching record type')
 @click.option('-o', '--download-path', type=str, metavar="PATH", help='Specify custom download directory')
 @click.option('-R', '--remove', is_flag=True, help='Stop monitoring an artist')
-def monitor_command(artist, im, playlist, no_refresh, user, bitrate, record_type, alerts,
+def monitor_command(artist, im, playlist, no_refresh, bitrate, record_type, alerts,
                     artist_id, remove, url, dl, download_path, search_flag):
     """
     Monitor artist for new releases by ID, URL or name.
@@ -133,12 +139,6 @@ def monitor_command(artist, im, playlist, no_refresh, user, bitrate, record_type
         monitor --artist-id 100
         monitor --url https://www.deezer.com/us/artist/000
     """
-    if user:
-        user_settings = db.get_user(user)
-        if user_settings:
-            LoadUser(user_settings)
-        else:
-            return logger.error(f"User {user} does not exist.")
 
     artist_id = list(artist_id)
     url = list(url)
@@ -226,10 +226,9 @@ def monitor_command(artist, im, playlist, no_refresh, user, bitrate, record_type
 
 
 @run.command(name='refresh')
-@click.option('-U', '--user', help="Specify user to refresh as")
 @click.option('-s', '--skip-download', is_flag=True, help="Skips downloading of new releases")
 @click.option('-t', '--time-machine', metavar='DATE', type=str, help='Refresh as if it were this date (YYYY-MM-DD)')
-def refresh_command(skip_download, time_machine, user):
+def refresh_command(skip_download, time_machine):
     """Check artists for new releases"""
     Refresh(skip_download=skip_download, time_machine=time_machine)
 
@@ -244,11 +243,26 @@ def show_command(artists, artist_ids, playlists, csv, extended):
     """
     Show monitored artists and latest releases
     """
+
+@show_command.command(name="artists")
+@click.option('-c', '--csv', is_flag=True, help='Used with -a, -i; output artists as CSV')
+@click.option('-e', '--extended', is_flag=True, help='Show extended artist data')
+def show_artists(csv, extended):
     show = ShowStats()
-    if artists or artist_ids:
-        show.artists(csv, artist_ids, extended)
-    elif playlists:
-        show.playlists(csv)
+    show.artists(csv=csv, artist_ids=False, extended=extended)
+
+@show_command.command(name="ids")
+@click.option('-c', '--csv', is_flag=True, help='Used with -a, -i; output artists as CSV')
+@click.option('-e', '--extended', is_flag=True, help='Show extended artist data')
+def show_ids(csv, extended):
+    show = ShowStats()
+    show.artists(csv=csv, artist_ids=True, extended=extended)
+
+@show_command.command(name="playlists")
+@click.option('-c', '--csv', is_flag=True, help='Used with -a, -i; output artists as CSV')
+def show_playlists(csv, extended):
+    show = ShowStats()
+    show.playlists(csv)
 
 
 @show_command.command(name="releases")
@@ -259,14 +273,6 @@ def show_releases(n):
     """
     show = ShowStats()
     show.releases(n)
-
-@show_command.command(name="users")
-def show_users():
-    """
-    Show list of users and their settings
-    """
-    show = ShowStats()
-    show.user_list()
 
 
 run.add_command(show_command)
@@ -379,6 +385,13 @@ def edit(user):
     """Modify existing users"""
     uc = UserConfig(user)
     uc.edit()
+
+@config_users.command(name='show')
+@click.argument('user', required=False)
+def show(user=None):
+    """Show settings for user(s)"""
+    uc = UserConfig(user)
+    uc.show()
 
 @config_users.command(name="delete")
 @click.argument('user')

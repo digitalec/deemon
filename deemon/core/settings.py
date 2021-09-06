@@ -42,10 +42,11 @@ class UserConfig:
                     try:
                         i = int(i)
                     except ValueError:
+                        print(" - Allowed options: " + ', '.join(str(x) for x in m['allowed']))
                         continue
                 if len(m['allowed']) > 0:
                     if i not in m['allowed']:
-                        print(" - Allowed options: " + ', '.join(m['allowed']))
+                        print(" - Allowed options: " + ', '.join(str(x) for x in m['allowed']))
                         continue
                 new_user[m['setting']] = i
                 break
@@ -85,10 +86,11 @@ class UserConfig:
                     try:
                         i = int(i)
                     except ValueError:
+                        print(" - Allowed options: " + ', '.join(str(x) for x in m['allowed']))
                         continue
                 if len(m['allowed']) > 0:
                     if i not in m['allowed']:
-                        print(" - Allowed options: " + ', '.join(m['allowed']))
+                        print(" - Allowed options: " + ', '.join(str(x) for x in m['allowed']))
                         continue
                 if m['setting'] == "name" and self.user != i:
                     if self.db.get_user(i):
@@ -123,6 +125,22 @@ class UserConfig:
         else:
             return logger.info("Username did not match, cancelled.")
 
+    def show(self):
+        if not self.user:
+            user = self.db.get_all_users()
+        else:
+            user = [self.db.get_user(self.user)]
+            if len(user) == 0:
+                return logger.error(f"User {self.user} not found")
+
+        print("{:<10} {:<40} {:<8} {:<8} {:<8} {:<25} "
+              "{:<20} {:<20} {:<20}".format('Name', 'Email', 'Alerts', 'Bitrate', 'Type',
+                                            'Plex Base URL', 'Plex Token', 'Plex Library', 'Download Path'))
+        for u in user:
+            id, name, email, active, alerts, bitrate, rtype, \
+            url, token, lib, dl_path = [x if x is not None else '' for x in u.values()]
+            print("{:<10} {:<40} {:<8} {:<8} {:<8} {:<25} "
+                  "{:<20} {:<20} {:<20}".format(name, email, alerts, bitrate, rtype, url, token, lib, dl_path))
 
 
 class AppConfig:
@@ -132,10 +150,9 @@ class AppConfig:
 
 class LoadUser(object):
     def __init__(self, profile: dict):
-        logger.debug("Loading user settings for ID " + str(profile['user_id']))
+        logger.debug("Loading user config for ID " + str(profile['user_id']))
         for key, value in profile.items():
             if value is None:
-                logger.debug("Skipping 'None' value on key " + str(key))
                 continue
             if config.get_config().get(key):
                 config.set(key, value)

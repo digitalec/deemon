@@ -88,13 +88,3 @@ class ShowStats:
 
     def stats(self):
         pass
-
-    def user_list(self):
-        users = self.db.get_all_users()
-        for user in users:
-            for k, v in user.items():
-                k = k.replace("_", " ")
-                if not v:
-                    v = ""
-                print(k.title() + ": " + str(v))
-            print("")
