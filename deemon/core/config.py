@@ -72,7 +72,7 @@ class Config(object):
         for key in DEFAULT_CONFIG:
             if key not in Config._CONFIG or Config._CONFIG[key] == "":
                 if not DEFAULT_CONFIG[key] == "":
-                    logger.error(f"Key '{key}' not set, using default value: {DEFAULT_CONFIG[key]}")
+                    logger.debug(f"Key '{key}' not set, using default value: {DEFAULT_CONFIG[key]}")
                     Config._CONFIG[key] = DEFAULT_CONFIG[key]
                     modified += 1
             else:
