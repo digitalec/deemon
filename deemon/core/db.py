@@ -103,22 +103,23 @@ class Database(object):
                    "'value' TEXT)")
 
         self.query("CREATE TABLE 'users' ("
-                   "'id' INTEGER,"
+                   "'user_id' INTEGER,"
                    "'name' TEXT,"
                    "'email' TEXT,"
                    "'active' INTEGER,"
                    "'alerts' INTEGER,"
                    "'bitrate' INTEGER,"
                    "'record_type' TEXT,"
-                   "'plex_url' TEXT,"
+                   "'plex_baseurl' TEXT,"
                    "'plex_token' TEXT,"
                    "'plex_library' TEXT,"
-                   "PRIMARY KEY('id' AUTOINCREMENT))")
+                   "'download_path' TEXT,"
+                   "PRIMARY KEY('user_id' AUTOINCREMENT))")
 
         self.query("CREATE UNIQUE INDEX 'idx_property' ON 'deemon' ('property')")
         self.query(f"INSERT INTO 'deemon' ('property', 'value') VALUES ('version', '{__dbversion__}')")
         self.query(f"INSERT INTO 'deemon' ('property', 'value') VALUES ('last_update_check', 0)")
-        self.query(f"INSERT INTO 'users' ('name') VALUES ('default')")
+        self.query(f"INSERT INTO 'users' ('name', 'active') VALUES ('default', 1)")
         self.commit()
 
     def get_db_version(self):
@@ -175,18 +176,19 @@ class Database(object):
         # Upgrade database to v3
         if current_ver < parse_version("3.0"):
             self.query("CREATE TABLE 'users' ("
-                       "'id' INTEGER,"
+                       "'user_id' INTEGER,"
                        "'name' TEXT,"
                        "'email' TEXT,"
                        "'active' INTEGER,"
                        "'alerts' INTEGER,"
                        "'bitrate' INTEGER,"
                        "'record_type' TEXT,"
-                       "'plex_url' TEXT,"
+                       "'plex_baseurl' TEXT,"
                        "'plex_token' TEXT,"
                        "'plex_library' TEXT,"
-                       "PRIMARY KEY('id' AUTOINCREMENT))")
-            self.query("INSERT INTO 'users' ('name') VALUES ('default')")
+                       "'download_path' TEXT,"
+                       "PRIMARY KEY('user_id' AUTOINCREMENT))")
+            self.query("INSERT INTO 'users' ('name', 'active') VALUES ('default', 1)")
             self.query("ALTER TABLE monitor ADD COLUMN user_id INTEGER DEFAULT 1")
             self.query("ALTER TABLE releases ADD COLUMN user_id INTEGER DEFAULT 1")
             self.query("ALTER TABLE playlists ADD COLUMN user_id INTEGER DEFAULT 1")
@@ -304,3 +306,7 @@ class Database(object):
         now = int(time.time())
         self.query(f"UPDATE deemon SET value = {now} WHERE property = 'last_update_check'")
         self.commit()
+
+    def get_user(self, user_name: str):
+        vals = {'user': user_name}
+        return self.query("SELECT * FROM users WHERE name = :user", vals).fetchone()
