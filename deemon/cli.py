@@ -112,6 +112,7 @@ def download_command(artist, artist_id, album_id, url, file, search_cmd, bitrate
 @click.option('-u', '--url', multiple=True, metavar="URL", help='Monitor artist by URL')
 @click.option('-p', '--playlist', multiple=True, metavar="URL", help='Monitor Deezer playlist by URL')
 @click.option('-s', '--search', 'search_flag', is_flag=True, help='Show similar artist results to choose from')
+@click.option('-U', '--user', help="Specify user to monitor as")
 @click.option('-b', '--bitrate', default=config.bitrate(), help="Specify bitrate")
 @click.option('-t', '--record-type', type=click.Choice(['all', 'album', 'ep', 'single'], case_sensitive=False),
               default=config.record_type(), help='Specify record types to download')
@@ -121,7 +122,7 @@ def download_command(artist, artist_id, album_id, url, file, search_cmd, bitrate
 @click.option('-o', '--download-path', type=str, metavar="PATH", help='Specify custom download directory')
 @click.option('-R', '--remove', is_flag=True, help='Stop monitoring an artist')
 @click.option('--reset', is_flag=True, help='Remove all artists/playlists from monitoring')
-def monitor_command(artist, im, playlist, no_refresh, bitrate, record_type, alerts,
+def monitor_command(artist, im, playlist, no_refresh, user, bitrate, record_type, alerts,
                     artist_id, remove, url, reset, dl, download_path, search_flag):
     """
     Monitor artist for new releases by ID, URL or name.
@@ -132,6 +133,13 @@ def monitor_command(artist, im, playlist, no_refresh, bitrate, record_type, aler
         monitor --artist-id 100
         monitor --url https://www.deezer.com/us/artist/000
     """
+    if user:
+        user_exists = db.get_user(user)
+        if not user_exists:
+            print(user_exists)
+            return logger.error(f"User {user} does not exist.")
+        else:
+            return logger.info(user_exists)
     if reset:
         logger.warning("** ALL ARTISTS AND PLAYLISTS WILL BE REMOVED! **")
         confirm = input("Type 'reset' to confirm: ")
@@ -227,9 +235,10 @@ def monitor_command(artist, im, playlist, no_refresh, bitrate, record_type, aler
 
 
 @run.command(name='refresh')
+@click.option('-U', '--user', help="Specify user to refresh as")
 @click.option('-s', '--skip-download', is_flag=True, help="Skips downloading of new releases")
 @click.option('-t', '--time-machine', metavar='DATE', type=str, help='Refresh as if it were this date (YYYY-MM-DD)')
-def refresh_command(skip_download, time_machine):
+def refresh_command(skip_download, time_machine, user):
     """Check artists for new releases"""
     Refresh(skip_download=skip_download, time_machine=time_machine)
 
@@ -242,9 +251,10 @@ def refresh_command(skip_download, time_machine):
 @click.option('-e', '--extended', is_flag=True, help='Show extended artist data')
 @click.option('-n', '--new-releases', metavar='N', type=int, help='Show new releases from last N days')
 # TODO Implement subcommands for 'stats', 'new-releases', etc.
+@click.option('-U', '--user', help="Specify user to show from")
 @click.option('-s', '--stats', is_flag=True, help='Show various usage statistics')
 @click.option('-r', '--reset', is_flag=True, help='Reset usage stats')
-def show_command(artists, artist_ids, playlists, new_releases, csv, extended, stats, reset):
+def show_command(artists, artist_ids, playlists, new_releases, csv, extended, user, stats, reset):
     """
     Show monitored artists, latest new releases and various statistics
     """
