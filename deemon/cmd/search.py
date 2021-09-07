@@ -60,6 +60,10 @@ class Search:
                 continue
             self.artist_menu(search_query, artist_search_result)
 
+    def queue_menu_options(self):
+        ui_options = ("(d) Download Queue  (c) Clear Queue  (b) Back")
+        self.display_options(options=ui_options)
+
     def artist_menu(self, query, results):
         exit_artist: bool = False
         while exit_artist is False:
@@ -123,10 +127,6 @@ class Search:
         if self.status_message:
             print("** " + self.status_message + " **")
             self.status_message = ""
-
-    def queue_menu_options(self):
-        ui_options = ("(d) Download Queue  (c) Clear Queue  (b) Back")
-        self.display_options(options=ui_options)
 
     def album_menu(self, artist: dict):
         exit_album_menu: bool = False
@@ -193,7 +193,7 @@ class Search:
                     sys.exit()
             else:
                 try:
-                    selected_index = (int(prompt) -1)
+                    selected_index = (int(prompt) - 1)
                 except ValueError:
                     self.status_message = "Invalid filter, sort or option provided"
                     continue
@@ -270,6 +270,7 @@ class Search:
         dl = download.Download()
         dl.queue_list = self.queue_list
         dl.download_queue()
+        self.queue_list.clear()
 
     def send_to_queue(self, item):
         if item.get('title'):
