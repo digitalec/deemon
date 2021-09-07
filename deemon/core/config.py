@@ -14,7 +14,7 @@ DEFAULT_CONFIG = {
     "deemix_path": "",
     "arl": "",
     "bitrate": 3,
-    "alerts": False,
+    "alerts": 0,
     "record_type": "all",
     "release_by_date": True,
     "release_max_days": 90,
@@ -49,7 +49,7 @@ class Config(object):
             self.__write_modified_config()
 
         # Set as default user for init
-        self.set('user_id', 1)
+        self.set('user_id', 1, False)
 
     @staticmethod
     def __create_default_config():
@@ -91,16 +91,7 @@ class Config(object):
                         Config._CONFIG[key] = False
                     modified += 1
 
-                if key == "bitrate" and isinstance(Config._CONFIG[key], str):
-                    if Config._CONFIG[key] == "128":
-                        Config._CONFIG[key] = 1
-                    elif Config._CONFIG[key] == "320":
-                        Config._CONFIG[key] = 3
-                    elif Config._CONFIG[key].upper() == "FLAC":
-                        Config._CONFIG[key] = 9
-                    modified += 1
-
-                if not isinstance(DEFAULT_CONFIG[key], type(Config._CONFIG[key])):
+                if not isinstance(DEFAULT_CONFIG[key], type(Config._CONFIG[key])) and key != "bitrate":
                     print(type(DEFAULT_CONFIG[key]), type(Config._CONFIG[key]))
                     raise PropertyTypeMismatch(f"Type mismatch on property '{key}'")
 
@@ -109,8 +100,19 @@ class Config(object):
                         raise UnknownValue(f"Invalid value specified for record_type; "
                                            f"expected 'all', 'album', 'ep' or 'single'")
 
-                if Config._CONFIG['bitrate'] not in [1, 3, 9]:
-                    raise UnknownValue(f"Unknown value specified for bitrate: {Config._CONFIG['bitrate']}")
+                if key == "bitrate":
+                    if isinstance(Config._CONFIG[key], str):
+                        if Config._CONFIG[key] in ["128", "1"]:
+                            Config._CONFIG[key] = 1
+                        elif Config._CONFIG[key] in ["320", "3"]:
+                            Config._CONFIG[key] = 3
+                        elif Config._CONFIG[key] in ["flac", "Flac", "FLAC", "9"]:
+                            Config._CONFIG[key] = 9
+                        else:
+                            raise PropertyTypeMismatch("Unknown string value provided for bitrate")
+                        modified += 1
+                    if Config._CONFIG['bitrate'] not in [1, 3, 9]:
+                        raise UnknownValue(f"Unknown value specified for bitrate: {Config._CONFIG['bitrate']}")
 
                 if key == "alerts":
                     if Config._CONFIG['alerts'] not in [0, 1]:
@@ -196,10 +198,10 @@ class Config(object):
 
     @staticmethod
     def smtp_recipient() -> list:
-        return Config._CONFIG.get('smtp_recipient')
+        return Config._CONFIG.get('email')
 
     @staticmethod
-    def update_freq() -> int:
+    def check_update() -> int:
         return Config._CONFIG.get('check_update')
 
     @staticmethod
@@ -211,8 +213,15 @@ class Config(object):
         return Config._CONFIG.get('user_id')
 
     @staticmethod
-    def set(property, value):
-        # TODO - validation
+    def update_available() -> int:
+        return Config._CONFIG.get('update_available')
+
+    @staticmethod
+    def set(property, value, validate=True):
+        if validate:
+            if not isinstance(value, type(DEFAULT_CONFIG[property])):
+                raise PropertyTypeMismatch(f"Type mismatch while setting {property} "
+                                           f"to {value} (type: {type(value).__name__})")
         Config._CONFIG[property] = value
 
 
