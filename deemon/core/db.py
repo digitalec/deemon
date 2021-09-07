@@ -231,8 +231,25 @@ class Database(object):
         # return sorted(result, key=lambda x: x['artist_name'])
 
     def get_monitored_artist_by_id(self, artist_id: int):
-        values = {'id': artist_id, 'user_id': config.user_id()}
-        return self.query(f"SELECT * FROM monitor WHERE artist_id = :id AND user_id = :user_id", values).fetchone()
+        values = {'id': artist_id, 'profile_id': config.profile_id()}
+        return self.query(f"SELECT * FROM monitor WHERE artist_id = :id AND profile_id = :profile_id", values).fetchone()
+
+    def get_monitored_artist_by_name(self, name: str):
+        values = {'name': name, 'profile_id': config.profile_id()}
+        return self.query(f"SELECT * FROM monitor WHERE artist_name = 'lifehouse' COLLATE NOCASE "
+                          f"AND profile_id = :profile_id", values).fetchone()
+
+    def remove_monitored_artist(self, id: int = None, name: str = None):
+        values = {'id': id, 'name': name, 'profile_id': config.profile_id()}
+        self.query("DELETE FROM monitor WHERE artist_id = :id AND profile_id = :profile_id", values)
+        self.query("DELETE FROM releases WHERE artist_id = :id AND profile_id = :profile_id", values)
+        self.commit()
+
+    def remove_monitored_playlists(self, id: int = None, title: str = None):
+        values = {'id': id, 'title': title, 'profile_id': config.profile_id()}
+        self.query("DELETE FROM playlists WHERE id = :id AND profile_id = :profile_id", values)
+        self.query("DELETE FROM playlist_tracks WHERE playlist_id = :id AND profile_id = :profile_id", values)
+        self.commit()
 
     def get_specified_artist(self, artist):
         values = {'artist': artist, 'profile_id': config.profile_id()}
