@@ -3,7 +3,6 @@ from sqlite3 import OperationalError
 from pathlib import Path
 from deemon.core.db import Database
 from deemon.core.config import Config as config
-from deemon.utils import menu
 import logging
 import deezer
 
@@ -41,11 +40,11 @@ def monitor(profile, value, bitrate, r_type, alerts, remove=False, dl_obj=None, 
         if len(matches) == 1:
             return matches[0]
         elif len(matches) > 1 and search:
-            m = menu.Menu("Multiple exact matches found: ", matches)
+            m = search.Menu("Multiple exact matches found: ", matches)
             ask_user = m.gen_artist_menu()
             return ask_user[0]
         elif search:
-            m = menu.Menu("Showing closest results, please choose:", api_result)
+            m = search.Menu("Showing closest results, please choose:", api_result)
             ask_user = m.gen_artist_menu()
             if ask_user:
                 return ask_user[0]
