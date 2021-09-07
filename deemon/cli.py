@@ -55,6 +55,24 @@ def run(user):
     #         logger.info("* To upgrade, run `pip install --upgrade deemon`")
     #         print("*" * 50)
     #     db.set_last_update()
+    last_checked: int = int(db.last_update_check())
+
+    check_interval: int = int(time.time()) - 3600
+
+    if last_checked < check_interval:
+        config.set('update_available', 0, False)
+        latest_ver = startup.get_latest_version()
+        if latest_ver:
+            db.query(f"INSERT OR REPLACE INTO deemon (property, value) VALUES ('latest_ver', {latest_ver})")
+        db.set_last_update_check()
+
+    new_version = db.get_latest_ver()
+    if parse_version(new_version) > parse_version(__version__):
+        config.set('update_available', 1, False)
+        print("*" * 50)
+        logger.info(f"* New version is available: v{__version__} -> v{new_version}")
+        logger.info("* To upgrade, run `pip install --upgrade deemon`")
+        print("*" * 50)
 
 
 @run.command(name='test')
