@@ -119,9 +119,13 @@ class Database(object):
 
         self.query("CREATE UNIQUE INDEX 'idx_property' ON 'deemon' ('property')")
         self.query(f"INSERT INTO 'deemon' ('property', 'value') VALUES ('version', '{__dbversion__}')")
-        self.query(f"INSERT INTO 'deemon' ('property', 'value') VALUES ('last_update_check', 0)")
-        self.query(f"INSERT INTO 'users' ('name', 'active') VALUES ('default', 1)")
+        self.query("INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('latest_ver', '')")
+        self.query("INSERT INTO 'deemon' ('property', 'value') VALUES ('last_update_check', 0)")
+        self.query("INSERT INTO 'users' ('name', 'active') VALUES ('default', 1)")
         self.commit()
+
+    def get_latest_ver(self):
+        return self.query("SELECT value FROM deemon WHERE property = 'latest_ver'").fetchone()['value']
 
     def get_db_version(self):
         try:
@@ -205,6 +209,7 @@ class Database(object):
             self.query("INSERT INTO monitor_tmp SELECT * FROM monitor")
             self.query("DROP TABLE monitor")
             self.query("ALTER TABLE monitor_tmp RENAME TO monitor")
+            self.query("INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('latest_ver', '')")
             self.query("INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('version', '3.0')")
             self.commit()
             logger.debug(f"Database upgraded to version 3.0")
@@ -297,7 +302,7 @@ class Database(object):
     def last_update_check(self):
         return self.query("SELECT value FROM 'deemon' WHERE property = 'last_update_check'").fetchone()['value']
 
-    def set_last_update(self):
+    def set_last_update_check(self):
         now = int(time.time())
         self.query(f"UPDATE deemon SET value = {now} WHERE property = 'last_update_check'")
         self.commit()
@@ -305,6 +310,10 @@ class Database(object):
     def get_user(self, user_name: str):
         vals = {'user': user_name}
         return self.query("SELECT * FROM users WHERE name = :user COLLATE NOCASE", vals).fetchone()
+
+    def get_user_by_id(self, user_id: int):
+        vals = {'user_id': user_id}
+        return self.query("SELECT * FROM users WHERE user_id = :user_id", vals).fetchone()
 
     def update_user(self, settings: dict):
         self.query("UPDATE users SET name = :name, email = :email, alerts = :alerts, bitrate = :bitrate,"
