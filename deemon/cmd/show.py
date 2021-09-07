@@ -84,7 +84,7 @@ class ShowStats:
             for release in release_list:
                 print('+ [%-10s] %s - %s' % (release['album_release'], release['artist_name'], release['album_name']))
         else:
-            logger.info(f"No releases found in that timeframe")
+            logger.info(f"No releases found in the last {days} day(s)")
 
     def stats(self):
         pass
