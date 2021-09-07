@@ -67,7 +67,7 @@ class Database(object):
                    "'bitrate' INTEGER,"
                    "'record_type' TEXT,"
                    "'alerts' INTEGER,"
-                   "'user_id' INTEGER DEFAULT 1,"
+                   "'profile_id' INTEGER DEFAULT 1,"
                    "'download_path' TEXT)")
 
         self.query("CREATE TABLE playlists ("
@@ -76,7 +76,7 @@ class Database(object):
                    "'url' TEXT,"
                    "'bitrate' INTEGER,"
                    "'alerts' INTEGER,"
-                   "'user_id' INTEGER DEFAULT 1,"
+                   "'profile_id' INTEGER DEFAULT 1,"
                    "'download_path' TEXT)")
 
         self.query("CREATE TABLE playlist_tracks ("
@@ -85,7 +85,7 @@ class Database(object):
                    "'artist_id' INTEGER,"
                    "'artist_name' TEXT,"
                    "'track_name' TEXT,"
-                   "'user_id' INTEGER DEFAULT 1,"
+                   "'profile_id' INTEGER DEFAULT 1,"
                    "'track_added' TEXT)")
 
         self.query("CREATE TABLE releases ("
@@ -96,15 +96,15 @@ class Database(object):
                    "'album_release' TEXT,"
                    "'album_added' INTEGER,"
                    "'explicit' INTEGER,"
-                   "'user_id' INTEGER DEFAULT 1,"
+                   "'profile_id' INTEGER DEFAULT 1,"
                    "'future_release' INTEGER DEFAULT 0)")
 
         self.query("CREATE TABLE 'deemon' ("
                    "'property' TEXT,"
                    "'value' TEXT)")
 
-        self.query("CREATE TABLE 'users' ("
-                   "'user_id' INTEGER,"
+        self.query("CREATE TABLE 'profiles' ("
+                   "'id' INTEGER,"
                    "'name' TEXT,"
                    "'email' TEXT,"
                    "'active' INTEGER,"
@@ -115,13 +115,13 @@ class Database(object):
                    "'plex_token' TEXT,"
                    "'plex_library' TEXT,"
                    "'download_path' TEXT,"
-                   "PRIMARY KEY('user_id' AUTOINCREMENT))")
+                   "PRIMARY KEY('id' AUTOINCREMENT))")
 
         self.query("CREATE UNIQUE INDEX 'idx_property' ON 'deemon' ('property')")
         self.query(f"INSERT INTO 'deemon' ('property', 'value') VALUES ('version', '{__dbversion__}')")
         self.query("INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('latest_ver', '')")
         self.query("INSERT INTO 'deemon' ('property', 'value') VALUES ('last_update_check', 0)")
-        self.query("INSERT INTO 'users' ('name', 'active') VALUES ('default', 1)")
+        self.query("INSERT INTO 'profiles' ('name', 'active') VALUES ('default', 1)")
         self.commit()
 
     def get_latest_ver(self):
@@ -180,8 +180,8 @@ class Database(object):
 
         # Upgrade database to v3
         if current_ver < parse_version("3.0"):
-            self.query("CREATE TABLE 'users' ("
-                       "'user_id' INTEGER,"
+            self.query("CREATE TABLE 'profiles' ("
+                       "'id' INTEGER,"
                        "'name' TEXT,"
                        "'email' TEXT,"
                        "'active' INTEGER,"
@@ -192,12 +192,12 @@ class Database(object):
                        "'plex_token' TEXT,"
                        "'plex_library' TEXT,"
                        "'download_path' TEXT,"
-                       "PRIMARY KEY('user_id' AUTOINCREMENT))")
-            self.query("INSERT INTO 'users' ('name', 'active') VALUES ('default', 1)")
-            self.query("ALTER TABLE monitor ADD COLUMN user_id INTEGER DEFAULT 1")
-            self.query("ALTER TABLE releases ADD COLUMN user_id INTEGER DEFAULT 1")
-            self.query("ALTER TABLE playlists ADD COLUMN user_id INTEGER DEFAULT 1")
-            self.query("ALTER TABLE playlist_tracks ADD COLUMN user_id INTEGER DEFAULT 1")
+                       "PRIMARY KEY('id' AUTOINCREMENT))")
+            self.query("INSERT INTO 'profiles' ('name', 'active') VALUES ('default', 1)")
+            self.query("ALTER TABLE monitor ADD COLUMN profile_id INTEGER DEFAULT 1")
+            self.query("ALTER TABLE releases ADD COLUMN profile_id INTEGER DEFAULT 1")
+            self.query("ALTER TABLE playlists ADD COLUMN profile_id INTEGER DEFAULT 1")
+            self.query("ALTER TABLE playlist_tracks ADD COLUMN profile_id INTEGER DEFAULT 1")
             self.query("CREATE TABLE monitor_tmp ("
                        "'artist_id' INTEGER,"
                        "'artist_name' TEXT,"
@@ -205,7 +205,7 @@ class Database(object):
                        "'record_type' TEXT,"
                        "'alerts' INTEGER,"
                        "'download_path' TEXT,"
-                       "'user_id' INTEGER DEFAULT 1)")
+                       "'profile_id' INTEGER DEFAULT 1)")
             self.query("INSERT INTO monitor_tmp SELECT * FROM monitor")
             self.query("DROP TABLE monitor")
             self.query("ALTER TABLE monitor_tmp RENAME TO monitor")
@@ -226,70 +226,70 @@ class Database(object):
         self.query(sql, values)
 
     def get_all_monitored_artists(self):
-        vals = {'user_id': config.user_id()}
-        result = self.query(f"SELECT * FROM monitor WHERE user_id = :user_id", vals).fetchall()
-        return sorted(result, key=lambda x: x['artist_name'])
+        vals = {'profile_id': config.profile_id()}
+        return self.query(f"SELECT * FROM monitor WHERE profile_id = :profile_id ORDER BY artist_name", vals).fetchall()
+        # return sorted(result, key=lambda x: x['artist_name'])
 
     def get_monitored_artist_by_id(self, artist_id: int):
         values = {'id': artist_id, 'user_id': config.user_id()}
         return self.query(f"SELECT * FROM monitor WHERE artist_id = :id AND user_id = :user_id", values).fetchone()
 
     def get_specified_artist(self, artist):
-        values = {'artist': artist, 'user_id': config.user_id()}
+        values = {'artist': artist, 'profile_id': config.profile_id()}
         if type(artist) is int:
             return self.query("SELECT * FROM monitor WHERE artist_id = :artist "
-                              "AND user_id = :user_id", values).fetchone()
+                              "AND profile_id = :profile_id", values).fetchone()
         else:
             return self.query("SELECT * FROM monitor WHERE artist_name = ':artist' "
-                              "AND user_id = :user_id COLLATE NOCASE", values).fetchone()
+                              "AND profile_id = :profile_id COLLATE NOCASE", values).fetchone()
 
     def add_new_release(self, artist_id, artist_name, album_id, album_name, release_date, future_release):
         timestamp = int(time.time())
         values = {'artist_id': artist_id, 'artist_name': artist_name, 'album_id': album_id,
                   'album_name': album_name, 'release_date': release_date, 'future': future_release,
-                  'user_id': config.user_id()}
+                  'profile_id': config.profile_id()}
         sql = (f"INSERT INTO releases ('artist_id', 'artist_name', 'album_id', "
-               f"'album_name', 'album_release', 'album_added', 'future_release', 'user_id') "
+               f"'album_name', 'album_release', 'album_added', 'future_release', 'profile_id') "
                f"VALUES (:artist_id, :artist_name, :album_id, :album_name, "
-               f":release_date, {timestamp}, :future, :user_id)")
+               f":release_date, {timestamp}, :future, :profile_id)")
         self.query(sql, values)
 
     def show_new_releases(self, from_date_ts, now_ts):
         today_date = datetime.utcfromtimestamp(now_ts).strftime('%Y-%m-%d')
         from_date = datetime.utcfromtimestamp(from_date_ts).strftime('%Y-%m-%d')
-        values = {'from': from_date, 'today': today_date, 'user_id': config.user_id()}
-        sql = "SELECT * FROM 'releases' WHERE album_release >= :from AND album_release <= :today AND user_id = :user_id"
+        values = {'from': from_date, 'today': today_date, 'profile_id': config.profile_id()}
+        sql = "SELECT * FROM 'releases' WHERE album_release >= :from AND album_release <= :today AND profile_id = :profile_id"
         return self.query(sql, values).fetchall()
 
     def get_artist_by_id(self, artist_id):
-        values = {'id': artist_id, 'user_id': config.user_id()}
-        sql = "SELECT * FROM 'releases' WHERE artist_id = :id AND user_id = :user_id"
+        values = {'id': artist_id, 'profile_id': config.profile_id()}
+        sql = "SELECT * FROM 'releases' WHERE artist_id = :id AND profile_id = :profile_id"
         return self.query(sql, values).fetchone()
 
     def get_album_by_id(self, album_id):
-        values = {'id': album_id, 'user_id': config.user_id()}
-        sql = "SELECT * FROM 'releases' WHERE album_id = :id AND user_id = :user_id"
+        values = {'id': album_id, 'profile_id': config.profile_id()}
+        sql = "SELECT * FROM 'releases' WHERE album_id = :id AND profile_id = :profile_id"
         return self.query(sql, values).fetchone()
 
     def monitor_playlist(self, playlist):
         values = {'id': playlist['id'], 'title': playlist['title'],
-                  'url': playlist['link'], 'user_id': config.user_id()}
-        sql = "INSERT OR REPLACE INTO playlists ('id', 'title', 'url', 'user_id') VALUES (:id, :title, :url, :user_id)"
+                  'url': playlist['link'], 'profile_id': config.profile_id()}
+        sql = "INSERT OR REPLACE INTO playlists ('id', 'title', 'url', 'profile_id') VALUES (:id, :title, :url, :profile_id)"
         self.query(sql, values)
         self.commit()
 
     def get_all_monitored_playlists(self):
-        vals = {'user_id': config.user_id()}
-        return self.query("SELECT * FROM playlists WHERE user_id = :user_id", vals)
+        vals = {'profile_id': config.profile_id()}
+        return self.query("SELECT * FROM playlists WHERE profile_id = :profile_id", vals)
 
-    def get_monitored_playlists_by_id(self, playlist_id):
-        values = {'id': playlist_id, 'user_id': config.user_id()}
-        return self.query("SELECT * FROM playlists WHERE id = :id AND user_id = :user_id", values).fetchone()
+    def get_monitored_playlist_by_id(self, playlist_id):
+        values = {'id': playlist_id, 'profile_id': config.profile_id()}
+        return self.query("SELECT * FROM playlists WHERE id = :id AND profile_id = :profile_id", values).fetchone()
 
-    def get_playlist_by_id(self, playlist_id):
-        values = {'id': playlist_id, 'user_id': config.user_id()}
-        sql = "SELECT * FROM 'playlist_tracks' WHERE playlist_id = :id AND user_id = :user_id"
-        return self.query(sql, values).fetchone()
+    def get_monitored_playlist_by_name(self, title):
+        values = {'title': title, 'profile_id': config.profile_id()}
+        return self.query("SELECT * FROM playlists WHERE title = :title COLLATE NOCASE "
+                          "AND profile_id = :profile_id", values).fetchone()
 
     def reset_database(self):
         self.query("DELETE FROM monitor")
@@ -307,36 +307,36 @@ class Database(object):
         self.query(f"UPDATE deemon SET value = {now} WHERE property = 'last_update_check'")
         self.commit()
 
-    def get_user(self, user_name: str):
-        vals = {'user': user_name}
-        return self.query("SELECT * FROM users WHERE name = :user COLLATE NOCASE", vals).fetchone()
+    def get_profile(self, profile_name: str):
+        vals = {'profile': profile_name}
+        return self.query("SELECT * FROM profiles WHERE name = :profile_name COLLATE NOCASE", vals).fetchone()
 
-    def get_user_by_id(self, user_id: int):
-        vals = {'user_id': user_id}
-        return self.query("SELECT * FROM users WHERE user_id = :user_id", vals).fetchone()
+    def get_profile_by_id(self, profile_id: int):
+        vals = {'profile_id': profile_id}
+        return self.query("SELECT * FROM profiles WHERE id = :profile_id", vals).fetchone()
 
-    def update_user(self, settings: dict):
-        self.query("UPDATE users SET name = :name, email = :email, alerts = :alerts, bitrate = :bitrate,"
+    def update_profile(self, settings: dict):
+        self.query("UPDATE profiles SET name = :name, email = :email, alerts = :alerts, bitrate = :bitrate,"
                    "record_type = :record_type, plex_baseurl = :plex_baseurl, plex_token = :plex_token,"
                    "plex_library = :plex_library, download_path = :download_path "
-                   "WHERE user_id = :user_id", settings)
+                   "WHERE profile_id = :profile_id", settings)
         self.commit()
 
-    def create_user(self, settings: dict):
-        self.query("INSERT INTO users (name, email, alerts, bitrate, record_type, plex_baseurl, plex_token,"
+    def create_profile(self, settings: dict):
+        self.query("INSERT INTO profiles (name, email, alerts, bitrate, record_type, plex_baseurl, plex_token,"
                    "plex_library, download_path) VALUES (:name, :email, :alerts, :bitrate, :record_type,"
                    ":plex_baseurl, :plex_token, :plex_library, :download_path)", settings)
         self.commit()
 
-    def delete_user(self, user_name: str):
-        user = self.get_user(user_name)
-        vals = {'user_id': user['user_id']}
-        self.query("DELETE FROM monitor WHERE user_id = :user_id", vals)
-        self.query("DELETE FROM releases WHERE user_id = :user_id", vals)
-        self.query("DELETE FROM playlists WHERE user_id = :user_id", vals)
-        self.query("DELETE FROM playlist_tracks WHERE user_id = :user_id", vals)
-        self.query("DELETE FROM users WHERE user_id = :user_id", vals)
+    def delete_profile(self, profile_name: str):
+        profile = self.get_profile(profile_name)
+        vals = {'profile_id': profile['profile_id']}
+        self.query("DELETE FROM monitor WHERE profile_id = :profile_id", vals)
+        self.query("DELETE FROM releases WHERE profile_id = :profile_id", vals)
+        self.query("DELETE FROM playlists WHERE profile_id = :profile_id", vals)
+        self.query("DELETE FROM playlist_tracks WHERE profile_id = :profile_id", vals)
+        self.query("DELETE FROM profiles WHERE id = :profile_id", vals)
         self.commit()
 
-    def get_all_users(self):
-        return self.query("SELECT * FROM users").fetchall()
+    def get_all_profiles(self):
+        return self.query("SELECT * FROM profiles").fetchall()

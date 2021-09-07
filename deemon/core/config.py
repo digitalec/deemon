@@ -48,8 +48,8 @@ class Config(object):
         if self.validate() > 0:
             self.__write_modified_config()
 
-        # Set as default user for init
-        self.set('user_id', 1, False)
+        # Set as default profile for init
+        self.set('profile_id', 1, False)
 
     @staticmethod
     def __create_default_config():
@@ -209,8 +209,8 @@ class Config(object):
         return Config._CONFIG.get('debug_mode')
 
     @staticmethod
-    def user_id() -> int:
-        return Config._CONFIG.get('user_id')
+    def profile_id() -> int:
+        return Config._CONFIG.get('profile_id')
 
     @staticmethod
     def update_available() -> int:

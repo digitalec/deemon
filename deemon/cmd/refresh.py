@@ -81,7 +81,7 @@ class Refresh:
             logger.debug("Playlist ID(s) have been passed, refreshing only those...")
             monitored = []
             for i in self.playlist_id:
-                monitored.append(self.db.get_monitored_playlists_by_id(i))
+                monitored.append(self.db.get_monitored_playlist_by_id(i))
         else:
             logger.debug("Refreshing all monitored playlists...")
             monitored = self.db.get_all_monitored_playlists()
@@ -188,23 +188,23 @@ class Refresh:
             return 0
 
     def monitoring_playlists(self):
-        vals = {'user_id': config.user_id()}
-        query = "SELECT * FROM 'playlists' WHERE user_id = :user_id"
+        vals = {'profile_id': config.profile_id()}
+        query = "SELECT * FROM 'playlists' WHERE profile_id = :profile_id"
         result = self.db.query(query, vals).fetchall()
         if result and len(result) > 0:
             return True
 
     def monitoring_artists(self):
-        vals = {'user_id': config.user_id()}
-        query = "SELECT * FROM 'monitor' WHERE user_id = :user_id"
+        vals = {'profile_id': config.profile_id()}
+        query = "SELECT * FROM 'monitor' WHERE profile_id = :profile_id"
         result = self.db.query(query, vals).fetchall()
         if result and len(result) > 0:
             return True
 
     def existing_artist(self, artist_id):
-        sql_values = {'artist_id': artist_id, 'user_id': config.user_id()}
+        sql_values = {'artist_id': artist_id, 'profile_id': config.profile_id()}
         # TODO BUG - issue #25 - Artist treated as new artist until at least one release has been seen
-        query = "SELECT * FROM 'releases' WHERE artist_id = :artist_id AND user_id = :user_id"
+        query = "SELECT * FROM 'releases' WHERE artist_id = :artist_id AND profile_id = :profile_id"
         artist_exists = self.db.query(query, sql_values).fetchone()
         if not artist_exists:
             logger.debug(f"New artist {artist_id}")
@@ -212,9 +212,9 @@ class Refresh:
 
     # TODO move to db.py
     def existing_playlist(self, playlist_id):
-        sql_values = {'playlist_id': playlist_id, 'user_id': config.user_id()}
+        sql_values = {'playlist_id': playlist_id, 'profile_id': config.profile_id()}
         # TODO BUG - issue #25 - Artist/playlist treated as new until at least one release has been seen
-        query = "SELECT * FROM 'playlist_tracks' WHERE playlist_id = :playlist_id AND user_id = :user_id"
+        query = "SELECT * FROM 'playlist_tracks' WHERE playlist_id = :playlist_id AND profile_id = :profile_id"
         playlist_exists = self.db.query(query, sql_values).fetchone()
         if not playlist_exists:
             logger.debug(f"Found new playlist {playlist_id}")
@@ -222,8 +222,8 @@ class Refresh:
 
     # TODO move to db.py
     def existing_playlist_track(self, playlist_id, track_id):
-        values = {'pid': playlist_id, 'tid': track_id, 'user_id': config.user_id()}
-        query = "SELECT * FROM 'playlist_tracks' WHERE track_id = :tid AND playlist_id = :pid AND user_id = :user_id"
+        values = {'pid': playlist_id, 'tid': track_id, 'profile_id': config.profile_id()}
+        query = "SELECT * FROM 'playlist_tracks' WHERE track_id = :tid AND playlist_id = :pid AND profile_id = :profile_id"
         result = self.db.query(query, values).fetchone()
         if result:
             return True
@@ -231,10 +231,10 @@ class Refresh:
     # TODO move to db.py
     def add_playlist_track(self, playlist, track):
         values = {'pid': playlist['id'], 'tid': track['id'], 'tname': track['title'], 'aid': track['artist']['id'],
-                  'aname': track['artist']['name'], 'time': int(time.time()), 'user_id': config.user_id()}
+                  'aname': track['artist']['name'], 'time': int(time.time()), 'profile_id': config.profile_id()}
         query = ("INSERT INTO 'playlist_tracks' "
-                 "('track_id', 'playlist_id', 'artist_id', 'artist_name', 'track_name', 'track_added', 'user_id') "
-                 "VALUES (:tid, :pid, :aid, :aname, :tname, :time, :user_id)")
+                 "('track_id', 'playlist_id', 'artist_id', 'artist_name', 'track_name', 'track_added', 'profile_id') "
+                 "VALUES (:tid, :pid, :aid, :aname, :tname, :time, :profile_id)")
         result = self.db.query(query, values)
         return result
 

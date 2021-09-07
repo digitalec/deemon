@@ -5,20 +5,20 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class UserConfig:
-    def __init__(self, username):
+class ProfileConfig:
+    def __init__(self, profile_name):
         self.db = Database()
-        self.user = username
+        self.profile = profile_name
 
     def add(self):
-        new_user = {}
-        user_settings = self.db.get_user(self.user)
-        if user_settings:
-            return logger.error(f"User {self.user} already exists")
+        new_profile = {}
+        profile_config = self.db.get_profile(self.profile)
+        if profile_config:
+            return logger.error(f"Profile {self.profile} already exists")
         else:
-            logger.info("Adding new user: " + self.user)
+            logger.info("Adding new profile: " + self.profile)
             print("** Any option left blank will fallback to global config (except email address) **\n")
-            new_user['name'] = self.user
+            new_profile['name'] = self.profile
 
         menu = [
             {'setting': 'email', 'type': str, 'text': 'Email address', 'allowed': []},
@@ -36,7 +36,7 @@ class UserConfig:
             while repeat:
                 i = input(m['text'] + ": ")
                 if i == "":
-                    new_user[m['setting']] = None
+                    new_profile[m['setting']] = None
                     break
                 if not isinstance(i, m['type']):
                     try:
@@ -48,7 +48,7 @@ class UserConfig:
                     if i not in m['allowed']:
                         print(" - Allowed options: " + ', '.join(str(x) for x in m['allowed']))
                         continue
-                new_user[m['setting']] = i
+                new_profile[m['setting']] = i
                 break
 
         print("\n")
@@ -56,15 +56,16 @@ class UserConfig:
         if i.lower() != "y":
             return logger.info("Operation cancelled. No changes saved.")
         else:
-            self.db.create_user(new_user)
+            self.db.create_profile(new_profile)
+            logger.debug(f"New profile created with the following configuration: {new_profile}")
 
     def edit(self):
-        user_settings = self.db.get_user(self.user)
-        if not user_settings:
-            return logger.error(f"User {self.user} was not found")
+        profile_config = self.db.get_profile(self.profile)
+        if not profile_config:
+            return logger.error(f"Profile {self.profile} was not found")
 
         menu = [
-            {'setting': 'name', 'type': str, 'text': 'User name', 'allowed': []},
+            {'setting': 'name', 'type': str, 'text': 'Profile Name', 'allowed': []},
             {'setting': 'email', 'type': str, 'text': 'Email address', 'allowed': []},
             {'setting': 'alerts', 'type': int, 'text': 'Alerts', 'allowed': [0, 1]},
             {'setting': 'bitrate', 'type': int, 'text': 'Bitrate', 'allowed': [1, 3, 9]},
@@ -79,7 +80,7 @@ class UserConfig:
         for m in menu:
             repeat = True
             while repeat:
-                i = input(m['text'] + " [" + str(user_settings[m['setting']]) + "]: ")
+                i = input(m['text'] + " [" + str(profile_config[m['setting']]) + "]: ")
                 if i == "":
                     break
                 if not isinstance(i, m['type']):
@@ -92,11 +93,11 @@ class UserConfig:
                     if i not in m['allowed']:
                         print(" - Allowed options: " + ', '.join(str(x) for x in m['allowed']))
                         continue
-                if m['setting'] == "name" and self.user != i:
-                    if self.db.get_user(i):
+                if m['setting'] == "name" and self.profile != i:
+                    if self.db.get_profile(i):
                         print(" - Name already in use: " + i)
                         continue
-                user_settings[m['setting']] = i
+                profile_config[m['setting']] = i
                 modified += 1
                 break
 
@@ -106,41 +107,42 @@ class UserConfig:
             if i.lower() != "y":
                 return logger.info("Operation cancelled. No changes saved.")
             else:
-                self.db.update_user(user_settings)
+                self.db.update_profile(profile_config)
         else:
             print("No changes made, exiting...")
 
     def delete(self):
-        user_settings = self.db.get_user(self.user)
-        if not user_settings:
-            return logger.error(f"User {self.user} not found")
+        profile_config = self.db.get_profile(self.profile)
+        if not profile_config:
+            return logger.error(f"Profile {self.profile} not found")
 
-        if user_settings['user_id'] == 1:
-            return logger.info("You cannot delete the primary user.")
+        if profile_config['id'] == 1:
+            return logger.info("You cannot delete the default profile.")
 
-        i = input("To confirm, please type the username: ")
-        if i.lower() == self.user.lower():
-            self.db.delete_user(self.user)
-            return logger.info("User " + self.user + " deleted.")
+        i = input(f"Remove the profile '{self.profile}'? [y|N] ")
+        if i.lower() == "y":
+            self.db.delete_profile(self.profile)
+            return logger.info("Profile " + self.profile + " deleted.")
         else:
-            return logger.info("Username did not match, cancelled.")
+            return logger.info("Operation cancelled")
 
     def show(self):
-        if not self.user:
-            user = self.db.get_all_users()
+        if not self.profile:
+            profile = self.db.get_all_profiles()
         else:
-            user = [self.db.get_user(self.user)]
-            if len(user) == 0:
-                return logger.error(f"User {self.user} not found")
+            profile = [self.db.get_profile(self.profile)]
+            if len(profile) == 0:
+                return logger.error(f"Profile {self.profile} not found")
 
         print("{:<10} {:<40} {:<8} {:<8} {:<8} {:<25} "
               "{:<20} {:<20} {:<20}".format('Name', 'Email', 'Alerts', 'Bitrate', 'Type',
                                             'Plex Base URL', 'Plex Token', 'Plex Library', 'Download Path'))
-        for u in user:
+        for u in profile:
             id, name, email, active, alerts, bitrate, rtype, \
             url, token, lib, dl_path = [x if x is not None else '' for x in u.values()]
             print("{:<10} {:<40} {:<8} {:<8} {:<8} {:<25} "
                   "{:<20} {:<20} {:<20}".format(name, email, alerts, bitrate, rtype, url, token, lib, dl_path))
+            print("")
 
 
 class AppConfig:
@@ -148,9 +150,9 @@ class AppConfig:
         pass
 
 
-class LoadUser(object):
+class LoadProfile(object):
     def __init__(self, profile: dict):
-        logger.debug("Loading user config for ID " + str(profile['user_id']))
+        logger.debug(f"Loading config for profile {str(profile['id'])} ({str(profile['name'] )})")
         for key, value in profile.items():
             if value is None:
                 continue

@@ -57,18 +57,17 @@ def monitor(profile, value, bitrate, r_type, alerts, remove=False, dl_obj=None, 
 
     if profile in ['artist', 'artist_id']:
         if profile == "artist":
-            api_result = dz.api.search_artist(value, limit=10)["data"]
+            if remove:
+                return purge_artist(name=value)
+
+            api_result = dz.api.search_artist(value, limit=config.query_limit())["data"]
 
             if len(api_result) == 0:
-                if search:
-                    return logger.error("No results found for " + value)
+                if is_search:
+                    return logger.error(f"No results found for {value}")
                 return logger.error(f"Artist {value} not found.")
 
-            if not remove:
-                api_result = get_best_result(api_result)
-            else:
-                # TODO --remove shouldn't use API
-                api_result = api_result[0]
+            api_result = get_best_result(api_result)
 
             if not api_result:
                 logger.error(f"No result selected")
@@ -101,10 +100,10 @@ def monitor(profile, value, bitrate, r_type, alerts, remove=False, dl_obj=None, 
             'record_type': r_type,
             'alerts': alerts,
             'download_path': config.download_path(),
-            'user_id': config.user_id()
+            'profile_id': config.profile_id()
         }
-        query = ("INSERT INTO monitor (artist_id, artist_name, bitrate, record_type, alerts, download_path, user_id) "
-                 "VALUES (:artist_id, :artist_name, :bitrate, :record_type, :alerts, :download_path, :user_id)")
+        query = ("INSERT INTO monitor (artist_id, artist_name, bitrate, record_type, alerts, download_path, profile_id) "
+                 "VALUES (:artist_id, :artist_name, :bitrate, :record_type, :alerts, :download_path, :profile_id)")
 
         try:
             db.query(query, sql_values)
@@ -131,9 +130,9 @@ def monitor(profile, value, bitrate, r_type, alerts, remove=False, dl_obj=None, 
         except deezer.api.DataException:
             logger.error(f"Playlist ID {playlist_id} not found.")
             return
-        sql_values = {'id': api_result['id'], 'user_id': config.user_id()}
+        sql_values = {'id': api_result['id'], 'profile_id': config.profile_id()}
         playlist_exists = db.query("SELECT * FROM 'playlists' WHERE id = :id "
-                                   "AND user_id = :user_id", sql_values).fetchone()
+                                   "AND profile_id = :profile_id", sql_values).fetchone()
         if remove:
             if not playlist_exists:
                 logger.warning(f"Playlist '{api_result['title']}' is not being monitored yet")
@@ -147,9 +146,9 @@ def monitor(profile, value, bitrate, r_type, alerts, remove=False, dl_obj=None, 
         # TODO move this to db.py
         sql_values = {'id': api_result['id'], 'title': api_result['title'], 'url': api_result['link'],
                       'bitrate': bitrate, 'alerts': alerts, 'download_path': config.download_path(),
-                      'user_id': config.user_id()}
+                      'profile_id': config.profile_id()}
         query = ("INSERT INTO playlists ('id', 'title', 'url', 'bitrate', 'alerts', 'download_path') "
-                 "VALUES (:id, :title, :url, :bitrate, :alerts, :download_path, :user_id)")
+                 "VALUES (:id, :title, :url, :bitrate, :alerts, :download_path, :profile_id)")
 
         try:
             db.query(query, sql_values)

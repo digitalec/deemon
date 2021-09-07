@@ -5,7 +5,7 @@ from deemon.core.logger import setup_logger
 from deemon.utils import notifier, startup, validate, dataprocessor
 from deemon.core.db import Database
 from deemon.core.config import Config
-from deemon.core.settings import UserConfig, LoadUser
+from deemon.core.settings import ProfileConfig, LoadProfile
 from deemon.cmd.search import Search
 from deemon.cmd.refresh import Refresh
 from deemon.cmd.show import ShowStats
@@ -30,25 +30,25 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 # TODO refresh all (--all | -U)
 @click.group(context_settings=CONTEXT_SETTINGS)
 @click.version_option(__version__, '-V', '--version', message='deemon %(version)s')
-@click.option('-U', '--user', help="Specify user to run deemon as")
-def run(user):
+@click.option('-P', '--profile', help="Specify profile to run deemon as")
+def run(profile):
     """Monitoring and alerting tool for new music releases using the Deezer API.
 
     deemon is a free and open source tool. To report issues or to contribute,
     please visit https://github.com/digitalec/deemon
     """
     db.do_upgrade()
-    if user:
-        user_settings = db.get_user(user)
-        if user_settings:
-            LoadUser(user_settings)
+    if profile:
+        profile_config = db.get_profile(profile)
+        if profile_config:
+            LoadProfile(profile_config)
         else:
-            logger.error(f"User {user} does not exist.")
+            logger.error(f"Profile {profile} does not exist.")
             sys.exit(1)
     else:
-        user_settings = db.get_user_by_id(1)
-        if user_settings:
-            LoadUser(user_settings)
+        profile_config = db.get_profile_by_id(1)
+        if profile_config:
+            LoadProfile(profile_config)
 
     last_checked: int = int(db.last_update_check())
 
@@ -171,20 +171,20 @@ def monitor_command(artist, im, playlist, no_refresh, bitrate, record_type, aler
             if artist_str_list:
                 for a in artist_str_list:
                     result = monitor.monitor("artist", a, bitrate, record_type, alerts, remove=remove, dl_obj=dl,
-                                             search=search_flag)
+                                             is_search=search_flag)
                     if type(result) == int:
                         new_artists.append(result)
             if artist_int_list:
                 for aid in artist_int_list:
                     result = monitor.monitor("artist_id", aid, bitrate, record_type, alerts, remove=remove, dl_obj=dl,
-                                             search=search_flag)
+                                             is_search=search_flag)
                     if type(result) == int:
                         new_artists.append(result)
         elif Path(im).is_dir():
             import_list = [x.relative_to(im) for x in sorted(Path(im).iterdir()) if x.is_dir()]
             for a in import_list:
                 result = monitor.monitor("artist", a, bitrate, record_type, alerts, remove=remove, dl_obj=dl,
-                                         search=search_flag)
+                                         is_search=search_flag)
                 if type(result) == int:
                     new_artists.append(result)
         else:
@@ -194,7 +194,7 @@ def monitor_command(artist, im, playlist, no_refresh, bitrate, record_type, aler
     if artist:
         for a in dataprocessor.artists_to_csv(artist):
             result = monitor.monitor("artist", a, bitrate, record_type, alerts, remove=remove, dl_obj=dl,
-                                     search=search_flag)
+                                     is_search=search_flag)
             if isinstance(result, int):
                 new_artists.append(result)
 
@@ -211,14 +211,14 @@ def monitor_command(artist, im, playlist, no_refresh, bitrate, record_type, aler
     if artist_id:
         for aid in artist_id:
             result = monitor.monitor("artist_id", aid, bitrate, record_type, alerts, remove=remove, dl_obj=dl,
-                                     search=search_flag)
+                                     is_search=search_flag)
             if isinstance(result, int):
                 new_artists.append(result)
 
     if playlists:
         for p in playlists:
             result = monitor.monitor("playlist", p, bitrate, record_type, alerts, remove=remove, dl_obj=dl,
-                                     search=search_flag)
+                                     is_search=search_flag)
             if isinstance(result, int):
                 new_playlists.append(result)
 
@@ -237,9 +237,7 @@ def refresh_command(skip_download, time_machine):
     Refresh(skip_download=skip_download, time_machine=time_machine)
 
 
-@click.group(name="show", invoke_without_command=True)
-@click.option('-c', '--csv', is_flag=True, help='Output artists as CSV')
-@click.option('-e', '--extended', is_flag=True, help='Show extended artist data')
+@click.group(name="show")
 def show_command():
     """
     Show monitored artists and latest releases
@@ -250,14 +248,14 @@ def show_command():
 @click.option('-c', '--csv', is_flag=True, help='Used with -a, -i; output artists as CSV')
 @click.option('-e', '--extended', is_flag=True, help='Show extended artist data')
 def show_artists(artist_ids, csv, extended):
-    """Show artists monitored by user"""
+    """Show artists monitored by profile"""
     show = ShowStats()
     show.artists(csv=csv, artist_ids=artist_ids, extended=extended)
 
 @show_command.command(name="playlists", hidden=True)
 @click.option('-c', '--csv', is_flag=True, help='Used with -a, -i; output artists as CSV')
 def show_playlists(csv, extended):
-    """Show playlists monitored by user"""
+    """Show playlists monitored by profile"""
     show = ShowStats()
     show.playlists(csv)
 
@@ -359,50 +357,30 @@ def reset_db():
         logger.info("Reset aborted. Database has NOT been modified.")
     return
 
+@run.command(name='profiles')
+@click.argument('profile', required=False)
+@click.option('-a', '--add', type=str, help="Add new profile")
+@click.option('-r', '--remove', type=str, help="Remove an existing profile")
+@click.option('-e', '--edit', type=str, help="Edit an existing profile")
+def profiles_command(profile, add, remove, edit):
+    """Add, modify and delete profiles"""
 
-
-@click.group(name='config', help='Modify deemon configuration and users')
-def config_command():
-    pass
-
-
-@click.group(name="users")
-def config_users():
-    """Add, modify and delete users"""
-
-@config_users.command(name='add')
-@click.argument('user')
-def add(user):
-    """Add a new user"""
-    uc = UserConfig(user)
-    uc.add()
-
-@config_users.command(name='edit')
-@click.argument('user')
-def edit(user):
-    """Modify existing users"""
-    uc = UserConfig(user)
-    uc.edit()
-
-@config_users.command(name='show')
-@click.argument('user', required=False)
-def show(user=None):
-    """Show settings for user(s)"""
-    uc = UserConfig(user)
-    uc.show()
-
-@config_users.command(name="delete")
-@click.argument('user')
-def delete(user):
-    """Delete an existing user"""
-    uc = UserConfig(user)
-    uc.delete()
+    uc = ProfileConfig(profile)
+    if profile:
+        if add:
+            uc = ProfileConfig(profile)
+            uc.add()
+        elif remove:
+            uc = ProfileConfig(profile)
+            uc.delete()
+        elif edit:
+            uc = ProfileConfig(profile)
+            uc.edit()
+    else:
+        uc.show()
 
 @run.command(name="search")
 def search():
     """Interactively search and download/monitor artists"""
     client = Search()
     client.search_menu()
-
-config_command.add_command(config_users)
-run.add_command(config_command)
