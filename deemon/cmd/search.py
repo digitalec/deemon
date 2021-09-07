@@ -12,7 +12,7 @@ class Search:
         self.artist_id: int = None
         self.artist: str = None
         self.choices: list = []
-        self.status_message: str = ""
+        self.status_message: str = None
         self.queue_list = []
 
         self.sort: str = "release_date"
@@ -22,55 +22,91 @@ class Search:
         self.db = db.Database()
         self.dz = Deezer()
 
+    @staticmethod
+    def truncate_artist(name: str):
+        if len(name) > 45:
+            return name[0:40] + "..."
+        return name
+
+    def get_latest_release(self, artist_id: int):
+        try:
+            all_releases = self.dz.api.get_artist_albums(artist_id)['data']
+            sorted_releases = sorted(all_releases, key=lambda x: x['release_date'], reverse=True)
+            latest_release = sorted_releases[0]
+        except IndexError:
+            return "   No releases found"
+        return f"   Latest release: {latest_release['title']} ({dates.get_year(latest_release['release_date'])})"
+
+    def display_monitored_status(self, artist_id: int):
+        if self.db.get_monitored_artist_by_id(artist_id):
+            return "* "
+        return ""
+
+    @staticmethod
+    def has_duplicate_artists(name: str, artist_dicts: dict):
+        names = [x['name'] for x in artist_dicts if x['name'] == name]
+        if len(names) > 1:
+            return True
+
     def show_mini_queue(self):
         num_queued = len(self.queue_list)
         if num_queued > 0:
             return f" ({str(num_queued)} Queued)"
         return ""
 
-    def search_menu(self):
+    def search_menu(self, query: str = None):
         exit_search: bool = False
+        quick_search: bool = False
         while exit_search is False:
             self.clear()
             print("deemon Interactive Search Client\n")
             if len(self.queue_list) > 0:
                 self.display_options(options="(d) Download Queue  (Q) Show Queue")
-            if self.status_message:
-                print(self.status_message + "\n")
-            search_query = input(f"Enter the artist to search for or type 'exit'{self.show_mini_queue()}: ")
-            if search_query == "exit":
-                if self.exit_search():
-                    sys.exit()
-                continue
-            if search_query == "d":
-                if len(self.queue_list) > 0:
-                    self.start_queue()
+            if query:
+                search_query = query
+                quick_search = True
+            else:
+                search_query = input(f"Enter the artist to search for or type 'exit'{self.show_mini_queue()}: ")
+                if search_query == "exit":
+                    if self.exit_search():
+                        sys.exit()
                     continue
-            if search_query == "Q":
-                if len(self.queue_list) > 0:
-                    self.queue_menu()
-                else:
-                    self.status_message = "Queue is empty"
-                continue
-            if search_query == "":
-                continue
-            artist_search_result = self.dz.api.search_artist(search_query, limit=10)['data']
+                if search_query == "d":
+                    if len(self.queue_list) > 0:
+                        self.start_queue()
+                        continue
+                if search_query == "Q":
+                    if len(self.queue_list) > 0:
+                        self.queue_menu()
+                    else:
+                        self.status_message = "Queue is empty"
+                    continue
+                if search_query == "":
+                    continue
+            artist_search_result = self.dz.api.search_artist(search_query, limit=config.query_limit())['data']
             if len(artist_search_result) == 0:
                 self.status_message = "No results found for: " + search_query
                 continue
-            self.artist_menu(search_query, artist_search_result)
+            artist_selected = self.artist_menu(search_query, artist_search_result, quick_search)
+            if artist_selected:
+                return [artist_selected]
 
     def queue_menu_options(self):
         ui_options = ("(d) Download Queue  (c) Clear Queue  (b) Back")
         self.display_options(options=ui_options)
 
-    def artist_menu(self, query, results):
+    def artist_menu(self, query: str, results: dict, artist_only: bool = False):
         exit_artist: bool = False
         while exit_artist is False:
             self.clear()
             print("Search results for artist: " + query)
             for idx, option in enumerate(results, start=1):
-                print(f"{idx}. {option['name']}")
+                print(f"{idx}. {self.display_monitored_status(option['id'])}{self.truncate_artist(option['name'])}")
+                if self.has_duplicate_artists(option['name'], results):
+                    print(self.get_latest_release(option['id']))
+                    print("   Total releases: " + str(option['nb_album']))
+                    print("")
+                    self.status_message = "Duplicate artists found"
             # TODO make options smarter/modular
             if len(self.queue_list) > 0:
                 self.display_options(options="(b) Back  (d) Download Queue  (Q) Show Queue")
@@ -103,7 +139,12 @@ class Search:
                 response = response - 1
                 if response in range(len(results)):
                     self.artist = results[response]['name']
+                    if artist_only:
+                        return results[response]
                     self.album_menu(results[response])
+                else:
+                    self.status_message = f"Invalid selection: {response}"
+                    continue
 
     def album_menu_header(self, artist: str):
         filter_text = "All" if not self.filter else self.filter.title()
@@ -123,10 +164,6 @@ class Search:
         ui_options = ("(b) Back  (d) Download Queue  (Q) Show Queue  (f) Queue Filtered  "
                       f"{monitor_opt}")
         self.display_options(ui_filter, ui_sort, ui_options)
-
-        if self.status_message:
-            print("** " + self.status_message + " **")
-            self.status_message = ""
 
     def album_menu(self, artist: dict):
         exit_album_menu: bool = False
@@ -254,6 +291,9 @@ class Search:
         if options:
             print("")
             print(options)
+        if self.status_message:
+            print("** " + self.status_message + " **")
+            self.status_message = None
 
     def clear(self):
         from os import system, name

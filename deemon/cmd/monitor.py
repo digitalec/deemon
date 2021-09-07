@@ -3,13 +3,14 @@ from sqlite3 import OperationalError
 from pathlib import Path
 from deemon.core.db import Database
 from deemon.core.config import Config as config
+from deemon.cmd import search
 import logging
 import deezer
 
 logger = logging.getLogger(__name__)
 
 
-def monitor(profile, value, bitrate, r_type, alerts, remove=False, dl_obj=None, search=False):
+def monitor(profile, value, bitrate, r_type, alerts, remove=False, dl_obj=None, is_search=False):
 
     dz = deezer.Deezer()
     db = Database()
@@ -47,20 +48,24 @@ def monitor(profile, value, bitrate, r_type, alerts, remove=False, dl_obj=None, 
         for idx, artist in enumerate(api_result):
             if value.lower() == artist['name'].lower():
                 matches.append(artist)
-        if len(matches) == 1:
+        if len(matches) == 1 and not is_search:
             return matches[0]
-        elif len(matches) > 1 and search:
-            m = search.Menu("Multiple exact matches found: ", matches)
-            ask_user = m.gen_artist_menu()
-            return ask_user[0]
-        elif search:
-            m = search.Menu("Showing closest results, please choose:", api_result)
-            ask_user = m.gen_artist_menu()
+        elif len(matches) > 1:
+            if is_search:
+                menu = search.Search()
+                ask_user = menu.search_menu(value)
+                return ask_user[0]
+            else:
+                if config.ranked_duplicates():
+                    return matches[0]
+                logger.error(f"Duplicate artist names found for {value}. Try again using --search")
+        elif is_search:
+            menu = search.Search()
+            ask_user = menu.search_menu(value)
             if ask_user:
                 return ask_user[0]
         else:
             logger.error(f"Artist {value} not found. Try again using --search")
-            sys.exit(1)
 
     if not Path(config.download_path()).exists:
         return logger.error(f"Invalid download path: {config.download_path()}")
