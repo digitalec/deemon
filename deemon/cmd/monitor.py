@@ -15,22 +15,32 @@ def monitor(profile, value, bitrate, r_type, alerts, remove=False, dl_obj=None, 
     db = Database()
 
     def purge_playlist(i, title):
-        values = {'id': api_result['id']}
-        db.query("DELETE FROM 'playlists' WHERE id = :id", values)
-        logger.debug(f"Playlist {i} removed from monitoring")
-        db.query("DELETE FROM 'playlist_tracks' WHERE playlist_id = :id", values)
-        logger.debug(f"All releases tracked for playlist {i} have been removed")
-        db.commit()
-        logger.info(f"No longer monitoring playlist '{title}'")
+        if id:
+            output = str(id)
+            playlist = db.get_monitored_playlist_by_id(id)
+        else:
+            output = title
+            playlist = db.get_monitored_playlist_by_name(title)
 
-    def purge_artist(i, name):
-        values = {'id': api_result['id']}
-        db.query("DELETE FROM 'monitor' WHERE artist_id = :id", values)
-        logger.debug(f"Artist {i} removed from monitoring")
-        db.query("DELETE FROM 'releases' WHERE artist_id = :id", values)
-        logger.debug(f"All releases tracked for artist {i} have been removed")
-        db.commit()
-        logger.info(f"No longer monitoring artist '{name}'")
+        if playlist:
+            db.remove_monitored_playlists(playlist['id'])
+            logger.info(f"No longer monitoring playlist '{playlist['title']}'")
+        else:
+            logger.error(f"Unable to remove from monitoring: '{output}' not found.")
+
+    def purge_artist(id: int = None, name: str = None):
+        if id:
+            output = str(id)
+            artist = db.get_monitored_artist_by_id(id)
+        else:
+            output = name
+            artist = db.get_monitored_artist_by_name(name)
+
+        if artist:
+            db.remove_monitored_artist(artist['artist_id'])
+            logger.info(f"No longer monitoring artist '{artist['artist_name']}'")
+        else:
+            logger.error(f"Unable to remove from monitoring: '{output}' not found.")
 
     def get_best_result(api_data):
         matches: list = []
@@ -79,17 +89,7 @@ def monitor(profile, value, bitrate, r_type, alerts, remove=False, dl_obj=None, 
                 logger.error(f"Artist ID {value} not found.")
                 return
 
-        # TODO move this to db.py
-        sql_values = {'id': api_result['id'], 'user_id': config.user_id()}
-        artist_exists = db.query("SELECT * FROM 'monitor' WHERE artist_id = :id "
-                                 "AND user_id = :user_id", sql_values).fetchone()
-        if remove:
-            if not artist_exists:
-                logger.warning(f"{api_result['name']} is not being monitored yet")
-                return
-            purge_artist(api_result['id'], api_result['name'])
-            return
-        if artist_exists:
+        if db.get_monitored_artist_by_id(api_result['id']):
             logger.warning(f"Artist '{api_result['name']}' is already being monitored")
             return
 
