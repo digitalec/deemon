@@ -52,7 +52,7 @@ def run(profile):
 
     last_checked: int = int(db.last_update_check())
 
-    check_interval: int = int(time.time()) - 3600
+    check_interval: int = config.check_update() - 3600
 
     if last_checked < check_interval:
         config.set('update_available', 0, False)
