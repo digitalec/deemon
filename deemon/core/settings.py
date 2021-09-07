@@ -155,4 +155,4 @@ class LoadUser(object):
             if value is None:
                 continue
             if config.get_config().get(key):
-                config.set(key, value)
+                config.set(key, value, validate=False)
