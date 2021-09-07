@@ -25,7 +25,10 @@ class QueueItem:
         self.download_path = download_path
 
         if artist:
-            self.artist_name = artist["artist_name"]
+            try:
+                self.artist_name = artist["artist_name"]
+            except KeyError:
+                self.artist_name = artist["name"]
             if not album:
                 self.url = artist["link"]
 
