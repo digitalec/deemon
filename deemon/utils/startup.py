@@ -1,5 +1,4 @@
-from packaging.version import parse as parse_version
-from deemon import __version__
+
 from pathlib import Path
 import requests
 import logging
@@ -47,18 +46,16 @@ def get_log_file():
     return Path(get_appdata_dir() / 'logs' / 'deemon.log')
 
 
-def check_version():
+def get_latest_version():
     logger.debug("Checking for update...")
     latest_ver = "https://api.github.com/repos/digitalec/deemon/releases/latest"
     try:
         response = requests.get(latest_ver)
     except requests.exceptions.ConnectionError:
         return
-    local_version = __version__
     try:
         remote_version = response.json()["name"]
     except KeyError as e:
         logger.debug(f"Invalid data returned from version check; too many requests? {e}")
         return
-    if parse_version(remote_version) > parse_version(local_version):
-        return remote_version
+    return remote_version
