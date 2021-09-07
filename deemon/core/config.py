@@ -25,7 +25,9 @@ DEFAULT_CONFIG = {
     "smtp_sender": "",
     "email": "",
     "check_update": 1,
-    "debug_mode": False
+    "debug_mode": False,
+    "query_limit": 5,
+    "ranked_duplicates": True
 }
 
 
@@ -215,6 +217,14 @@ class Config(object):
     @staticmethod
     def update_available() -> int:
         return Config._CONFIG.get('update_available')
+
+    @staticmethod
+    def query_limit() -> int:
+        return Config._CONFIG.get('query_limit')
+
+    @staticmethod
+    def ranked_duplicates() -> int:
+        return Config._CONFIG.get('ranked_duplicates')
 
     @staticmethod
     def set(property, value, validate=True):
