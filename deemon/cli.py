@@ -1,10 +1,12 @@
+import time
+from packaging.version import parse as parse_version
 from deemon.cmd import monitor, download
 from deemon.core.logger import setup_logger
 from deemon.utils import notifier, startup, validate, dataprocessor
 from deemon.core.db import Database
 from deemon.core.config import Config
-from deemon.core.settings import UserConfig, AppConfig, LoadUser
-from deemon.cmd.search import search
+from deemon.core.settings import UserConfig, LoadUser
+from deemon.cmd.search import Search
 from deemon.cmd.refresh import Refresh
 from deemon.cmd.show import ShowStats
 from deemon import __version__
@@ -25,7 +27,7 @@ db = Database()
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
-
+# TODO refresh all (--all | -U)
 @click.group(context_settings=CONTEXT_SETTINGS)
 @click.version_option(__version__, '-V', '--version', message='deemon %(version)s')
 @click.option('-U', '--user', help="Specify user to run deemon as")
@@ -43,18 +45,11 @@ def run(user):
         else:
             logger.error(f"User {user} does not exist.")
             sys.exit(1)
-    # import deemon.core.db as database
-    # db = database.DBHelper(settings.db_path)
-    # last_checked = db.last_update_check()
-    # check_interval = (config["check_update"] * 86400)
-    # if last_checked < check_interval:
-    #     new_version = startup.check_version()
-    #     if new_version:
-    #         print("*" * 50)
-    #         logger.info(f"* New version is available: v{__version__} -> v{new_version}")
-    #         logger.info("* To upgrade, run `pip install --upgrade deemon`")
-    #         print("*" * 50)
-    #     db.set_last_update()
+    else:
+        user_settings = db.get_user_by_id(1)
+        if user_settings:
+            LoadUser(user_settings)
+
     last_checked: int = int(db.last_update_check())
 
     check_interval: int = int(time.time()) - 3600
@@ -88,12 +83,11 @@ def test():
 @click.option('-A', '--album-id', multiple=True, metavar='ID', type=int, help='Download by album ID')
 @click.option('-u', '--url', metavar='URL', multiple=True, help='Download by URL of artist/album/track/playlist')
 @click.option('-f', '--file', metavar='FILE', help='Download batch of artists and/or artist IDs from file')
-@click.option('-s', '--search', 'search_cmd', is_flag=True, help='Interactively search for and download')
 @click.option('-b', '--bitrate', default=config.bitrate(), help='Set custom bitrate for this operation')
 @click.option('-o', '--download-path', type=str, metavar="PATH", help='Specify custom download directory')
 @click.option('-t', '--record-type', type=click.Choice(['all', 'album', 'ep', 'single'], case_sensitive=False),
               default=config.record_type(), help='Specify record types to download')
-def download_command(artist, artist_id, album_id, url, file, search_cmd, bitrate, record_type, download_path):
+def download_command(artist, artist_id, album_id, url, file, bitrate, record_type, download_path):
     """
     Download specific artist, album ID or by URL
 
@@ -105,14 +99,6 @@ def download_command(artist, artist_id, album_id, url, file, search_cmd, bitrate
     bitrate = validate.validate_bitrate(bitrate)
     if bitrate:
         config.set('bitrate', bitrate)
-
-    if search_cmd:
-        if artist:
-            search_artist = ' '.join(artist)
-            search(search_artist)
-        else:
-            logger.error("Artist name must be specified")
-        return
 
     artists = dataprocessor.artists_to_csv(artist) if artist else None
     artist_ids = [x for x in artist_id] if artist_id else None
@@ -251,34 +237,27 @@ def refresh_command(skip_download, time_machine):
     Refresh(skip_download=skip_download, time_machine=time_machine)
 
 
-@click.group(name="show")
-@click.option('-a', '--artists', is_flag=True, help='Show artists currently being monitored')
-@click.option('-i', '--artist-ids', is_flag=True, help='Show artist IDs currently being monitored')
-@click.option('-p', '--playlists', is_flag=True, help='Show playlists currently being monitored', hidden=True)
-@click.option('-c', '--csv', is_flag=True, help='Used with -a, -i; output artists as CSV')
+@click.group(name="show", invoke_without_command=True)
+@click.option('-c', '--csv', is_flag=True, help='Output artists as CSV')
 @click.option('-e', '--extended', is_flag=True, help='Show extended artist data')
-def show_command(artists, artist_ids, playlists, csv, extended):
+def show_command():
     """
     Show monitored artists and latest releases
     """
 
 @show_command.command(name="artists")
+@click.option('-i', '--artist-ids', is_flag=True, help='Show artist IDs currently being monitored')
 @click.option('-c', '--csv', is_flag=True, help='Used with -a, -i; output artists as CSV')
 @click.option('-e', '--extended', is_flag=True, help='Show extended artist data')
-def show_artists(csv, extended):
+def show_artists(artist_ids, csv, extended):
+    """Show artists monitored by user"""
     show = ShowStats()
-    show.artists(csv=csv, artist_ids=False, extended=extended)
+    show.artists(csv=csv, artist_ids=artist_ids, extended=extended)
 
-@show_command.command(name="ids")
-@click.option('-c', '--csv', is_flag=True, help='Used with -a, -i; output artists as CSV')
-@click.option('-e', '--extended', is_flag=True, help='Show extended artist data')
-def show_ids(csv, extended):
-    show = ShowStats()
-    show.artists(csv=csv, artist_ids=True, extended=extended)
-
-@show_command.command(name="playlists")
+@show_command.command(name="playlists", hidden=True)
 @click.option('-c', '--csv', is_flag=True, help='Used with -a, -i; output artists as CSV')
 def show_playlists(csv, extended):
+    """Show playlists monitored by user"""
     show = ShowStats()
     show.playlists(csv)
 
@@ -291,7 +270,7 @@ def show_releases(n):
     """
     show = ShowStats()
     show.releases(n)
-
+    # TODO add ability to download from this list
 
 run.add_command(show_command)
 
@@ -317,7 +296,7 @@ def backup(include_logs):
 
 
 # TODO @click.option does not support nargs=-1; unable to use spaces without quotations
-@run.command(name="api", help="View raw API data for artist, artist ID or playlist ID")
+@run.command(name="api", help="View raw API data for artist, artist ID or playlist ID", hidden=True)
 @click.option('--artist', type=str, help='Get artist result via API')
 @click.option('--artist-id', type=int, help='Get artist ID result via API')
 @click.option('--album-id', type=int, help='Get album ID result via API')
@@ -371,6 +350,7 @@ def api_test(artist, artist_id, album_id, playlist_id, limit, raw):
 
 @run.command(name="reset")
 def reset_db():
+    """Reset monitoring database"""
     logger.warning("** ALL ARTISTS AND PLAYLISTS WILL BE REMOVED! **")
     confirm = input("Type 'reset' to confirm: ")
     if confirm.lower() == "reset":
@@ -418,6 +398,11 @@ def delete(user):
     uc = UserConfig(user)
     uc.delete()
 
+@run.command(name="search")
+def search():
+    """Interactively search and download/monitor artists"""
+    client = Search()
+    client.search_menu()
 
 config_command.add_command(config_users)
 run.add_command(config_command)
