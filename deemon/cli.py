@@ -89,7 +89,7 @@ def test():
 @click.option('-f', '--file', metavar='FILE', help='Download batch of artists and/or artist IDs from file')
 @click.option('-b', '--bitrate', default=config.bitrate(), help='Set custom bitrate for this operation')
 @click.option('-o', '--download-path', type=str, metavar="PATH", help='Specify custom download directory')
-@click.option('-t', '--record-type', type=click.Choice(['all', 'album', 'ep', 'single'], case_sensitive=False),
+@click.option('-t', '--record-type', type=click.Choice(config.allowed_values("record_type"), case_sensitive=False),
               default=config.record_type(), help='Specify record types to download')
 def download_command(artist, artist_id, album_id, url, file, bitrate, record_type, download_path):
     """
