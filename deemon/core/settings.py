@@ -145,11 +145,6 @@ class ProfileConfig:
             print("")
 
 
-class AppConfig:
-    def __init__(self):
-        pass
-
-
 class LoadProfile(object):
     def __init__(self, profile: dict):
         logger.debug(f"Loading config for profile {str(profile['id'])} ({str(profile['name'] )})")
