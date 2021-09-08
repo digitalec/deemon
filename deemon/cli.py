@@ -1,4 +1,3 @@
-import time
 from packaging.version import parse as parse_version
 from deemon.cmd import monitor, download
 from deemon.core.logger import setup_logger
@@ -8,7 +7,7 @@ from deemon.core.config import Config
 from deemon.core.settings import ProfileConfig, LoadProfile
 from deemon.cmd.search import Search
 from deemon.cmd.refresh import Refresh
-from deemon.cmd.show import ShowStats
+from deemon.cmd.show import Show
 from deemon import __version__
 from datetime import datetime
 from pathlib import Path
@@ -119,8 +118,6 @@ def download_command(artist, artist_id, album_id, url, file, bitrate, record_typ
     dl = download.Download()
     dl.download(artists, artist_ids, album_ids, urls, bitrate, record_type, file)
 
-
-# TODO implement subcommands; add --include-featured-artists, --track-id options
 @run.command(name='monitor', context_settings={"ignore_unknown_options": True})
 @click.argument('artist', nargs=-1)
 @click.option('-i', '--artist-id', multiple=True, type=int, metavar="ID", help="Monitor artist by ID")
@@ -168,6 +165,7 @@ def monitor_command(artist, im, playlist, no_refresh, bitrate, record_type, aler
     if dl:
         dl = download.Download()
 
+    # TODO moved import to subcommand, add option to skip line 1 for CSV header (--header)
     if im:
         if Path(im).is_file():
             imported_file = dataprocessor.read_file_as_csv(im)
@@ -228,8 +226,6 @@ def monitor_command(artist, im, playlist, no_refresh, bitrate, record_type, aler
 
     if (len(new_artists) > 0 or len(new_playlists) > 0) and not no_refresh:
         logger.debug("Requesting refresh, standby...")
-        logger.debug(f"new_artists={new_artists}")
-        logger.debug(f"new_playlists={new_playlists}")
         Refresh(artist_id=new_artists, playlist_id=new_playlists, dl_obj=dl)
 
 
@@ -249,18 +245,22 @@ def show_command():
 
 @show_command.command(name="artists")
 @click.option('-i', '--artist-ids', is_flag=True, help='Show artist IDs currently being monitored')
-@click.option('-c', '--csv', is_flag=True, help='Used with -a, -i; output artists as CSV')
 @click.option('-e', '--extended', is_flag=True, help='Show extended artist data')
-def show_artists(artist_ids, csv, extended):
+@click.option('-c', '--csv', is_flag=True, help='Output artists as CSV')
+@click.option('-h', '--hide-header', is_flag=True, help='Hide header on CSV output')
+@click.option('-f', '--filter', type=str, help='Specify filter for CSV output')
+def show_artists(artist_ids, csv, extended, filter, hide_header):
     """Show artists monitored by profile"""
-    show = ShowStats()
-    show.artists(csv=csv, artist_ids=artist_ids, extended=extended)
+    show = Show()
+    if filter is None:
+        filter = "name,id"
+    show.artists(csv, artist_ids, extended, filter, hide_header)
 
 @show_command.command(name="playlists", hidden=True)
 @click.option('-c', '--csv', is_flag=True, help='Used with -a, -i; output artists as CSV')
 def show_playlists(csv, extended):
     """Show playlists monitored by profile"""
-    show = ShowStats()
+    show = Show()
     show.playlists(csv)
 
 
@@ -270,7 +270,7 @@ def show_releases(n):
     """
     Show list of new releases
     """
-    show = ShowStats()
+    show = Show()
     show.releases(n)
     # TODO add ability to download from this list
 
