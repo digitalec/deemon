@@ -38,7 +38,7 @@ def get_artist(query: str):
         by_id = db.get_monitored_artist_by_id(artist_as_id)
         if by_id:
             logger.debug(f"Artist found by ID")
-            if len(artist_fromdb) == 0:
+            if not artist_fromdb:
                 artist_fromdb = by_id
             else:
                 logger.debug("Artist found by both ID and name, prompting user")
