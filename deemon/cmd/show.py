@@ -7,22 +7,42 @@ import sys
 logger = logging.getLogger(__name__)
 
 
-class ShowStats:
+class Show:
 
     def __init__(self):
         self.db = Database()
 
-    def artists(self, csv=False, artist_ids=False, extended=None):
-        # TODO extended is list of fields to grab from database; 'id', 'name', etc.
+    def artists(self, csv: bool, artist_ids: bool, extended: bool, filter: str, hide_header: bool):
         monitored_artists = self.db.get_all_monitored_artists()
 
         if len(monitored_artists) == 0:
             logger.info("No artists are being monitored")
-            sys.exit(0)
+            return
+
+        if csv:
+            filter = filter.split(',')
+            logger.debug(f"Generating CSV data using filters: {', '.join(filter)}")
+            column_names = ['artist_id' if x == 'id' else x for x in filter]
+            column_names = ['artist_name' if x == 'name' else x for x in column_names]
+            column_names = ['record_type' if x == 'type' else x for x in column_names]
+
+            for column in column_names:
+                if not any(x.get(column) for x in monitored_artists):
+                    logger.warning(f"Unknown filter specified: {column}")
+                    column_names.remove(column)
+                    filter.remove(column)
+
+            if not hide_header:
+                print(','.join(filter))
+            for artist in monitored_artists:
+                filtered_artists = []
+                for column in column_names:
+                    filtered_artists.append(str(artist[column]))
+                if len(filtered_artists) > 0:
+                    print(",".join(filtered_artists))
 
         if extended:
-            artist_data = monitored_artists
-            for artist in artist_data:
+            for artist in monitored_artists:
                 if csv:
                     if artist_ids:
                         print(str(artist['artist_id']) + ", " + artist['artist_name'])
@@ -38,25 +58,23 @@ class ShowStats:
                               f"path: {artist['download_path']}\n")
             return
         elif artist_ids:
-            artist_data = [str(artist['artist_id']) for artist in monitored_artists]
+            csv_output = [str(artist['artist_id']) for artist in monitored_artists]
         else:
-            artist_data = [artist['artist_name'] for artist in monitored_artists]
+            csv_output = [artist['artist_name'] for artist in monitored_artists]
 
-        if csv:
-            logger.info(', '.join(artist_data))
+
+        if len(monitored_artists) > 10:
+            if not artist_ids:
+                monitored_artists = self.truncate_long_artists(monitored_artists)
+
+            if len(monitored_artists) % 2 != 0:
+                monitored_artists.append(" ")
+
+            for a, b in zip(monitored_artists[0::2], monitored_artists[1::2]):
+                print('{:<30}{:<}'.format(a, b))
         else:
-            if len(artist_data) > 10:
-                if not artist_ids:
-                    artist_data = self.truncate_long_artists(artist_data)
-
-                if len(artist_data) % 2 != 0:
-                    artist_data.append(" ")
-
-                for a, b in zip(artist_data[0::2], artist_data[1::2]):
-                    print('{:<30}{:<}'.format(a, b))
-            else:
-                for artist in artist_data:
-                    print(artist)
+            for artist in monitored_artists:
+                print(artist['artist_name'])
 
     def playlists(self, csv=False):
         monitored_playlists = self.db.get_all_monitored_playlists()
@@ -68,6 +86,7 @@ class ShowStats:
         for idx, artist in enumerate(all_artists):
             if len(artist) > 25:
                 all_artists[idx] = artist[:22] + "..."
+            all_artists[idx] = artist
         return all_artists
 
     def releases(self, days):
@@ -86,5 +105,3 @@ class ShowStats:
         else:
             logger.info(f"No releases found in the last {days} day(s)")
 
-    def stats(self):
-        pass
