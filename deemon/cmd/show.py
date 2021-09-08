@@ -40,41 +40,36 @@ class Show:
                     filtered_artists.append(str(artist[column]))
                 if len(filtered_artists) > 0:
                     print(",".join(filtered_artists))
+            return
 
         if extended:
             for artist in monitored_artists:
-                if csv:
-                    if artist_ids:
-                        print(str(artist['artist_id']) + ", " + artist['artist_name'])
-                    else:
-                        print(artist['artist_name'] + ", " + str(artist['artist_id']))
+                if artist_ids:
+                    print(f"{str(artist['artist_id'])} ({artist['artist_name']})")
                 else:
-                    if artist_ids:
-                        print(f"{str(artist['artist_id'])} ({artist['artist_name']})")
-                    else:
-                        print(f"{artist['artist_name']} ({str(artist['artist_id'])}) | "
-                              f"type: {artist['record_type'].upper()}, "
-                              f"bitrate: {artist['bitrate']}, alerts: {artist['alerts']}, "
-                              f"path: {artist['download_path']}\n")
+                    print(f"{artist['artist_name']} ({artist['artist_id']})")
+                    for column in ['bitrate', 'record_type', 'alerts', 'download_path']:
+                        print("  " + column.replace("_", " ").title() + ": " + str(artist[column]))
+                    print("")
             return
-        elif artist_ids:
-            csv_output = [str(artist['artist_id']) for artist in monitored_artists]
+
+        if artist_ids:
+            artist_data = [str(artist['artist_id']) for artist in monitored_artists]
         else:
-            csv_output = [artist['artist_name'] for artist in monitored_artists]
+            artist_data = [artist['artist_name'] for artist in monitored_artists]
 
-
-        if len(monitored_artists) > 10:
+        if len(artist_data) > 10:
             if not artist_ids:
-                monitored_artists = self.truncate_long_artists(monitored_artists)
+                artist_data = self.truncate_long_artists(artist_data)
 
-            if len(monitored_artists) % 2 != 0:
-                monitored_artists.append(" ")
+            if len(artist_data) % 2 != 0:
+                artist_data.append(" ")
 
-            for a, b in zip(monitored_artists[0::2], monitored_artists[1::2]):
+            for a, b in zip(artist_data[0::2], artist_data[1::2]):
                 print('{:<30}{:<}'.format(a, b))
         else:
-            for artist in monitored_artists:
-                print(artist['artist_name'])
+            for artist in artist_data:
+                print(artist)
 
     def playlists(self, csv=False):
         monitored_playlists = self.db.get_all_monitored_playlists()
