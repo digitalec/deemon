@@ -7,27 +7,38 @@ import json
 logger = logging.getLogger(__name__)
 
 DEFAULT_CONFIG = {
-    "plex_baseurl": "",
-    "plex_token": "",
-    "plex_library": "",
-    "download_path": "",
-    "deemix_path": "",
-    "arl": "",
-    "bitrate": 3,
-    "alerts": 0,
-    "record_type": "all",
-    "release_by_date": True,
-    "release_max_days": 90,
-    "smtp_server": "",
-    "smtp_port": 465,
-    "smtp_user": "",
-    "smtp_pass": "",
-    "smtp_sender": "",
-    "email": "",
     "check_update": 1,
     "debug_mode": False,
     "query_limit": 5,
-    "ranked_duplicates": True
+    "ranked_duplicates": True,
+    "accept_closest_match": True,
+    "new_releases": {
+        "by_release_date": True,
+        "release_max_age": 90
+    },
+    "global": {
+        "bitrate": 3,
+        "alerts": False,
+        "record_type": "all",
+        "download_path": "",
+        "email": ""
+    },
+    "deemix": {
+        "path": "",
+        "arl": ""
+    },
+    "smtp_settings": {
+        "server": "",
+        "port": 465,
+        "username": "",
+        "password": "",
+        "from_addr": ""
+    },
+    "plex": {
+        "base_url": "",
+        "token": "",
+        "library": ""
+    }
 }
 
 
@@ -68,11 +79,82 @@ class Config(object):
         modified = 0
 
         # Convert previous configuration keys to new 2.x values, removing unused
+        if not Config._CONFIG.get('plex'):
+            Config._CONFIG['plex'] = {}
+            modified += 1
+
+        if not Config._CONFIG.get('smtp_settings'):
+            Config._CONFIG['smtp_settings'] = {}
+            modified += 1
+
+        if not Config._CONFIG.get('deemix'):
+            Config._CONFIG['deemix'] = {}
+            modified += 1
+
+        if not Config._CONFIG.get('global'):
+            Config._CONFIG['global'] = {}
+            modified += 1
+
+        if not Config._CONFIG.get('new_releases'):
+            Config._CONFIG['new_releases'] = {}
+            modified += 1
+
         temp_config = Config._CONFIG.copy()
         for key in temp_config:
             if key not in DEFAULT_CONFIG:
                 if key == "smtp_recipient":
                     Config._CONFIG['email'] = Config._CONFIG.pop('smtp_recipient')
+                    modified += 1
+                elif key == "plex_baseurl":
+                    Config._CONFIG['plex']['base_url'] = Config._CONFIG.pop('plex_baseurl')
+                    modified += 1
+                elif key == "plex_token":
+                    Config._CONFIG['plex']['token'] = Config._CONFIG.pop('plex_token')
+                    modified += 1
+                elif key == "plex_library":
+                    Config._CONFIG['plex']['library'] = Config._CONFIG.pop('plex_library')
+                    modified += 1
+                elif key == "smtp_server":
+                    Config._CONFIG['smtp_settings']['server'] = Config._CONFIG.pop('smtp_server')
+                    modified += 1
+                elif key == "smtp_port":
+                    Config._CONFIG['smtp_settings']['port'] = Config._CONFIG.pop('smtp_port')
+                    modified += 1
+                elif key == "smtp_user":
+                    Config._CONFIG['smtp_settings']['username'] = Config._CONFIG.pop('smtp_user')
+                    modified += 1
+                elif key == "smtp_pass":
+                    Config._CONFIG['smtp_settings']['password'] = Config._CONFIG.pop('smtp_pass')
+                    modified += 1
+                elif key == "smtp_sender":
+                    Config._CONFIG['smtp_settings']['from_addr'] = Config._CONFIG.pop('smtp_sender')
+                    modified += 1
+                elif key == "deemix_path":
+                    Config._CONFIG['deemix']['path'] = Config._CONFIG.pop('deemix_path')
+                    modified += 1
+                elif key == "arl":
+                    Config._CONFIG['deemix']['arl'] = Config._CONFIG.pop('arl')
+                    modified += 1
+                elif key == "bitrate":
+                    Config._CONFIG['global']['bitrate'] = Config._CONFIG.pop('bitrate')
+                    modified += 1
+                elif key == "alerts":
+                    Config._CONFIG['global']['alerts'] = Config._CONFIG.pop('alerts')
+                    modified += 1
+                elif key == "record_type":
+                    Config._CONFIG['global']['record_type'] = Config._CONFIG.pop('record_type')
+                    modified += 1
+                elif key == "download_path":
+                    Config._CONFIG['global']['download_path'] = Config._CONFIG.pop('download_path')
+                    modified += 1
+                elif key == "email":
+                    Config._CONFIG['global']['email'] = Config._CONFIG.pop('email')
+                    modified += 1
+                elif key == "release_by_date":
+                    Config._CONFIG['new_releases']['by_release_date'] = Config._CONFIG.pop('release_by_date')
+                    modified += 1
+                elif key == "release_max_days":
+                    Config._CONFIG['new_releases']['release_max_age'] = Config._CONFIG.pop('release_max_days')
                     modified += 1
                 else:
                     logger.debug(f"Your config contains an unknown setting and will be removed: {key}")
@@ -136,71 +218,71 @@ class Config(object):
 
     @staticmethod
     def plex_baseurl() -> str:
-        return Config._CONFIG.get('plex_baseurl')
+        return Config._CONFIG.get('plex').get('base_url')
 
     @staticmethod
     def plex_token() -> str:
-        return Config._CONFIG.get('plex_token')
+        return Config._CONFIG.get('plex_token').get('token')
 
     @staticmethod
     def plex_library() -> str:
-        return Config._CONFIG.get('plex_library')
+        return Config._CONFIG.get('plex_library').get('library')
 
     @staticmethod
     def download_path() -> str:
-        return Config._CONFIG.get('download_path')
+        return Config._CONFIG.get('global').get('download_path')
 
     @staticmethod
     def deemix_path() -> str:
-        return Config._CONFIG.get('deemix_path')
+        return Config._CONFIG.get('deemix').get('deemix_path')
 
     @staticmethod
     def arl() -> str:
-        return Config._CONFIG.get('arl')
+        return Config._CONFIG.get('deemix').get('arl')
 
     @staticmethod
     def release_by_date() -> bool:
-        return Config._CONFIG.get('release_by_date')
+        return Config._CONFIG.get('new_releases').get('by_release_date')
 
     @staticmethod
     def release_max_days() -> int:
-        return Config._CONFIG.get('release_max_days')
+        return Config._CONFIG.get('new_releases').get('release_max_age')
 
     @staticmethod
     def bitrate() -> int:
-        return Config._CONFIG.get('bitrate')
+        return Config._CONFIG.get('global').get('bitrate')
 
     @staticmethod
     def alerts() -> bool:
-        return Config._CONFIG.get('alerts')
+        return Config._CONFIG.get('global').get('alerts')
 
     @staticmethod
     def record_type() -> str:
-        return Config._CONFIG.get('record_type')
+        return Config._CONFIG.get('global').get('record_type')
 
     @staticmethod
     def smtp_server() -> str:
-        return Config._CONFIG.get('smtp_server')
+        return Config._CONFIG.get('smtp_settings').get('server')
 
     @staticmethod
     def smtp_port() -> int:
-        return Config._CONFIG.get('smtp_port')
+        return Config._CONFIG.get('smtp_settings').get('port')
 
     @staticmethod
     def smtp_user() -> str:
-        return Config._CONFIG.get('smtp_user')
+        return Config._CONFIG.get('smtp_settings').get('username')
 
     @staticmethod
     def smtp_pass() -> str:
-        return Config._CONFIG.get('smtp_pass')
+        return Config._CONFIG.get('smtp_settings').get('password')
 
     @staticmethod
     def smtp_sender() -> str:
-        return Config._CONFIG.get('smtp_sender')
+        return Config._CONFIG.get('smtp_settings').get('from_addr')
 
     @staticmethod
     def smtp_recipient() -> list:
-        return Config._CONFIG.get('email')
+        return Config._CONFIG.get('global').get('email')
 
     @staticmethod
     def check_update() -> int:
@@ -225,6 +307,10 @@ class Config(object):
     @staticmethod
     def ranked_duplicates() -> int:
         return Config._CONFIG.get('ranked_duplicates')
+
+    @staticmethod
+    def accept_closest_match() -> bool:
+        return Config._CONFIG.get('accept_closest_match')
 
     @staticmethod
     def set(property, value, validate=True):
