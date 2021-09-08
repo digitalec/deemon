@@ -236,7 +236,7 @@ class Database(object):
 
     def get_monitored_artist_by_name(self, name: str):
         values = {'name': name, 'profile_id': config.profile_id()}
-        return self.query(f"SELECT * FROM monitor WHERE artist_name = 'lifehouse' COLLATE NOCASE "
+        return self.query(f"SELECT * FROM monitor WHERE artist_name = :name COLLATE NOCASE "
                           f"AND profile_id = :profile_id", values).fetchone()
 
     def remove_monitored_artist(self, id: int = None, name: str = None):
@@ -331,6 +331,11 @@ class Database(object):
     def get_profile_by_id(self, profile_id: int):
         vals = {'profile_id': profile_id}
         return self.query("SELECT * FROM profiles WHERE id = :profile_id", vals).fetchone()
+
+    def update_artist(self, settings: dict):
+        self.query("UPDATE monitor SET bitrate = :bitrate, alerts = :alerts, record_type = :record_type,"
+                   "download_path = :download_path WHERE artist_id = :artist_id AND profile_id = :profile_id", settings)
+        self.commit()
 
     def update_profile(self, settings: dict):
         self.query("UPDATE profiles SET name = :name, email = :email, alerts = :alerts, bitrate = :bitrate,"

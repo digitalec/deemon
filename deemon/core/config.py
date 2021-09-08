@@ -6,6 +6,12 @@ import json
 
 logger = logging.getLogger(__name__)
 
+ALLOWED_VALUES = {
+    'bitrate': [1, 3, 9],
+    'alerts': [0, 1],
+    'record_type': ['all', 'album', 'ep', 'single']
+}
+
 DEFAULT_CONFIG = {
     "check_update": 1,
     "debug_mode": False,
@@ -311,6 +317,10 @@ class Config(object):
     @staticmethod
     def accept_closest_match() -> bool:
         return Config._CONFIG.get('accept_closest_match')
+
+    @staticmethod
+    def allowed_values(prop) -> list:
+        return ALLOWED_VALUES.get(prop)
 
     @staticmethod
     def set(property, value, validate=True):

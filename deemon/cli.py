@@ -8,6 +8,7 @@ from deemon.core.settings import ProfileConfig, LoadProfile
 from deemon.cmd.search import Search
 from deemon.cmd.refresh import Refresh
 from deemon.cmd.show import Show
+from deemon.cmd.artistconfig import artist_lookup
 from deemon import __version__
 from datetime import datetime
 from pathlib import Path
@@ -388,3 +389,9 @@ def search():
     """Interactively search and download/monitor artists"""
     client = Search()
     client.search_menu()
+
+@run.command(name="config")
+@click.argument('artist')
+def config_command(artist):
+    """Configure per-artist settings by name or ID"""
+    artist_lookup(artist)
