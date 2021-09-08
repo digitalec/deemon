@@ -30,13 +30,17 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 # TODO refresh all (--all | -U)
 @click.group(context_settings=CONTEXT_SETTINGS)
 @click.version_option(__version__, '-V', '--version', message='deemon %(version)s')
+@click.option('-v', '--verbose', is_flag=True, help="Show verbose")
 @click.option('-P', '--profile', help="Specify profile to run deemon as")
-def run(profile):
+def run(verbose, profile):
     """Monitoring and alerting tool for new music releases using the Deezer API.
 
     deemon is a free and open source tool. To report issues or to contribute,
     please visit https://github.com/digitalec/deemon
     """
+    if verbose:
+        setup_logger(log_level='DEBUG', log_file=startup.get_log_file())
+
     db.do_upgrade()
     if profile:
         profile_config = db.get_profile(profile)
