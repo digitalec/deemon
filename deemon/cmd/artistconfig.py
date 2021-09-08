@@ -44,7 +44,7 @@ def get_artist(query: str):
                 logger.debug("Artist found by both ID and name, prompting user")
 
                 while True:
-                    prompt = input("Multiple artists found. Was that a name or ID? ")
+                    prompt = input(":: Multiple artists found. Was that a name or ID? ")
                     if prompt.lower() == "name":
                         logger.debug("Artist confirmed by user to be a name")
                         return artist_fromdb
@@ -91,7 +91,7 @@ def artist_lookup(query):
             modified += 1
             break
     if modified > 0:
-        i = input("\nSave these settings? [y|N] ")
+        i = input("\n:: Save these settings? [y|N] ")
         if i.lower() != "y":
             logger.info("No changes made, exiting...")
         else:

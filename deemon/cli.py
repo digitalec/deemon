@@ -355,7 +355,7 @@ def api_test(artist, artist_id, album_id, playlist_id, limit, raw):
 def reset_db():
     """Reset monitoring database"""
     logger.warning("** ALL ARTISTS AND PLAYLISTS WILL BE REMOVED! **")
-    confirm = input("Type 'reset' to confirm: ")
+    confirm = input(":: Type 'reset' to confirm: ")
     if confirm.lower() == "reset":
         db.reset_database()
     else:

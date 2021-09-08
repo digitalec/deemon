@@ -66,7 +66,7 @@ class Search:
                 search_query = query
                 quick_search = True
             else:
-                search_query = input(f"Enter the artist to search for or type 'exit'{self.show_mini_queue()}: ")
+                search_query = input(":: Enter the artist to search for or type 'exit'{self.show_mini_queue()}: ")
                 if search_query == "exit":
                     if self.exit_search():
                         sys.exit()
@@ -112,7 +112,7 @@ class Search:
                 self.display_options(options="(b) Back  (d) Download Queue  (Q) Show Queue")
             else:
                 self.display_options(options="(b) Back")
-            response = input(f"Please choose an option or type 'exit'{self.show_mini_queue()}: ")
+            response = input(":: Please choose an option or type 'exit'{self.show_mini_queue()}: ")
             if response == "d":
                 if len(self.queue_list) > 0:
                     self.start_queue()
@@ -178,7 +178,7 @@ class Search:
             self.album_menu_options(monitored)
 
             n = str(len(self.queue_list))
-            prompt = input(f"Please choose an option or type 'exit'{self.show_mini_queue()}: ")
+            prompt = input(f":: Please choose an option or type 'exit'{self.show_mini_queue()}: ")
             if prompt == "a":
                 self.filter = "album"
             elif prompt == "e":
@@ -254,7 +254,7 @@ class Search:
                 print(f"{idx}. {q.artist_name} - {q.album_title}")
             print("")
             self.queue_menu_options()
-            response = input(f"Please choose an option or type exit{self.show_mini_queue()}: ")
+            response = input(f":: Please choose an option or type exit{self.show_mini_queue()}: ")
             if response == "d":
                 if len(self.queue_list) > 0:
                     self.start_queue()
@@ -276,7 +276,7 @@ class Search:
 
     def exit_search(self):
         if len(self.queue_list) > 0:
-            exit_all = input("Quit before downloading queue? [y|N] ")
+            exit_all = input(":: Quit before downloading queue? [y|N] ")
             if exit_all.lower() != 'y':
                 return False
             else:

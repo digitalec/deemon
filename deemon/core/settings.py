@@ -52,7 +52,7 @@ class ProfileConfig:
                 break
 
         print("\n")
-        i = input("Save these settings? [y|N] ")
+        i = input(":: Save these settings? [y|N] ")
         if i.lower() != "y":
             return logger.info("Operation cancelled. No changes saved.")
         else:
@@ -103,7 +103,7 @@ class ProfileConfig:
 
         if modified > 0:
             print("\n")
-            i = input("Save these settings? [y|N] ")
+            i = input(":: Save these settings? [y|N] ")
             if i.lower() != "y":
                 return logger.info("Operation cancelled. No changes saved.")
             else:
@@ -119,7 +119,7 @@ class ProfileConfig:
         if profile_config['id'] == 1:
             return logger.info("You cannot delete the default profile.")
 
-        i = input(f"Remove the profile '{self.profile}'? [y|N] ")
+        i = input(f":: Remove the profile '{self.profile}'? [y|N] ")
         if i.lower() == "y":
             self.db.delete_profile(self.profile)
             return logger.info("Profile " + self.profile + " deleted.")
