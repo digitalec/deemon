@@ -228,11 +228,11 @@ class Config(object):
 
     @staticmethod
     def plex_token() -> str:
-        return Config._CONFIG.get('plex_token').get('token')
+        return Config._CONFIG.get('plex').get('token')
 
     @staticmethod
     def plex_library() -> str:
-        return Config._CONFIG.get('plex_library').get('library')
+        return Config._CONFIG.get('plex').get('library')
 
     @staticmethod
     def download_path() -> str:
@@ -240,7 +240,7 @@ class Config(object):
 
     @staticmethod
     def deemix_path() -> str:
-        return Config._CONFIG.get('deemix').get('deemix_path')
+        return Config._CONFIG.get('deemix').get('path')
 
     @staticmethod
     def arl() -> str:
