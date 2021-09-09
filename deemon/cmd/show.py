@@ -25,6 +25,7 @@ class Show:
             column_names = ['artist_id' if x == 'id' else x for x in filter]
             column_names = ['artist_name' if x == 'name' else x for x in column_names]
             column_names = ['record_type' if x == 'type' else x for x in column_names]
+            column_names = ['download_path' if x == 'path' else x for x in column_names]
 
             for column in column_names:
                 if not any(x.get(column) for x in monitored_artists):
