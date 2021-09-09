@@ -242,7 +242,7 @@ class Search:
                     stop = False
                 record_type = self.filter or config.record_type()
                 self.clear()
-                monitor.monitor("artist_id", self.artist_id, config.bitrate(),
+                monitor.monitor("artist_id", artist['id'], config.bitrate(),
                                 record_type, config.alerts(),
                                 remove=stop, dl_obj=None)
             elif prompt == "f":
