@@ -51,7 +51,7 @@ def monitor(profile, value, bitrate, r_type, alerts, remove=False, dl_obj=None, 
         if len(matches) == 1 and not is_search:
             return matches[0]
         elif len(matches) > 1:
-            if is_search:
+            if is_search or not config.ranked_duplicates():
                 menu = search.Search()
                 ask_user = menu.search_menu(value)
                 return ask_user[0]
