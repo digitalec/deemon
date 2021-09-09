@@ -340,7 +340,7 @@ class Database(object):
         self.query("UPDATE profiles SET name = :name, email = :email, alerts = :alerts, bitrate = :bitrate,"
                    "record_type = :record_type, plex_baseurl = :plex_baseurl, plex_token = :plex_token,"
                    "plex_library = :plex_library, download_path = :download_path "
-                   "WHERE profile_id = :profile_id", settings)
+                   "WHERE id = :id", settings)
         self.commit()
 
     def create_profile(self, settings: dict):

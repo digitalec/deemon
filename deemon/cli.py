@@ -30,17 +30,13 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 # TODO refresh all (--all | -U)
 @click.group(context_settings=CONTEXT_SETTINGS)
 @click.version_option(__version__, '-V', '--version', message='deemon %(version)s')
-@click.option('-v', '--verbose', is_flag=True, help="Show verbose")
 @click.option('-P', '--profile', help="Specify profile to run deemon as")
-def run(verbose, profile):
+def run(profile):
     """Monitoring and alerting tool for new music releases using the Deezer API.
 
     deemon is a free and open source tool. To report issues or to contribute,
     please visit https://github.com/digitalec/deemon
     """
-    if verbose:
-        setup_logger(log_level='DEBUG', log_file=startup.get_log_file())
-
     db.do_upgrade()
     if profile:
         profile_config = db.get_profile(profile)
@@ -364,25 +360,24 @@ def reset_db():
 
 @run.command(name='profile')
 @click.argument('profile', required=False)
-@click.option('-a', '--add', metavar='PROFILE', type=str, help="Add new profile")
-@click.option('-r', '--remove', metavar='PROFILE', type=str, help="Remove an existing profile")
-@click.option('-e', '--edit', metavar='PROFILE', type=str, help="Edit an existing profile")
-def profile_command(profile, add, remove, edit):
+@click.option('-a', '--add', is_flag=True, type=str, help="Add new profile")
+@click.option('-d', '--delete', is_flag=True, type=str, help="Delete an existing profile")
+@click.option('-e', '--edit', is_flag=True, type=str, help="Edit an existing profile")
+def profile_command(profile, add, delete, edit):
     """Add, modify and delete configuration profiles"""
 
-    uc = ProfileConfig(profile)
+    pc = ProfileConfig(profile)
     if profile:
         if add:
-            uc = ProfileConfig(profile)
-            uc.add()
-        elif remove:
-            uc = ProfileConfig(profile)
-            uc.delete()
+            pc.add()
+        elif delete:
+            pc.delete()
         elif edit:
-            uc = ProfileConfig(profile)
-            uc.edit()
+            pc.edit()
+        else:
+            pc.show()
     else:
-        uc.show()
+        pc.show()
 
 @run.command(name="search")
 def search():
