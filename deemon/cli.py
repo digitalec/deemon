@@ -119,7 +119,7 @@ def download_command(artist, artist_id, album_id, url, file, bitrate, record_typ
     dl = download.Download()
     dl.download(artists, artist_ids, album_ids, urls, bitrate, record_type, file)
 
-@run.command(name='monitor', context_settings={"ignore_unknown_options": True})
+@run.command(name='monitor', context_settings={"ignore_unknown_options": False})
 @click.argument('artist', nargs=-1)
 @click.option('-i', '--artist-id', multiple=True, type=int, metavar="ID", help="Monitor artist by ID")
 @click.option('-I', '--import', 'im', metavar="PATH", help="Monitor artists/IDs from file or directory")
@@ -362,13 +362,13 @@ def reset_db():
         logger.info("Reset aborted. Database has NOT been modified.")
     return
 
-@run.command(name='profiles')
+@run.command(name='profile')
 @click.argument('profile', required=False)
-@click.option('-a', '--add', type=str, help="Add new profile")
-@click.option('-r', '--remove', type=str, help="Remove an existing profile")
-@click.option('-e', '--edit', type=str, help="Edit an existing profile")
-def profiles_command(profile, add, remove, edit):
-    """Add, modify and delete profiles"""
+@click.option('-a', '--add', metavar='PROFILE', type=str, help="Add new profile")
+@click.option('-r', '--remove', metavar='PROFILE', type=str, help="Remove an existing profile")
+@click.option('-e', '--edit', metavar='PROFILE', type=str, help="Edit an existing profile")
+def profile_command(profile, add, remove, edit):
+    """Add, modify and delete configuration profiles"""
 
     uc = ProfileConfig(profile)
     if profile:
