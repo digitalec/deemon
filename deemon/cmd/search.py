@@ -14,6 +14,9 @@ class Search:
         self.choices: list = []
         self.status_message: str = None
         self.queue_list = []
+        self.select_mode = False
+        self.explicit_only = False
+        self.user_search_query: str = None
 
         self.sort: str = "release_date"
         self.filter: str = None
@@ -39,8 +42,8 @@ class Search:
 
     def display_monitored_status(self, artist_id: int):
         if self.db.get_monitored_artist_by_id(artist_id):
-            return "* "
-        return ""
+            return "[M] "
+        return "    "
 
     @staticmethod
     def has_duplicate_artists(name: str, artist_dicts: dict):
@@ -66,7 +69,7 @@ class Search:
                 search_query = query
                 quick_search = True
             else:
-                search_query = input(":: Enter the artist to search for or type 'exit'{self.show_mini_queue()}: ")
+                search_query = input(f":: Enter the artist to search for or type 'exit'{self.show_mini_queue()}: ")
                 if search_query == "exit":
                     if self.exit_search():
                         sys.exit()
@@ -89,6 +92,7 @@ class Search:
                 continue
             artist_selected = self.artist_menu(search_query, artist_search_result, quick_search)
             if artist_selected:
+                self.user_search_query = search_query
                 return [artist_selected]
 
     def queue_menu_options(self):
@@ -101,7 +105,7 @@ class Search:
             self.clear()
             print("Search results for artist: " + query)
             for idx, option in enumerate(results, start=1):
-                print(f"{idx}. {self.display_monitored_status(option['id'])}{self.truncate_artist(option['name'])}")
+                print(f"{self.display_monitored_status(option['id'])}{idx}. {self.truncate_artist(option['name'])}")
                 if self.has_duplicate_artists(option['name'], results):
                     print(self.get_latest_release(option['id']))
                     print("   Total releases: " + str(option['nb_album']))
@@ -112,7 +116,7 @@ class Search:
                 self.display_options(options="(b) Back  (d) Download Queue  (Q) Show Queue")
             else:
                 self.display_options(options="(b) Back")
-            response = input(":: Please choose an option or type 'exit'{self.show_mini_queue()}: ")
+            response = input(f":: Please choose an option or type 'exit'{self.show_mini_queue()}: ")
             if response == "d":
                 if len(self.queue_list) > 0:
                     self.start_queue()
@@ -148,6 +152,8 @@ class Search:
 
     def album_menu_header(self, artist: str):
         filter_text = "All" if not self.filter else self.filter.title()
+        if self.explicit_only:
+            filter_text = filter_text + " (Explicit Only)"
         desc_text = "desc" if self.desc else "asc"
         sort_text = self.sort.replace("_", " ").title() + " (" + desc_text + ")"
         print("Discography for artist: " + artist)
@@ -159,11 +165,32 @@ class Search:
             monitor_opt = "(m) Monitor"
         else:
             monitor_opt = "(m) Stop Monitoring"
-        ui_filter = "Filters: (*) All  (a) Albums  (e) EP  (s) Singles"
+        ui_filter = "Filters: (*) All  (a) Albums  (e) EP  (s) Singles - (E) Explicit (r) Reset"
         ui_sort = "   Sort: (y) Year Desc  (Y) Year Asc  (t) Title Desc  (T) Title Asc"
+        ui_mode = "   Mode: (S) Toggle Select"
         ui_options = ("(b) Back  (d) Download Queue  (Q) Show Queue  (f) Queue Filtered  "
                       f"{monitor_opt}")
-        self.display_options(ui_filter, ui_sort, ui_options)
+        self.display_options(ui_filter, ui_sort, ui_mode, ui_options)
+
+    def explicit_lyrics(self, is_explicit):
+        if is_explicit:
+            return " [E]"
+        else:
+            return ""
+
+    def item_selected(self, id):
+        if self.select_mode:
+            if [x for x in self.queue_list if x.album_id == id or x.track_id == id]:
+                return "[*] "
+            else:
+                return "[ ] "
+        else:
+            return "    "
+
+    def show_mode(self):
+        if self.select_mode:
+            return "[SELECT] "
+        return ""
 
     def album_menu(self, artist: dict):
         exit_album_menu: bool = False
@@ -173,12 +200,12 @@ class Search:
             self.album_menu_header(artist['name'])
             filtered_choices = self.filter_choices(artist_albums)
             for idx, album in enumerate(filtered_choices, start=1):
-                print(f"{idx}. ({dates.get_year(album['release_date'])}) {album['title']}")
+                print(f"{self.item_selected(album['id'])}{idx}. ({dates.get_year(album['release_date'])}) "
+                      f"{album['title']} {self.explicit_lyrics(album['explicit_lyrics'])}")
             monitored = self.db.get_monitored_artist_by_id(artist['id'])
             self.album_menu_options(monitored)
 
-            n = str(len(self.queue_list))
-            prompt = input(f":: Please choose an option or type 'exit'{self.show_mini_queue()}: ")
+            prompt = input(f":: {self.show_mode()}Please choose an option or type 'exit'{self.show_mini_queue()}: ")
             if prompt == "a":
                 self.filter = "album"
             elif prompt == "e":
@@ -187,6 +214,13 @@ class Search:
                 self.filter = "single"
             elif prompt == "*":
                 self.filter = None
+            elif prompt == "E":
+                self.explicit_only = True
+            elif prompt == "r":
+                self.filter = None
+                self.explicit_only = False
+                self.sort = "release_date"
+                self.desc = True
             elif prompt == "y":
                 self.sort = "release_date"
                 self.desc = True
@@ -199,6 +233,8 @@ class Search:
             elif prompt == "T":
                 self.sort = "title"
                 self.desc = False
+            elif prompt == "S":
+                self.select_mode ^= True
             elif prompt == "m":
                 if monitored:
                     stop = True
@@ -210,8 +246,11 @@ class Search:
                                 record_type, config.alerts(),
                                 remove=stop, dl_obj=None)
             elif prompt == "f":
-                for item in filtered_choices:
-                    self.send_to_queue(item)
+                if len(filtered_choices) > 0:
+                    for item in filtered_choices:
+                        self.send_to_queue(item)
+                else:
+                    self.status_message = "No items to add"
             elif prompt == "d":
                 if len(self.queue_list) > 0:
                     self.start_queue()
@@ -239,25 +278,94 @@ class Search:
                     continue
 
                 if selected_index in range(len(filtered_choices)):
-                    selected_item = filtered_choices[selected_index]
+                    if self.select_mode:
+                        selected_item = filtered_choices[selected_index]
+                        self.send_to_queue(selected_item)
+                        continue
+                    else:
+                        self.track_menu(filtered_choices[selected_index])
+                else:
+                    self.status_message = "Invalid selection, please choose from above"
+                    continue
+
+    def track_menu_options(self):
+        ui_options = ("(b) Back  (d) Download Queue  (Q) Show Queue")
+        self.display_options(options=ui_options)
+
+    def track_menu_header(self, album):
+        print("deemon Interactive Search Client")
+        print(f"Artist: {self.artist}  |  Album: {album['title']}\n")
+
+    def track_menu(self, album):
+        exit_track_menu: bool = False
+        track_list = self.dz.api.get_album_tracks(album['id'])['data']
+        self.select_mode = True
+        while not exit_track_menu:
+            self.clear()
+            self.track_menu_header(album)
+
+            for idx, track in enumerate(track_list, start=1):
+                print(f"{self.item_selected(track['id'])}{idx}. {track['title']}")
+            self.track_menu_options()
+
+            prompt = input(f":: {self.show_mode()}Please choose an option or type 'exit'{self.show_mini_queue()}: ")
+            if prompt == "d":
+                if len(self.queue_list) > 0:
+                    self.start_queue()
+                else:
+                    self.status_message = "Queue is empty"
+            elif prompt == "Q":
+                if len(self.queue_list) > 0:
+                    self.queue_menu()
+                else:
+                    self.status_message = "Queue is empty"
+            elif prompt == "b":
+                self.select_mode = False
+                break
+            elif prompt == "":
+                self.status_message = "Hint: to exit, type 'exit'!"
+                continue
+            elif prompt == "exit":
+                if self.exit_search():
+                    sys.exit()
+            else:
+                try:
+                    selected_index = (int(prompt) - 1)
+                except ValueError:
+                    self.status_message = "Invalid filter, sort or option provided"
+                    continue
+                except IndexError:
+                    self.status_message = "Invalid selection, please choose from above"
+                    continue
+
+                if selected_index in range(len(track_list)):
+                    selected_item = track_list[selected_index]
                     self.send_to_queue(selected_item)
                     continue
                 else:
                     self.status_message = "Invalid selection, please choose from above"
                     continue
 
+    def search_header(self):
+        pass
+
     def queue_menu(self):
         exit_queue_list = False
         while exit_queue_list is False:
             self.clear()
             for idx, q in enumerate(self.queue_list, start=1):
-                print(f"{idx}. {q.artist_name} - {q.album_title}")
+                if q.album_title:
+                    print(f"{idx}. {q.artist_name} - {q.album_title}")
+                else:
+                    print(f"{idx}. {q.artist_name} - {q.track_title}")
             print("")
             self.queue_menu_options()
-            response = input(f":: Please choose an option or type exit{self.show_mini_queue()}: ")
+            response = input(f":: Please choose an option or type exit {self.show_mini_queue()}: ")
             if response == "d":
                 if len(self.queue_list) > 0:
                     self.start_queue()
+                else:
+                    self.status_message = "Queue is empty"
             if response == "c":
                 self.queue_list = []
                 break
@@ -283,11 +391,13 @@ class Search:
                 return True
         return True
 
-    def display_options(self, filter=None, sort=None, options=None):
+    def display_options(self, filter=None, sort=None, mode=None, options=None):
         if filter:
             print(filter)
         if sort:
             print(sort)
+        if mode:
+            print(mode)
         if options:
             print("")
             print(options)
@@ -304,6 +414,8 @@ class Search:
 
     def filter_choices(self, choices):
         apply_filter = [x for x in choices if x['record_type'] == self.filter or self.filter is None]
+        if self.explicit_only:
+            apply_filter = [x for x in apply_filter if x['explicit_lyrics'] == True]
         return sorted(apply_filter, key=lambda x: x[self.sort], reverse=self.desc)
 
     def start_queue(self):
@@ -313,13 +425,21 @@ class Search:
         self.queue_list.clear()
 
     def send_to_queue(self, item):
-        if item.get('title'):
-            artist = {'artist_name': self.artist}
-            album = {'id': item['id'], 'title': item['title'], 'link': item['link']}
+        if item['type'] == 'album':
+            album = {'id': item['id'], 'title': item['title'], 'link': item['link'], 'artist': {'name': self.artist}}
             for q in self.queue_list:
                 if q.album_id == album['id']:
-                    self.status_message = "Item already in queue"
+                    self.status_message = "Album already in queue"
                     return
-            self.queue_list.append(download.QueueItem(config.download_path(), config.bitrate(), artist=artist, album=album))
+            self.queue_list.append(download.QueueItem(config.download_path(), config.bitrate(), album=album))
+
+        elif item['type'] == 'track':
+            track = {'id': item['id'], 'title': item['title'], 'link': item['link'], 'artist': self.artist}
+            for q in self.queue_list:
+                if q.track_id == track['id']:
+                    self.status_message = "Track already in queue"
+                    return
+            self.queue_list.append(download.QueueItem(config.download_path(), config.bitrate(), track=track))
+
         elif item.get('name'):
             pass

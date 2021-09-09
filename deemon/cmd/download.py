@@ -14,11 +14,13 @@ logger = logging.getLogger(__name__)
 
 class QueueItem:
     # TODO - Accept new playlist tracks for output/alerts
-    def __init__(self, download_path, bitrate, artist=None, album=None, playlist=None):
+    def __init__(self, download_path, bitrate, artist=None, album=None, track=None, playlist=None):
         self.artist_name = None
         self.bitrate = bitrate
         self.album_id = None
         self.album_title = None
+        self.track_id = None
+        self.track_title = None
         self.url = None
         self.playlist_title = None
         self.verbose = os.environ.get('VERBOSE')
@@ -29,7 +31,7 @@ class QueueItem:
                 self.artist_name = artist["artist_name"]
             except KeyError:
                 self.artist_name = artist["name"]
-            if not album:
+            if not album or not track:
                 self.url = artist["link"]
 
         if album:
@@ -38,6 +40,12 @@ class QueueItem:
             self.album_id = album["id"]
             self.album_title = album["title"]
             self.url = album["link"]
+
+        if track:
+            self.artist_name = track["artist"]
+            self.track_id = track["id"]
+            self.track_title = track["title"]
+            self.url = track["link"]
 
         if playlist:
             self.url = playlist["link"]
@@ -102,7 +110,10 @@ class Download:
                 if self.verbose == "true":
                     logger.debug(f"Processing queue item {vars(q)}")
                 if q.artist_name:
-                    logger.info(f"[{current}/{total}] {q.artist_name} - {q.album_title}... ")
+                    if q.album_title:
+                        logger.info(f"[{current}/{total}] {q.artist_name} - {q.album_title}... ")
+                    else:
+                        logger.info(f"[{current}/{total}] {q.artist_name} - {q.track_title}... ")
                     self.di.download_url([q.url], q.bitrate, q.download_path)
                 else:
                     logger.info(f"+ {q.playlist_title} (playlist)...")
