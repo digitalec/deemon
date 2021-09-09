@@ -64,11 +64,11 @@ class Config(object):
                     logger.exception(f"An error occured while reading from config: {e}")
                     raise
 
-        if self.validate() > 0:
-            self.__write_modified_config()
+            if self.validate() > 0:
+                self.__write_modified_config()
 
-        # Set as default profile for init
-        self.set('profile_id', 1, False)
+            # Set as default profile for init
+            self.set('profile_id', 1, False)
 
     @staticmethod
     def __create_default_config():

@@ -16,8 +16,7 @@ class Show:
         monitored_artists = self.db.get_all_monitored_artists()
 
         if len(monitored_artists) == 0:
-            logger.info("No artists are being monitored")
-            return
+            return logger.info("No artists are being monitored")
 
         if csv:
             filter = filter.split(',')

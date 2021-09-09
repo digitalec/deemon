@@ -152,5 +152,22 @@ class LoadProfile(object):
         for key, value in profile.items():
             if value is None:
                 continue
-            if config.get_config().get(key):
-                config.set(key, value, validate=False)
+            # TODO optimize this code
+            if key == "profile_id":
+                config._CONFIG[key] = value
+            if key == "email":
+                config._CONFIG["global"][key] = value
+            if key == "bitrate":
+                config._CONFIG["global"][key] = value
+            if key == "alerts":
+                config._CONFIG["global"][key] = value
+            if key == "record_type":
+                config._CONFIG["global"][key] = value
+            if key == "download_path":
+                config._CONFIG["global"][key] = value
+            if key == "plex_baseurl":
+                config._CONFIG["plex"][key] = value
+            if key == "plex_token":
+                config._CONFIG["plex"][key] = value
+            if key == "plex_library":
+                config._CONFIG["plex"][key] = value
