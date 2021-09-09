@@ -5,6 +5,7 @@ from deemon.utils import dates
 from deemon.core.config import Config as config
 from deemon.core import db
 from deemon.cmd import monitor, download
+from deemon.cmd.refresh import Refresh
 
 
 class Search:
@@ -17,6 +18,7 @@ class Search:
         self.select_mode = False
         self.explicit_only = False
         self.user_search_query: str = None
+        self.new_artist_monitored: list = []
 
         self.sort: str = "release_date"
         self.filter: str = None
@@ -245,6 +247,8 @@ class Search:
                 monitor.monitor("artist_id", artist['id'], config.bitrate(),
                                 record_type, config.alerts(),
                                 remove=stop, dl_obj=None)
+                if not stop:
+                    self.new_artist_monitored.append(artist['id'])
             elif prompt == "f":
                 if len(filtered_choices) > 0:
                     for item in filtered_choices:
@@ -372,7 +376,8 @@ class Search:
             if response == "b":
                 break
             if response == "exit":
-                sys.exit()
+                if self.exit_search():
+                    sys.exit()
             try:
                 response = int(response) - 1
             except ValueError:
@@ -388,7 +393,13 @@ class Search:
             if exit_all.lower() != 'y':
                 return False
             else:
+                if len(self.new_artist_monitored) > 0:
+                    self.clear()
+                    Refresh(artist_id=self.new_artist_monitored)
                 return True
+        if len(self.new_artist_monitored) > 0:
+            self.clear()
+            Refresh(artist_id=self.new_artist_monitored)
         return True
 
     def display_options(self, filter=None, sort=None, mode=None, options=None):
