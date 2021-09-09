@@ -228,7 +228,6 @@ class Database(object):
     def get_all_monitored_artists(self):
         vals = {'profile_id': config.profile_id()}
         return self.query(f"SELECT * FROM monitor WHERE profile_id = :profile_id ORDER BY artist_name", vals).fetchall()
-        # return sorted(result, key=lambda x: x['artist_name'])
 
     def get_monitored_artist_by_id(self, artist_id: int):
         values = {'id': artist_id, 'profile_id': config.profile_id()}
@@ -326,7 +325,7 @@ class Database(object):
 
     def get_profile(self, profile_name: str):
         vals = {'profile': profile_name}
-        return self.query("SELECT * FROM profiles WHERE name = :profile_name COLLATE NOCASE", vals).fetchone()
+        return self.query("SELECT * FROM profiles WHERE name = :profile COLLATE NOCASE", vals).fetchone()
 
     def get_profile_by_id(self, profile_id: int):
         vals = {'profile_id': profile_id}

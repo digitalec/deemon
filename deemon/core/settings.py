@@ -17,7 +17,7 @@ class ProfileConfig:
             return logger.error(f"Profile {self.profile} already exists")
         else:
             logger.info("Adding new profile: " + self.profile)
-            print("** Any option left blank will fallback to global config (except email address) **\n")
+            print("** Any option left blank will fallback to global config **\n")
             new_profile['name'] = self.profile
 
         menu = [
@@ -147,7 +147,8 @@ class ProfileConfig:
 
 class LoadProfile(object):
     def __init__(self, profile: dict):
-        logger.debug(f"Loading config for profile {str(profile['id'])} ({str(profile['name'] )})")
+        profile["profile_id"] = profile.pop("id")
+        logger.debug(f"Loading config for profile {str(profile['profile_id'])} ({str(profile['name'] )})")
         for key, value in profile.items():
             if value is None:
                 continue
