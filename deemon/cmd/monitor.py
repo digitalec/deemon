@@ -90,6 +90,8 @@ def monitor(profile, value, bitrate, r_type, alerts, remove=False, dl_obj=None, 
                 logger.error(f"No result selected")
                 return
         else:
+            if remove:
+                return purge_artist(id=value)
             try:
                 api_result = dz.api.get_artist(value)
             except deezer.api.DataException:
