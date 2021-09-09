@@ -31,7 +31,7 @@ class QueueItem:
                 self.artist_name = artist["artist_name"]
             except KeyError:
                 self.artist_name = artist["name"]
-            if not album or not track:
+            if not album and not track:
                 self.url = artist["link"]
 
         if album:
