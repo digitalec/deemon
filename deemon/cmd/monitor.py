@@ -64,7 +64,7 @@ def monitor(profile, value, bitrate, r_type, alerts, remove=False, dl_obj=None, 
             ask_user = menu.search_menu(value)
             if ask_user:
                 return ask_user[0]
-        elif config.accept_closest_match():
+        elif not config.prompt_no_matches():
             return api_result[0]
         else:
             logger.error(f"Artist {value} not found. Try again using --search")

@@ -17,7 +17,7 @@ DEFAULT_CONFIG = {
     "debug_mode": False,
     "query_limit": 5,
     "ranked_duplicates": True,
-    "accept_closest_match": True,
+    "prompt_no_matches": True,
     "new_releases": {
         "by_release_date": True,
         "release_max_age": 90
@@ -315,8 +315,8 @@ class Config(object):
         return Config._CONFIG.get('ranked_duplicates')
 
     @staticmethod
-    def accept_closest_match() -> bool:
-        return Config._CONFIG.get('accept_closest_match')
+    def prompt_no_matches() -> bool:
+        return Config._CONFIG.get('prompt_no_matches')
 
     @staticmethod
     def allowed_values(prop) -> list:
