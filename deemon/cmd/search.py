@@ -39,8 +39,8 @@ class Search:
             sorted_releases = sorted(all_releases, key=lambda x: x['release_date'], reverse=True)
             latest_release = sorted_releases[0]
         except IndexError:
-            return "   No releases found"
-        return f"   Latest release: {latest_release['title']} ({dates.get_year(latest_release['release_date'])})"
+            return "       No releases found"
+        return f"       Latest release: {latest_release['title']} ({dates.get_year(latest_release['release_date'])})"
 
     def display_monitored_status(self, artist_id: int):
         if self.db.get_monitored_artist_by_id(artist_id):
@@ -110,7 +110,7 @@ class Search:
                 print(f"{self.display_monitored_status(option['id'])}{idx}. {self.truncate_artist(option['name'])}")
                 if self.has_duplicate_artists(option['name'], results):
                     print(self.get_latest_release(option['id']))
-                    print("   Total releases: " + str(option['nb_album']))
+                    print("       Total releases: " + str(option['nb_album']))
                     print("")
                     self.status_message = "Duplicate artists found"
             # TODO make options smarter/modular
