@@ -71,7 +71,7 @@ class Search:
                 search_query = query
                 quick_search = True
             else:
-                search_query = input(f":: Enter the artist to search for or type 'exit'{self.show_mini_queue()}: ")
+                search_query = input(f":: Enter an artist to search for{self.show_mini_queue()}: ")
                 if search_query == "exit":
                     if self.exit_search():
                         sys.exit()
@@ -92,6 +92,7 @@ class Search:
             if len(artist_search_result) == 0:
                 self.status_message = "No results found for: " + search_query
                 continue
+
             artist_selected = self.artist_menu(search_query, artist_search_result, quick_search)
             if artist_selected:
                 self.user_search_query = search_query
@@ -146,6 +147,7 @@ class Search:
                 if response in range(len(results)):
                     self.artist = results[response]['name']
                     if artist_only:
+                        self.clear()
                         return results[response]
                     self.album_menu(results[response])
                 else:
@@ -174,7 +176,8 @@ class Search:
                       f"{monitor_opt}")
         self.display_options(ui_filter, ui_sort, ui_mode, ui_options)
 
-    def explicit_lyrics(self, is_explicit):
+    @staticmethod
+    def explicit_lyrics(is_explicit):
         if is_explicit:
             return " [E]"
         else:
@@ -217,7 +220,7 @@ class Search:
             elif prompt == "*":
                 self.filter = None
             elif prompt == "E":
-                self.explicit_only = True
+                self.explicit_only ^= True
             elif prompt == "r":
                 self.filter = None
                 self.explicit_only = False
@@ -416,7 +419,8 @@ class Search:
             print("** " + self.status_message + " **")
             self.status_message = None
 
-    def clear(self):
+    @staticmethod
+    def clear():
         from os import system, name
         if name == 'nt':
             _ = system('cls')
