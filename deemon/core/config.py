@@ -201,11 +201,11 @@ class Config(object):
                         else:
                             raise PropertyTypeMismatch("Unknown string value provided for bitrate")
                         modified += 1
-                    if Config._CONFIG['bitrate'] not in [1, 3, 9]:
+                    if Config._CONFIG['bitrate'] not in ALLOWED_VALUES['bitrate']:
                         raise UnknownValue(f"Unknown value specified for bitrate: {Config._CONFIG['bitrate']}")
 
                 if key == "alerts":
-                    if Config._CONFIG['alerts'] not in [0, 1]:
+                    if Config._CONFIG['alerts'] not in ALLOWED_VALUES['alerts']:
                         raise UnknownValue(f"Unknown value specified for alerts: {Config._CONFIG['alerts']}")
 
                 if key == "release_by_date":
