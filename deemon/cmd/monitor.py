@@ -45,7 +45,7 @@ def monitor(profile, value, bitrate, r_type, alerts, remove=False, dl_obj=None, 
 
     def get_best_result(api_data):
         matches: list = []
-        for idx, artist in enumerate(api_result):
+        for idx, artist in enumerate(api_data):
             if value.lower() == artist['name'].lower():
                 matches.append(artist)
         if len(matches) == 1 and not is_search:
@@ -68,6 +68,7 @@ def monitor(profile, value, bitrate, r_type, alerts, remove=False, dl_obj=None, 
             return api_result[0]
         else:
             logger.error(f"Artist {value} not found. Try again using --search")
+            sys.exit(0)
 
     if not Path(config.download_path()).exists:
         return logger.error(f"Invalid download path: {config.download_path()}")
