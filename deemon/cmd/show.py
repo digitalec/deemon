@@ -12,9 +12,24 @@ class Show:
     def __init__(self):
         self.db = Database()
 
-    def artists(self, csv: bool, artist_ids: bool, extended: bool, filter: str, hide_header: bool):
-        monitored_artists = self.db.get_all_monitored_artists()
+    def artists(self, csv: bool, artist_ids: bool, extended: bool, filter: str, hide_header: bool, artist: str = None):
 
+        if artist:
+            mon = self.db.get_monitored_artist_by_name(artist)
+            if len(mon) == 0:
+                return logger.info(f"Artist '{artist}' is not being monitored")
+
+            print("{:<10} {:<35} {:<10} {:<10} {:<10} {:<25}".format('ID', 'Artist', 'Alerts',
+                                                           'Bitrate', 'Type', 'Download Path'))
+
+            print("{:<10} {:<35} {:<10} {:<10} {:<10} {:<25}".format(mon['artist_id'], mon['artist_name'],
+                                                                     mon['alerts'], mon['bitrate'],
+                                                                     mon['record_type'], mon['download_path']))
+            print("")
+
+            return
+
+        monitored_artists = self.db.get_all_monitored_artists()
         if len(monitored_artists) == 0:
             return logger.info("No artists are being monitored")
 
