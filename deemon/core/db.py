@@ -107,7 +107,6 @@ class Database(object):
                    "'id' INTEGER,"
                    "'name' TEXT,"
                    "'email' TEXT,"
-                   "'active' INTEGER,"
                    "'alerts' INTEGER,"
                    "'bitrate' INTEGER,"
                    "'record_type' TEXT,"
@@ -121,7 +120,7 @@ class Database(object):
         self.query(f"INSERT INTO 'deemon' ('property', 'value') VALUES ('version', '{__dbversion__}')")
         self.query("INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('latest_ver', '')")
         self.query("INSERT INTO 'deemon' ('property', 'value') VALUES ('last_update_check', 0)")
-        self.query("INSERT INTO 'profiles' ('name', 'active') VALUES ('default', 1)")
+        self.query("INSERT INTO 'profiles' ('name') VALUES ('default')")
         self.commit()
 
     def get_latest_ver(self):
@@ -184,7 +183,6 @@ class Database(object):
                        "'id' INTEGER,"
                        "'name' TEXT,"
                        "'email' TEXT,"
-                       "'active' INTEGER,"
                        "'alerts' INTEGER,"
                        "'bitrate' INTEGER,"
                        "'record_type' TEXT,"
@@ -193,7 +191,7 @@ class Database(object):
                        "'plex_library' TEXT,"
                        "'download_path' TEXT,"
                        "PRIMARY KEY('id' AUTOINCREMENT))")
-            self.query("INSERT INTO 'profiles' ('name', 'active') VALUES ('default', 1)")
+            self.query("INSERT INTO 'profiles' ('name') VALUES ('default')")
             self.query("ALTER TABLE monitor ADD COLUMN profile_id INTEGER DEFAULT 1")
             self.query("ALTER TABLE releases ADD COLUMN profile_id INTEGER DEFAULT 1")
             self.query("ALTER TABLE playlists ADD COLUMN profile_id INTEGER DEFAULT 1")
@@ -201,7 +199,7 @@ class Database(object):
             self.query("CREATE TABLE monitor_tmp ("
                        "'artist_id' INTEGER,"
                        "'artist_name' TEXT,"
-                       "'bitrate' INTEGER,"
+                       "'bitrate' TEXT,"
                        "'record_type' TEXT,"
                        "'alerts' INTEGER,"
                        "'download_path' TEXT,"
