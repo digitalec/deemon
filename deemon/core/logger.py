@@ -28,6 +28,9 @@ def setup_logger(log_level='DEBUG', log_file=None):
     deemon_logger = logging.getLogger("deemon")
     deemon_logger.setLevel(logging.DEBUG)
 
+    deemix_logger = logging.getLogger("deemix")
+    deemix_logger.setLevel(logging.DEBUG)
+
     urllib3_logger = logging.getLogger("urllib3")
     urllib3_logger.setLevel(logging.INFO)
 
@@ -35,6 +38,7 @@ def setup_logger(log_level='DEBUG', log_file=None):
     spotipy_logger.setLevel(logging.INFO)
 
     del logger.handlers[:]
+    del deemix_logger.handlers[:]
 
     if log_file is not None:
         rotate = RotatingFileHandler(log_file, maxBytes=1048576, backupCount=5, encoding="utf-8")
