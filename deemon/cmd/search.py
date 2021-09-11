@@ -247,9 +247,7 @@ class Search:
                     stop = False
                 record_type = self.filter or config.record_type()
                 self.clear()
-                monitor.monitor("artist_id", artist['id'], config.bitrate(),
-                                record_type, config.alerts(),
-                                remove=stop, dl_obj=None)
+                monitor.monitor("artist_id", artist['id'], remove=stop, dl_obj=None)
                 if not stop:
                     self.new_artist_monitored.append(artist['id'])
             elif prompt == "f":
@@ -446,7 +444,7 @@ class Search:
                 if q.album_id == album['id']:
                     self.status_message = "Album already in queue"
                     return
-            self.queue_list.append(download.QueueItem(config.download_path(), config.bitrate(), album=album))
+            self.queue_list.append(download.QueueItem(album=album))
 
         elif item['type'] == 'track':
             track = {'id': item['id'], 'title': item['title'], 'link': item['link'], 'artist': self.artist}
@@ -454,7 +452,7 @@ class Search:
                 if q.track_id == track['id']:
                     self.status_message = "Track already in queue"
                     return
-            self.queue_list.append(download.QueueItem(config.download_path(), config.bitrate(), track=track))
+            self.queue_list.append(download.QueueItem(track=track))
 
         elif item.get('name'):
             pass

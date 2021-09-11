@@ -1,8 +1,9 @@
 from pathlib import Path
 import plexapi.exceptions
 from plexapi.server import PlexServer
-from deemon.core import config, dmi
+from deemon.core import dmi
 from deemon.utils import dataprocessor
+from deemon.core.config import Config as config
 from deemon import utils
 import logging
 import deezer
@@ -14,9 +15,8 @@ logger = logging.getLogger(__name__)
 
 class QueueItem:
     # TODO - Accept new playlist tracks for output/alerts
-    def __init__(self, download_path, bitrate, artist=None, album=None, track=None, playlist=None):
+    def __init__(self, artist=None, album=None, track=None, playlist=None):
         self.artist_name = None
-        self.bitrate = bitrate
         self.album_id = None
         self.album_title = None
         self.track_id = None
@@ -24,7 +24,6 @@ class QueueItem:
         self.url = None
         self.playlist_title = None
         self.verbose = os.environ.get('VERBOSE')
-        self.download_path = download_path
 
         if artist:
             try:
@@ -63,7 +62,6 @@ class Download:
     def __init__(self):
         super().__init__()
         self.dz = deezer.Deezer()
-        self.config = config.Config()
         self.di = dmi.DeemixInterface()
         self.queue_list = []
         self.bitrate = None
@@ -74,12 +72,10 @@ class Download:
             sys.exit(1)
 
     def get_plex_server(self):
-        baseurl = self.config.plex_baseurl()
-        token = self.config.plex_token()
-        if (baseurl != "") and (token != ""):
+        if (config.plex_baseurl() != "") and (config.plex_token() != ""):
             try:
                 print("Plex settings found, trying to connect (10s)... ", end="")
-                plex_server = PlexServer(baseurl, token, timeout=10)
+                plex_server = PlexServer(config.plex_baseurl(), config.plex_token(), timeout=10)
                 print(" OK")
                 return plex_server
             except Exception:
@@ -89,7 +85,7 @@ class Download:
 
     def refresh_plex(self, plexobj):
         try:
-            plexobj.library.section(self.config.plex_library()).update()
+            plexobj.library.section(config.plex_library()).update()
             logger.debug("Plex library refreshed successfully")
         except plexapi.exceptions.BadRequest as e:
             logger.error("Error occurred while refreshing your library. See logs for additional info.")
@@ -107,6 +103,8 @@ class Download:
             current = 1
             total = len(self.queue_list)
             for q in self.queue_list:
+                dx_bitrates = {"128": 1, "320": 3, "FLAC": 9}
+                dx_bitrate = dx_bitrates[config.bitrate()]
                 if self.verbose == "true":
                     logger.debug(f"Processing queue item {vars(q)}")
                 if q.artist_name:
@@ -114,27 +112,27 @@ class Download:
                         logger.info(f"[{current}/{total}] {q.artist_name} - {q.album_title}... ")
                     else:
                         logger.info(f"[{current}/{total}] {q.artist_name} - {q.track_title}... ")
-                    self.di.download_url([q.url], q.bitrate, q.download_path)
+                    self.di.download_url([q.url], dx_bitrate, config.download_path())
                 else:
                     logger.info(f"+ {q.playlist_title} (playlist)...")
-                    self.di.download_url([q.url], q.bitrate, q.download_path, override_deemix=False)
+                    self.di.download_url([q.url], dx_bitrate, config.download_path(), override_deemix=False)
                 current += 1
             print("")
             logger.info("Downloads complete!")
-            if plex and (self.config.plex_library() != ""):
+            if plex and (config.plex_library() != ""):
                 self.refresh_plex(plex)
 
-    def download(self, artist, artist_id, album_id, url, bitrate, record_type, input_file, auto=True):
+    def download(self, artist, artist_id, album_id, url, input_file, auto=True):
 
-        def filter_artist_by_record_type(artist, record_type):
+        def filter_artist_by_record_type(artist):
             album_api = self.dz.api.get_artist_albums(artist['id'])['data']
             filtered_albums = []
             for album in album_api:
-                if (album['record_type'] == record_type) or record_type == "all":
+                if (album['record_type'] == config.record_type()) or config.record_type() == "all":
                     filtered_albums.append(album)
                 else:
                     logger.debug(f"Filtered release '{album['title']} ({album['id']})' as it "
-                                 f"does not match record type '{record_type}'")
+                                 f"does not match record type '{config.record_type()}'")
             return filtered_albums
 
         def get_api_result(artist=None, artist_id=None, album_id=None):
@@ -155,10 +153,10 @@ class Download:
                     logger.error(f"Album ID {album_id} not found.")
 
         def queue_filtered_releases(api_object):
-            filtered = filter_artist_by_record_type(api_object, record_type)
+            filtered = filter_artist_by_record_type(api_object)
             for album in filtered:
                 if not queue_item_exists(album['id']):
-                    self.queue_list.append(QueueItem(self.config.download_path(), bitrate, api_object, album))
+                    self.queue_list.append(QueueItem(artist=api_object, album=album))
 
         def queue_item_exists(i):
             for q in self.queue_list:
@@ -189,11 +187,11 @@ class Download:
             logger.debug(f"Requested Album: {i}, "
                          f"Found: {album_id_result['artist']['name']} - {album_id_result['title']}")
             if album_id_result and not queue_item_exists(album_id_result['id']):
-                self.queue_list.append(QueueItem(self.config.download_path(), bitrate, album=album_id_result))
+                self.queue_list.append(QueueItem(album=album_id_result))
 
         def process_playlist_by_id(id):
             playlist_api = self.dz.api.get_playlist(id)
-            self.queue_list.append(QueueItem(self.config.download_path(), bitrate, playlist=playlist_api))
+            self.queue_list.append(QueueItem(playlist=playlist_api))
 
         def extract_id_from_url(url):
             id_group = ['artist', 'album', 'playlist']

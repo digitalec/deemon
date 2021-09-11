@@ -10,7 +10,7 @@ import deezer
 logger = logging.getLogger(__name__)
 
 
-def monitor(profile, value, bitrate, r_type, alerts, remove=False, dl_obj=None, is_search=False):
+def monitor(profile, value, remove=False, dl_obj=None, is_search=False):
 
     dz = deezer.Deezer()
     db = Database()
@@ -106,14 +106,16 @@ def monitor(profile, value, bitrate, r_type, alerts, remove=False, dl_obj=None, 
         sql_values = {
             'artist_id': api_result['id'],
             'artist_name': api_result['name'],
-            'bitrate': bitrate,
-            'record_type': r_type,
-            'alerts': alerts,
+            'bitrate': config.bitrate(),
+            'record_type': config.record_type(),
+            'alerts': config.alerts(),
             'download_path': config.download_path(),
             'profile_id': config.profile_id()
         }
-        query = ("INSERT INTO monitor (artist_id, artist_name, bitrate, record_type, alerts, download_path, profile_id) "
-                 "VALUES (:artist_id, :artist_name, :bitrate, :record_type, :alerts, :download_path, :profile_id)")
+        query = ("INSERT INTO monitor "
+                 "(artist_id, artist_name, bitrate, record_type, alerts, download_path, profile_id) "
+                 "VALUES "
+                 "(:artist_id, :artist_name, :bitrate, :record_type, :alerts, :download_path, :profile_id)")
 
         try:
             db.query(query, sql_values)
@@ -121,10 +123,10 @@ def monitor(profile, value, bitrate, r_type, alerts, remove=False, dl_obj=None, 
             logger.info(e)
 
         logger.info(f"Now monitoring artist '{api_result['name']}'")
-        logger.debug(f"bitrate: {bitrate}, record_type: {r_type}, "
-                     f"alerts: {alerts}, download_path: {config.download_path()}")
+        logger.debug(f"bitrate: {config.bitrate()}, record_type: {config.record_type()}, "
+                     f"alerts: {config.alerts()}, download_path: {config.download_path()}")
         if dl_obj:
-            dl_obj.download(None, [api_result['id']], None, None, bitrate, r_type, None, False)
+            dl_obj.download(None, [api_result['id']], None, None, None, False)
         db.commit()
         return api_result['id']
 
@@ -155,7 +157,7 @@ def monitor(profile, value, bitrate, r_type, alerts, remove=False, dl_obj=None, 
 
         # TODO move this to db.py
         sql_values = {'id': api_result['id'], 'title': api_result['title'], 'url': api_result['link'],
-                      'bitrate': bitrate, 'alerts': alerts, 'download_path': config.download_path(),
+                      'bitrate': config.bitrate(), 'alerts': config.alerts(), 'download_path': config.download_path(),
                       'profile_id': config.profile_id()}
         query = ("INSERT INTO playlists ('id', 'title', 'url', 'bitrate', 'alerts', 'download_path') "
                  "VALUES (:id, :title, :url, :bitrate, :alerts, :download_path, :profile_id)")
@@ -167,6 +169,6 @@ def monitor(profile, value, bitrate, r_type, alerts, remove=False, dl_obj=None, 
 
         logger.info(f"Now monitoring playlist '{api_result['title']}'")
         if dl_obj:
-            dl_obj.download(None, None, None, [api_result['link']], bitrate, r_type, None, False)
+            dl_obj.download(None, None, None, [api_result['link']], None, False)
         db.commit()
         return api_result['id']

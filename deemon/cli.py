@@ -1,10 +1,10 @@
 from packaging.version import parse as parse_version
 from deemon.cmd import monitor, download
 from deemon.core.logger import setup_logger
-from deemon.utils import notifier, startup, validate, dataprocessor
+from deemon.utils import notifier, startup, dataprocessor
 from deemon.core.db import Database
-from deemon.core.config import Config
-from deemon.core.settings import ProfileConfig, LoadProfile
+from deemon.core.config import Config, LoadProfile
+from deemon.cmd.profile import ProfileConfig
 from deemon.cmd.search import Search
 from deemon.cmd.refresh import Refresh
 from deemon.cmd.show import Show
@@ -22,12 +22,13 @@ startup.init_appdata_dir(appdata)
 config = Config()
 setup_logger(log_level='DEBUG' if config.debug_mode() else 'INFO', log_file=startup.get_log_file())
 logger = logging.getLogger(__name__)
+logger.debug(f"deemon {__version__}")
+logger.debug(f"Command executed: \"{' '.join([x for x in sys.argv[1:]])}\"")
 
 db = Database()
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
-# TODO refresh all (--all | -U)
 @click.group(context_settings=CONTEXT_SETTINGS)
 @click.version_option(__version__, '-V', '--version', message='deemon %(version)s')
 @click.option('-P', '--profile', help="Specify profile to run deemon as")
@@ -83,10 +84,9 @@ def test():
 @click.option('-A', '--album-id', multiple=True, metavar='ID', type=int, help='Download by album ID')
 @click.option('-u', '--url', metavar='URL', multiple=True, help='Download by URL of artist/album/track/playlist')
 @click.option('-f', '--file', metavar='FILE', help='Download batch of artists and/or artist IDs from file')
-@click.option('-b', '--bitrate', default=config.bitrate(), help='Set custom bitrate for this operation')
+@click.option('-b', '--bitrate', help='Set custom bitrate for this operation')
 @click.option('-o', '--download-path', type=str, metavar="PATH", help='Specify custom download directory')
-@click.option('-t', '--record-type', type=click.Choice(config.allowed_values("record_type"), case_sensitive=False),
-              default=config.record_type(), help='Specify record types to download')
+@click.option('-t', '--record-type', type=str, help='Specify record types to download')
 def download_command(artist, artist_id, album_id, url, file, bitrate, record_type, download_path):
     """
     Download specific artist, album ID or by URL
@@ -96,9 +96,12 @@ def download_command(artist, artist_id, album_id, url, file, bitrate, record_typ
         download Mozart
         download -i 100 -t album -b 9
     """
-    bitrate = validate.validate_bitrate(bitrate)
     if bitrate:
-        config.set('bitrate', bitrate)
+        config.set('bitrate', bitrate.upper())
+    if download_path:
+        config.set('download_path', download_path)
+    if record_type:
+        config.set('record_type', record_type)
 
     artists = dataprocessor.artists_to_csv(artist) if artist else None
     artist_ids = [x for x in artist_id] if artist_id else None
@@ -113,7 +116,8 @@ def download_command(artist, artist_id, album_id, url, file, bitrate, record_typ
             return logger.error(f"Invalid download path: {download_path}")
 
     dl = download.Download()
-    dl.download(artists, artist_ids, album_ids, urls, bitrate, record_type, file)
+    dl.download(artists, artist_ids, album_ids, urls, file)
+
 
 @run.command(name='monitor', context_settings={"ignore_unknown_options": False})
 @click.argument('artist', nargs=-1)
@@ -122,16 +126,15 @@ def download_command(artist, artist_id, album_id, url, file, bitrate, record_typ
 @click.option('-u', '--url', multiple=True, metavar="URL", help='Monitor artist by URL')
 @click.option('-p', '--playlist', multiple=True, metavar="URL", help='Monitor Deezer playlist by URL')
 @click.option('-s', '--search', 'search_flag', is_flag=True, help='Show similar artist results to choose from')
-@click.option('-b', '--bitrate', default=config.bitrate(), help="Specify bitrate")
-@click.option('-t', '--record-type', type=click.Choice(['all', 'album', 'ep', 'single'], case_sensitive=False),
-              default=config.record_type(), help='Specify record types to download')
-@click.option('-a', '--alerts', type=int, default=config.alerts(), help="Enable or disable alerts")
+@click.option('-b', '--bitrate', help="Specify bitrate")
+@click.option('-t', '--record-type', type=str, help='Specify record types to download')
+@click.option('-a', '--alerts', type=int, help="Enable or disable alerts")
 @click.option('-n', '--no-refresh', is_flag=True, help='Skip refresh after adding or removing artist')
 @click.option('-D', '--download', 'dl', is_flag=True, help='Download all releases matching record type')
 @click.option('-o', '--download-path', type=str, metavar="PATH", help='Specify custom download directory')
 @click.option('-R', '--remove', is_flag=True, help='Stop monitoring an artist')
-def monitor_command(artist, im, playlist, no_refresh, bitrate, record_type, alerts,
-                    artist_id, remove, url, dl, download_path, search_flag):
+def monitor_command(artist, im, playlist, no_refresh, bitrate, record_type, alerts, artist_id, remove,
+                    url, dl, download_path, search_flag):
     """
     Monitor artist for new releases by ID, URL or name.
 
@@ -149,8 +152,14 @@ def monitor_command(artist, im, playlist, no_refresh, bitrate, record_type, aler
     new_artists = []
     new_playlists = []
 
-    alerts = validate.validate_alerts(alerts)
-    bitrate = validate.validate_bitrate(bitrate)
+    if bitrate:
+        config.set('bitrate', bitrate.upper())
+    if download_path:
+        config.set('download_path', download_path)
+    if record_type:
+        config.set('record_type', record_type)
+    if alerts:
+        config.set('alerts', alerts)
 
     if download_path and download_path != "":
         if Path(download_path).exists:
@@ -169,21 +178,18 @@ def monitor_command(artist, im, playlist, no_refresh, bitrate, record_type, aler
             artist_int_list, artist_str_list = dataprocessor.process_input_file(imported_file)
             if artist_str_list:
                 for a in artist_str_list:
-                    result = monitor.monitor("artist", a, bitrate, record_type, alerts, remove=remove, dl_obj=dl,
-                                             is_search=search_flag)
+                    result = monitor.monitor("artist", a, remove=remove, dl_obj=dl, is_search=search_flag)
                     if type(result) == int:
                         new_artists.append(result)
             if artist_int_list:
                 for aid in artist_int_list:
-                    result = monitor.monitor("artist_id", aid, bitrate, record_type, alerts, remove=remove, dl_obj=dl,
-                                             is_search=search_flag)
+                    result = monitor.monitor("artist_id", aid, remove=remove, dl_obj=dl, is_search=search_flag)
                     if type(result) == int:
                         new_artists.append(result)
         elif Path(im).is_dir():
             import_list = [x.relative_to(im) for x in sorted(Path(im).iterdir()) if x.is_dir()]
             for a in import_list:
-                result = monitor.monitor("artist", a, bitrate, record_type, alerts, remove=remove, dl_obj=dl,
-                                         is_search=search_flag)
+                result = monitor.monitor("artist", a, remove=remove, dl_obj=dl, is_search=search_flag)
                 if type(result) == int:
                     new_artists.append(result)
         else:
@@ -192,8 +198,7 @@ def monitor_command(artist, im, playlist, no_refresh, bitrate, record_type, aler
 
     if artist:
         for a in dataprocessor.artists_to_csv(artist):
-            result = monitor.monitor("artist", a, bitrate, record_type, alerts, remove=remove, dl_obj=dl,
-                                     is_search=search_flag)
+            result = monitor.monitor("artist", a, remove=remove, dl_obj=dl, is_search=search_flag)
             if isinstance(result, int):
                 new_artists.append(result)
 
@@ -209,15 +214,13 @@ def monitor_command(artist, im, playlist, no_refresh, bitrate, record_type, aler
 
     if artist_id:
         for aid in artist_id:
-            result = monitor.monitor("artist_id", aid, bitrate, record_type, alerts, remove=remove, dl_obj=dl,
-                                     is_search=search_flag)
+            result = monitor.monitor("artist_id", aid, remove=remove, dl_obj=dl, is_search=search_flag)
             if isinstance(result, int):
                 new_artists.append(result)
 
     if playlists:
         for p in playlists:
-            result = monitor.monitor("playlist", p, bitrate, record_type, alerts, remove=remove, dl_obj=dl,
-                                     is_search=search_flag)
+            result = monitor.monitor("playlist", p, remove=remove, dl_obj=dl, is_search=search_flag)
             if isinstance(result, int):
                 new_playlists.append(result)
 
@@ -240,18 +243,24 @@ def show_command():
     Show monitored artists and latest releases
     """
 
+
 @show_command.command(name="artists")
+@click.argument('artist', nargs=-1, required=False)
 @click.option('-i', '--artist-ids', is_flag=True, help='Show artist IDs currently being monitored')
 @click.option('-e', '--extended', is_flag=True, help='Show extended artist data')
 @click.option('-c', '--csv', is_flag=True, help='Output artists as CSV')
-@click.option('-h', '--hide-header', is_flag=True, help='Hide header on CSV output')
+@click.option('-H', '--hide-header', is_flag=True, help='Hide header on CSV output')
 @click.option('-f', '--filter', type=str, help='Specify filter for CSV output')
-def show_artists(artist_ids, csv, extended, filter, hide_header):
-    """Show artists monitored by profile"""
+def show_artists(artist, artist_ids, csv, extended, filter, hide_header):
+    """Show artist info monitored by profile"""
+    if artist:
+        artist = ' '.join([x for x in artist])
+
     show = Show()
     if filter is None:
         filter = "name,id"
-    show.artists(csv, artist_ids, extended, filter, hide_header)
+    show.artists(csv, artist_ids, extended, filter, hide_header, artist=artist)
+
 
 @show_command.command(name="playlists", hidden=True)
 @click.option('-c', '--csv', is_flag=True, help='Used with -a, -i; output artists as CSV')
@@ -287,7 +296,7 @@ def backup(include_logs):
             return item
 
     backup_tar = datetime.today().strftime('%Y%m%d-%H%M%S') + ".tar"
-    backup_path = Path(startup.get_config() / "backups")
+    backup_path = Path(startup.get_appdata_dir() / "backups")
 
     with tarfile.open(backup_path / backup_tar, "w") as tar:
         tar.add(startup.get_config(), arcname='deemon', filter=filter_func)
@@ -386,7 +395,8 @@ def search():
     client.search_menu()
 
 @run.command(name="config")
-@click.argument('artist')
+@click.argument('artist', nargs=-1)
 def config_command(artist):
     """Configure per-artist settings by name or ID"""
+    artist = ' '.join([x for x in artist])
     artist_lookup(artist)
