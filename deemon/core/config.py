@@ -1,5 +1,6 @@
-from typing import List, Dict, Optional
+from typing import Optional
 from deemon.utils import startup
+from deemon.core.exceptions import ValueNotAllowed, UnknownValue, PropertyTypeMismatch
 import logging
 from pathlib import Path
 import json
@@ -7,7 +8,7 @@ import json
 logger = logging.getLogger(__name__)
 
 ALLOWED_VALUES = {
-    'bitrate': [1, 3, 9],
+    'bitrate': ["128", "320", "FLAC"],
     'alerts': [0, 1],
     'record_type': ['all', 'album', 'ep', 'single']
 }
@@ -23,7 +24,7 @@ DEFAULT_CONFIG = {
         "release_max_age": 90
     },
     "global": {
-        "bitrate": 3,
+        "bitrate": "320",
         "alerts": False,
         "record_type": "all",
         "download_path": "",
@@ -68,7 +69,7 @@ class Config(object):
                 self.__write_modified_config()
 
             # Set as default profile for init
-            self.set('profile_id', 1, False)
+            self.set('profile_id', 1, validate=False)
 
     @staticmethod
     def __create_default_config():
@@ -105,6 +106,7 @@ class Config(object):
             Config._CONFIG['new_releases'] = {}
             modified += 1
 
+        # Convert keys to new v2.0 layout
         temp_config = Config._CONFIG.copy()
         for key in temp_config:
             if key not in DEFAULT_CONFIG:
@@ -174,44 +176,48 @@ class Config(object):
                 Config._CONFIG[key] = DEFAULT_CONFIG[key]
                 modified += 1
             else:
-                if key == "release_by_date" and isinstance(Config._CONFIG[key], int):
-                    if Config._CONFIG[key] == 1:
-                        Config._CONFIG[key] = True
-                    else:
-                        Config._CONFIG[key] = False
-                    modified += 1
+                if key == "new_releases":
+                    for k, v in DEFAULT_CONFIG['new_releases'].items():
+                        if k == "by_release_date":
+                            if isinstance(Config._CONFIG[key], int):
+                                if Config._CONFIG['new_releases']['by_release_date'] == 1:
+                                    Config._CONFIG['new_releases']['by_release_date'] = True
+                                else:
+                                    Config._CONFIG['new_releases']['by_release_date'] = False
+                                modified += 1
+                            if not isinstance(Config._CONFIG['new_releases']['by_release_date'], bool):
+                                raise PropertyTypeMismatch(f"Type mismatch on property '{k}'")
+                if key == "global":
+                    for k, v in DEFAULT_CONFIG['global'].items():
+                        if k == "record_type":
+                            if Config._CONFIG['global']['record_type'].lower() not in ALLOWED_VALUES['record_type']:
+                                raise UnknownValue(f"Property {k} requires one of "
+                                                   f"{', '.join(ALLOWED_VALUES[key])}, not "
+                                                   f"{Config._CONFIG['global']['record_type']}.")
 
-                if not isinstance(DEFAULT_CONFIG[key], type(Config._CONFIG[key])) and key != "bitrate":
-                    print(type(DEFAULT_CONFIG[key]), type(Config._CONFIG[key]))
-                    raise PropertyTypeMismatch(f"Type mismatch on property '{key}'")
+                        if k == "bitrate":
+                            if type(Config._CONFIG['global']['bitrate']) == int:
+                                if Config._CONFIG['global']['bitrate'] == 1:
+                                    Config._CONFIG['global']['bitrate'] = "128"
+                                    modified += 1
+                                if Config._CONFIG['global']['bitrate'] == 3:
+                                    Config._CONFIG['global']['bitrate'] = "320"
+                                    modified += 1
+                                if Config._CONFIG['global']['bitrate'] == 9:
+                                    Config._CONFIG['global']['bitrate'] = "FLAC"
+                                    modified += 1
+                            if Config._CONFIG['global']['bitrate'] not in ALLOWED_VALUES['bitrate']:
+                                raise UnknownValue(f"Unknown value specified for bitrate: "
+                                                   f"{Config._CONFIG['global']['bitrate']}")
 
-                if key == "record_type":
-                    if Config._CONFIG[key].lower() not in ['all', 'album', 'ep', 'single']:
-                        raise UnknownValue(f"Invalid value specified for record_type; "
-                                           f"expected 'all', 'album', 'ep' or 'single'")
+                        if k == "alerts":
+                            if Config._CONFIG['global']['alerts'] not in ALLOWED_VALUES['alerts']:
+                                raise UnknownValue(f"Unknown value specified for alerts: "
+                                                   f"{Config._CONFIG['global']['alerts']}")
 
-                if key == "bitrate":
-                    if isinstance(Config._CONFIG[key], str):
-                        if Config._CONFIG[key] in ["128", "1"]:
-                            Config._CONFIG[key] = 1
-                        elif Config._CONFIG[key] in ["320", "3"]:
-                            Config._CONFIG[key] = 3
-                        elif Config._CONFIG[key] in ["flac", "Flac", "FLAC", "9"]:
-                            Config._CONFIG[key] = 9
-                        else:
-                            raise PropertyTypeMismatch("Unknown string value provided for bitrate")
-                        modified += 1
-                    if Config._CONFIG['bitrate'] not in ALLOWED_VALUES['bitrate']:
-                        raise UnknownValue(f"Unknown value specified for bitrate: {Config._CONFIG['bitrate']}")
+                    # if not isinstance(DEFAULT_CONFIG[k], type(Config._CONFIG[k])):
+                    #     raise PropertyTypeMismatch(f"Type mismatch on property '{k}'")
 
-                if key == "alerts":
-                    if Config._CONFIG['alerts'] not in ALLOWED_VALUES['alerts']:
-                        raise UnknownValue(f"Unknown value specified for alerts: {Config._CONFIG['alerts']}")
-
-                if key == "release_by_date":
-                    if not isinstance(Config._CONFIG['release_by_date'], bool):
-                        raise UnknownValue(f"Unknown value specified for release_by_date: "
-                                           f"{Config._CONFIG['release_by_date']}")
         return modified
 
     @staticmethod
@@ -255,7 +261,7 @@ class Config(object):
         return Config._CONFIG.get('new_releases').get('release_max_age')
 
     @staticmethod
-    def bitrate() -> int:
+    def bitrate() -> str:
         return Config._CONFIG.get('global').get('bitrate')
 
     @staticmethod
@@ -323,17 +329,82 @@ class Config(object):
         return ALLOWED_VALUES.get(prop)
 
     @staticmethod
+    def find_position(d, property):
+        for k, v in d.items():
+            if isinstance(v, dict):
+                next = Config.find_position(v, property)
+                if next:
+                    return [k] + next
+            elif k == property:
+                return [k]
+
+    @staticmethod
     def set(property, value, validate=True):
-        if validate:
-            if not isinstance(value, type(DEFAULT_CONFIG[property])):
+        if not validate:
+            Config._CONFIG[property] = value
+        if Config._CONFIG.get(property):
+            if property in ALLOWED_VALUES:
+                if value in ALLOWED_VALUES[property]:
+                    Config._CONFIG[property] = value
+                    return
+                raise ValueNotAllowed(f"Property {property} requires one of "
+                                      f"{', '.join(ALLOWED_VALUES[property])}, not {value}.")
+
+            if isinstance(value, type(Config._CONFIG[property])):
+                Config._CONFIG[property] = value
+                return
+            else:
                 raise PropertyTypeMismatch(f"Type mismatch while setting {property} "
                                            f"to {value} (type: {type(value).__name__})")
-        Config._CONFIG[property] = value
+
+        else:
+            property_path = Config.find_position(Config._CONFIG, property)
+            tmpConfig = Config._CONFIG
+            for k in property_path[:-1]:
+                tmpConfig = tmpConfig.setdefault(k, {})
+            if property in ALLOWED_VALUES:
+                if value in ALLOWED_VALUES[property]:
+                    tmpConfig[property_path[-1]] = value
+                    return
+                raise ValueNotAllowed(f"Property {property} requires one of "
+                                      f"'{', '.join(str(x) for x in ALLOWED_VALUES[property])}', "
+                                      f"not {value} of type {type(value)}.")
+
+            if isinstance(value, type(tmpConfig[property])):
+                tmpConfig[property] = value
+                return
+            else:
+                raise PropertyTypeMismatch(f"Type mismatch while setting {property} "
+                                           f"to {value} (type: {type(value).__name__})")
 
 
-class PropertyTypeMismatch(Exception):
-    pass
+class LoadProfile(object):
+    def __init__(self, profile: dict):
+        logger.debug(f"Loaded config for profile {str(profile['id'])} ({str(profile['name'] )})")
 
+        # Rename keys to match config
+        profile["profile_id"] = profile.pop("id")
+        profile["base_url"] = profile.pop("plex_baseurl")
+        profile["token"] = profile.pop("plex_token")
+        profile["library"] = profile.pop("plex_library")
 
-class UnknownValue(Exception):
-    pass
+        # Append to config for debug output; Remove profile name from dict
+        Config.set("profile_name", profile.pop("name"), validate=False)
+
+        for key, value in profile.items():
+            if value is None:
+                continue
+            Config.set(key, value)
+
+        logger.debug("=========== CONFIG ===========")
+        for key, value in Config.get_config().items():
+            if key in ['smtp_settings']:
+                continue
+            if type(value) == dict:
+                for k, v in value.items():
+                    if k in ['arl', 'email']:
+                        continue
+                    logger.debug(f"{k.replace('_', ' ').title()}: {v}")
+            else:
+                logger.debug(f"{key.replace('_', ' ').title()}: {value}")
+        logger.debug("==============================")
