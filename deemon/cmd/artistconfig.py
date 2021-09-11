@@ -1,10 +1,9 @@
 from deemon.core.db import Database
-from deemon.core.config import Config
+from deemon.core.config import Config as config
 import logging
 
 logger = logging.getLogger(__name__)
 db = Database()
-config = Config()
 
 
 def print_header(message: str = None):

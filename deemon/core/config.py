@@ -381,7 +381,6 @@ class Config(object):
 class LoadProfile(object):
     def __init__(self, profile: dict):
         logger.debug(f"Loaded config for profile {str(profile['id'])} ({str(profile['name'] )})")
-
         # Rename keys to match config
         profile["profile_id"] = profile.pop("id")
         profile["base_url"] = profile.pop("plex_baseurl")

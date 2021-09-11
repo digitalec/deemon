@@ -22,9 +22,9 @@ class ProfileConfig:
 
         menu = [
             {'setting': 'email', 'type': str, 'text': 'Email address', 'allowed': []},
-            {'setting': 'alerts', 'type': int, 'text': 'Alerts', 'allowed': [0, 1]},
-            {'setting': 'bitrate', 'type': int, 'text': 'Bitrate', 'allowed': [1, 3, 9]},
-            {'setting': 'record_type', 'type': str, 'text': 'Record Type', 'allowed': ["all", "album", "ep", "single"]},
+            {'setting': 'alerts', 'type': bool, 'text': 'Alerts', 'allowed': config.allowed_values('alerts')},
+            {'setting': 'bitrate', 'type': str, 'text': 'Bitrate', 'allowed': config.allowed_values('bitrate')},
+            {'setting': 'record_type', 'type': str, 'text': 'Record Type', 'allowed': config.allowed_values('record_type')},
             {'setting': 'plex_baseurl', 'type': str, 'text': 'Plex Base URL', 'allowed': []},
             {'setting': 'plex_token', 'type': str, 'text': 'Plex Token', 'allowed': []},
             {'setting': 'plex_library', 'type': str, 'text': 'Plex Library', 'allowed': []},
@@ -67,9 +67,9 @@ class ProfileConfig:
         menu = [
             {'setting': 'name', 'type': str, 'text': 'Profile Name', 'allowed': []},
             {'setting': 'email', 'type': str, 'text': 'Email address', 'allowed': []},
-            {'setting': 'alerts', 'type': int, 'text': 'Alerts', 'allowed': [0, 1]},
-            {'setting': 'bitrate', 'type': int, 'text': 'Bitrate', 'allowed': [1, 3, 9]},
-            {'setting': 'record_type', 'type': str, 'text': 'Record Type', 'allowed': ["all", "album", "ep", "single"]},
+            {'setting': 'alerts', 'type': bool, 'text': 'Alerts', 'allowed': config.allowed_values('alerts')},
+            {'setting': 'bitrate', 'type': str, 'text': 'Bitrate', 'allowed': config.allowed_values('bitrate')},
+            {'setting': 'record_type', 'type': str, 'text': 'Record Type', 'allowed': config.allowed_values('record_type')},
             {'setting': 'plex_baseurl', 'type': str, 'text': 'Plex Base URL', 'allowed': []},
             {'setting': 'plex_token', 'type': str, 'text': 'Plex Token', 'allowed': []},
             {'setting': 'plex_library', 'type': str, 'text': 'Plex Library', 'allowed': []},
