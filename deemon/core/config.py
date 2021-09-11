@@ -179,7 +179,7 @@ class Config(object):
                 if key == "new_releases":
                     for k, v in DEFAULT_CONFIG['new_releases'].items():
                         if k == "by_release_date":
-                            if isinstance(Config._CONFIG[key], int):
+                            if isinstance(Config._CONFIG['new_releases']['by_release_date'], int):
                                 if Config._CONFIG['new_releases']['by_release_date'] == 1:
                                     Config._CONFIG['new_releases']['by_release_date'] = True
                                 else:
