@@ -10,7 +10,6 @@ from deemix.downloader import Downloader
 from deemix.settings import load as LoadSettings
 from deemon.core.config import Config
 from deemon.core.db import Database
-from deemon.utils import startup
 import deemix.utils.localpaths as localpaths
 import logging
 
