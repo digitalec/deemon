@@ -138,36 +138,8 @@ class ProfileConfig:
               "{:<20} {:<20} {:<20}".format('Name', 'Email', 'Alerts', 'Bitrate', 'Type',
                                             'Plex Base URL', 'Plex Token', 'Plex Library', 'Download Path'))
         for u in profile:
-            id, name, email, active, alerts, bitrate, rtype, \
-            url, token, lib, dl_path = [x if x is not None else '' for x in u.values()]
+            id, name, email, alerts, bitrate, rtype, url, token, \
+            lib, dl_path = [x if x is not None else '' for x in u.values()]
             print("{:<10} {:<40} {:<8} {:<8} {:<8} {:<25} "
                   "{:<20} {:<20} {:<20}".format(name, email, alerts, bitrate, rtype, url, token, lib, dl_path))
             print("")
-
-
-class LoadProfile(object):
-    def __init__(self, profile: dict):
-        profile["profile_id"] = profile.pop("id")
-        logger.debug(f"Loading config for profile {str(profile['profile_id'])} ({str(profile['name'] )})")
-        for key, value in profile.items():
-            if value is None:
-                continue
-            # TODO optimize this code
-            if key == "profile_id":
-                config._CONFIG[key] = value
-            if key == "email":
-                config._CONFIG["global"][key] = value
-            if key == "bitrate":
-                config._CONFIG["global"][key] = value
-            if key == "alerts":
-                config._CONFIG["global"][key] = value
-            if key == "record_type":
-                config._CONFIG["global"][key] = value
-            if key == "download_path":
-                config._CONFIG["global"][key] = value
-            if key == "plex_baseurl":
-                config._CONFIG["plex"][key] = value
-            if key == "plex_token":
-                config._CONFIG["plex"][key] = value
-            if key == "plex_library":
-                config._CONFIG["plex"][key] = value
