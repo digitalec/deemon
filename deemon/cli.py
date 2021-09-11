@@ -55,6 +55,7 @@ def run(profile):
 
     check_interval: int = config.check_update() - 3600
 
+    # TODO add beta notifications
     if last_checked < check_interval or last_checked == 0:
         config.set('update_available', 0, False)
         latest_ver = startup.get_latest_version()

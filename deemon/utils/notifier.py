@@ -16,6 +16,7 @@ from deemon import __version__
 
 logger = logging.getLogger(__name__)
 
+# TODO send email when ARL expires
 
 class Notify:
 
