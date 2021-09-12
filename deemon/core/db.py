@@ -285,16 +285,9 @@ class Database(object):
         sql = "SELECT * FROM 'releases' WHERE album_id = :id AND profile_id = :profile_id"
         return self.query(sql, values).fetchone()
 
-    def monitor_playlist(self, playlist):
-        values = {'id': playlist['id'], 'title': playlist['title'],
-                  'url': playlist['link'], 'profile_id': config.profile_id()}
-        sql = "INSERT OR REPLACE INTO playlists ('id', 'title', 'url', 'profile_id') VALUES (:id, :title, :url, :profile_id)"
-        self.query(sql, values)
-        self.commit()
-
     def get_all_monitored_playlists(self):
         vals = {'profile_id': config.profile_id()}
-        return self.query("SELECT * FROM playlists WHERE profile_id = :profile_id", vals)
+        return self.query("SELECT * FROM playlists WHERE profile_id = :profile_id", vals).fetchall()
 
     def get_monitored_playlist_by_id(self, playlist_id):
         values = {'id': playlist_id, 'profile_id': config.profile_id()}
@@ -339,6 +332,15 @@ class Database(object):
                    "record_type = :record_type, plex_baseurl = :plex_baseurl, plex_token = :plex_token,"
                    "plex_library = :plex_library, download_path = :download_path "
                    "WHERE id = :id", settings)
+        self.commit()
+
+    def monitor_playlist(self, api_result):
+        values = {'id': api_result['id'], 'title': api_result['title'], 'url': api_result['link'],
+                'bitrate': config.bitrate(), 'alerts': config.alerts(), 'download_path': config.download_path(),
+                'profile_id': config.profile_id()}
+        query = ("INSERT INTO playlists ('id', 'title', 'url', 'bitrate', 'alerts', 'download_path', 'profile_id') "
+                 "VALUES (:id, :title, :url, :bitrate, :alerts, :download_path, :profile_id)")
+        self.query(query, values)
         self.commit()
 
     def create_profile(self, settings: dict):

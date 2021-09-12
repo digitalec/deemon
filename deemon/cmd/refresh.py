@@ -77,9 +77,9 @@ class Refresh:
         self.db.commit()
 
     def refresh_playlists(self):
+        monitored = []
         if self.playlist_id:
             logger.debug("Playlist ID(s) have been passed, refreshing only those...")
-            monitored = []
             for i in self.playlist_id:
                 monitored.append(self.db.get_monitored_playlist_by_id(i))
         else:
@@ -91,8 +91,8 @@ class Refresh:
 
         for playlist in progress:
             new_track_count = 0
-            new_playlist = self.existing_playlist(playlist[0])
-            playlist_api = self.dz.api.get_playlist(playlist[0])
+            new_playlist = self.existing_playlist(playlist['id'])
+            playlist_api = self.dz.api.get_playlist(playlist['id'])
             progress.set_description_str("Refreshing playlists")
 
             for track in playlist_api['tracks']['data']:
@@ -103,10 +103,8 @@ class Refresh:
                     new_track_count += 1
 
             if new_track_count > 0 and not new_playlist:
-                pl = {'id': playlist[0], 'title': playlist[1], 'link': playlist[2],'bitrate': playlist[3],
-                      'download_path': playlist[5]}
                 self.queue_list.append(
-                    download.QueueItem(download_path=pl['download_path'], bitrate=pl['bitrate'], playlist=pl)
+                    download.QueueItem(playlist=playlist)
                 )
                 logger.info(f"Playlist '{playlist_api['title']}' has {new_track_count} new track(s)")
             else:

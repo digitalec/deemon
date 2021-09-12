@@ -15,10 +15,10 @@ def monitor(profile, value, remove=False, dl_obj=None, is_search=False):
     dz = deezer.Deezer()
     db = Database()
 
-    def purge_playlist(i, title):
-        if id:
-            output = str(id)
-            playlist = db.get_monitored_playlist_by_id(id)
+    def purge_playlist(playlist_id, title):
+        if playlist_id:
+            output = str(playlist_id)
+            playlist = db.get_monitored_playlist_by_id(playlist_id)
         else:
             output = title
             playlist = db.get_monitored_playlist_by_name(title)
@@ -142,30 +142,24 @@ def monitor(profile, value, remove=False, dl_obj=None, is_search=False):
         except deezer.api.DataException:
             logger.error(f"Playlist ID {playlist_id} not found.")
             return
-        sql_values = {'id': api_result['id'], 'profile_id': config.profile_id()}
-        playlist_exists = db.query("SELECT * FROM 'playlists' WHERE id = :id "
-                                   "AND profile_id = :profile_id", sql_values).fetchone()
+
+        playlist_exists = db.get_monitored_playlist_by_id(api_result['id'])
+
+        # TODO remove should NOT access API!
         if remove:
             if not playlist_exists:
                 logger.warning(f"Playlist '{api_result['title']}' is not being monitored yet")
                 return
             purge_playlist(api_result['id'], api_result['title'])
-            return True
+            return
         if playlist_exists:
             logger.warning(f"Playlist '{api_result['title']}' is already being monitored")
             return
 
-        # TODO move this to db.py
-        sql_values = {'id': api_result['id'], 'title': api_result['title'], 'url': api_result['link'],
-                      'bitrate': config.bitrate(), 'alerts': config.alerts(), 'download_path': config.download_path(),
-                      'profile_id': config.profile_id()}
-        query = ("INSERT INTO playlists ('id', 'title', 'url', 'bitrate', 'alerts', 'download_path') "
-                 "VALUES (:id, :title, :url, :bitrate, :alerts, :download_path, :profile_id)")
-
         try:
-            db.query(query, sql_values)
+            db.monitor_playlist(api_result)
         except OperationalError as e:
-            logger.error(e)
+            logger.error("sqlite Operational Error: " + e)
 
         logger.info(f"Now monitoring playlist '{api_result['title']}'")
         if dl_obj:
