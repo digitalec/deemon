@@ -2,8 +2,10 @@ name: Deploy Docker
 
 on:
   release:
-    branch: [main]
-    type: [created]
+    branch:
+      - main
+    types:
+      - created
   workflow_dispatch:
 
 jobs:
