@@ -1,3 +1,4 @@
+from copy import deepcopy
 from typing import Optional
 from deemon.utils import startup
 from deemon.core.exceptions import ValueNotAllowed, UnknownValue, PropertyTypeMismatch
@@ -8,8 +9,8 @@ import json
 logger = logging.getLogger(__name__)
 
 ALLOWED_VALUES = {
-    'bitrate': ["128", "320", "FLAC"],
-    'alerts': [0, 1],
+    'bitrate': {1: "128", 3: "320", 9: "FLAC"},
+    'alerts': [True, False],
     'record_type': ['all', 'album', 'ep', 'single']
 }
 
@@ -85,139 +86,107 @@ class Config(object):
     def validate():
         modified = 0
 
-        # Convert previous configuration keys to new 2.x values, removing unused
-        if not Config._CONFIG.get('plex'):
-            Config._CONFIG['plex'] = {}
-            modified += 1
+        def find_position(d, key):
+            for k, v in d.items():
+                if isinstance(v, dict):
+                    next = find_position(v, key)
+                    if next:
+                        return [k] + next
+                elif k == key:
+                    return [k]
 
-        if not Config._CONFIG.get('smtp_settings'):
-            Config._CONFIG['smtp_settings'] = {}
-            modified += 1
+        def migrate_old_config(old_config, new_config):
+            nonlocal modified
+            # Old key > new key
+            migration_map = [
+                {'plex_baseurl': 'base_url'},
+                {'plex_token': 'token'},
+                {'plex_library': 'library'},
+                {'deemix_path': 'path'},
+                {'debug_mode': 'debug_mode'},
+                {'arl': 'arl'},
+                {'smtp_recipient': 'email'},
+                {'smtp_server': 'server'},
+                {'smtp_user': 'username'},
+                {'smtp_pass': 'password'},
+                {'smtp_port': 'port'},
+                {'smtp_sender': 'from_addr'},
+                {'bitrate': 'bitrate'},
+                {'alerts': 'alerts'},
+                {'record_type': 'record_type'},
+                {'download_path': 'download_path'},
+                {'release_by_date': 'by_release_date'},
+                {'release_max_days': 'release_max_age'}
+            ]
+            for mlist in migration_map:
+                for old, new in mlist.items():
+                    if not old_config.get(old):
+                        continue
+                    opos = find_position(old_config, old) or [old]
+                    npos = find_position(new_config, new) or [new]
+                    usertmp_old = old_config
+                    usertmp_new = new_config
+                    if len(opos):
+                        for i in opos[:-1]:
+                            usertmp_old = usertmp_old.setdefault(i, {})
+                    if len(npos):
+                        for i in npos[:-1]:
+                            usertmp_new = usertmp_new.setdefault(i, {})
+                    logger.debug("Migrating " + ':'.join([str(x) for x in opos]) + " -> " + ':'.join(
+                        [str(x) for x in npos]))
+                    usertmp_new[npos[-1]] = usertmp_old[opos[-1]]
+                    modified += 1
+            return new_config
 
-        if not Config._CONFIG.get('deemix'):
-            Config._CONFIG['deemix'] = {}
-            modified += 1
-
-        if not Config._CONFIG.get('global'):
-            Config._CONFIG['global'] = {}
-            modified += 1
-
-        if not Config._CONFIG.get('new_releases'):
-            Config._CONFIG['new_releases'] = {}
-            modified += 1
-
-        # Convert keys to new v2.0 layout
-        temp_config = Config._CONFIG.copy()
-        for key in temp_config:
-            if key not in DEFAULT_CONFIG:
-                if key == "smtp_recipient":
-                    Config._CONFIG['email'] = Config._CONFIG.pop('smtp_recipient')
-                    modified += 1
-                elif key == "plex_baseurl":
-                    Config._CONFIG['plex']['base_url'] = Config._CONFIG.pop('plex_baseurl')
-                    modified += 1
-                elif key == "plex_token":
-                    Config._CONFIG['plex']['token'] = Config._CONFIG.pop('plex_token')
-                    modified += 1
-                elif key == "plex_library":
-                    Config._CONFIG['plex']['library'] = Config._CONFIG.pop('plex_library')
-                    modified += 1
-                elif key == "smtp_server":
-                    Config._CONFIG['smtp_settings']['server'] = Config._CONFIG.pop('smtp_server')
-                    modified += 1
-                elif key == "smtp_port":
-                    Config._CONFIG['smtp_settings']['port'] = Config._CONFIG.pop('smtp_port')
-                    modified += 1
-                elif key == "smtp_user":
-                    Config._CONFIG['smtp_settings']['username'] = Config._CONFIG.pop('smtp_user')
-                    modified += 1
-                elif key == "smtp_pass":
-                    Config._CONFIG['smtp_settings']['password'] = Config._CONFIG.pop('smtp_pass')
-                    modified += 1
-                elif key == "smtp_sender":
-                    Config._CONFIG['smtp_settings']['from_addr'] = Config._CONFIG.pop('smtp_sender')
-                    modified += 1
-                elif key == "deemix_path":
-                    Config._CONFIG['deemix']['path'] = Config._CONFIG.pop('deemix_path')
-                    modified += 1
-                elif key == "arl":
-                    Config._CONFIG['deemix']['arl'] = Config._CONFIG.pop('arl')
-                    modified += 1
-                elif key == "bitrate":
-                    Config._CONFIG['global']['bitrate'] = Config._CONFIG.pop('bitrate')
-                    modified += 1
-                elif key == "alerts":
-                    Config._CONFIG['global']['alerts'] = Config._CONFIG.pop('alerts')
-                    modified += 1
-                elif key == "record_type":
-                    Config._CONFIG['global']['record_type'] = Config._CONFIG.pop('record_type')
-                    modified += 1
-                elif key == "download_path":
-                    Config._CONFIG['global']['download_path'] = Config._CONFIG.pop('download_path')
-                    modified += 1
-                elif key == "email":
-                    Config._CONFIG['global']['email'] = Config._CONFIG.pop('email')
-                    modified += 1
-                elif key == "release_by_date":
-                    Config._CONFIG['new_releases']['by_release_date'] = Config._CONFIG.pop('release_by_date')
-                    modified += 1
-                elif key == "release_max_days":
-                    Config._CONFIG['new_releases']['release_max_age'] = Config._CONFIG.pop('release_max_days')
-                    modified += 1
-                else:
-                    logger.debug(f"Your config contains an unknown setting and will be removed: {key}")
-                    del Config._CONFIG[key]
-                    modified += 1
-
-        # Convert previous configuration values to new 2.x values
-        for key in DEFAULT_CONFIG:
-            if key not in Config._CONFIG:
-                logger.debug(f"Key '{key}' not set, using default value: {DEFAULT_CONFIG[key]}")
-                Config._CONFIG[key] = DEFAULT_CONFIG[key]
-                modified += 1
-            else:
-                if key == "new_releases":
-                    for k, v in DEFAULT_CONFIG['new_releases'].items():
-                        if k == "by_release_date":
-                            if isinstance(Config._CONFIG['new_releases']['by_release_date'], int):
-                                if Config._CONFIG['new_releases']['by_release_date'] == 1:
-                                    Config._CONFIG['new_releases']['by_release_date'] = True
+        def test_values(dict1, dict2):
+            nonlocal modified
+            for key, value in dict1.items():
+                if key in dict2.keys():
+                    if isinstance(dict1[key], dict):
+                        test_values(dict1[key], dict2[key])
+                    else:
+                        if key in ALLOWED_VALUES:
+                            if isinstance(ALLOWED_VALUES[key], dict):
+                                if value in ALLOWED_VALUES[key].keys():
+                                    dict1_tmp = dict1
+                                    pos = find_position(dict1_tmp, key)
+                                    for i in pos[:-1]:
+                                        dict1_tmp = dict1.setdefault(i, {})
+                                    dict1_tmp[key] = ALLOWED_VALUES[key][value]
+                                    modified += 1
+                                elif value in ALLOWED_VALUES[key].values():
+                                    continue
                                 else:
-                                    Config._CONFIG['new_releases']['by_release_date'] = False
-                                modified += 1
-                            if not isinstance(Config._CONFIG['new_releases']['by_release_date'], bool):
-                                raise PropertyTypeMismatch(f"Type mismatch on property '{k}'")
-                if key == "global":
-                    for k, v in DEFAULT_CONFIG['global'].items():
-                        if k == "record_type":
-                            if Config._CONFIG['global']['record_type'].lower() not in ALLOWED_VALUES['record_type']:
-                                raise UnknownValue(f"Property {k} requires one of "
-                                                   f"{', '.join(ALLOWED_VALUES[key])}, not "
-                                                   f"{Config._CONFIG['global']['record_type']}.")
-
-                        if k == "bitrate":
-                            if type(Config._CONFIG['global']['bitrate']) == int:
-                                if Config._CONFIG['global']['bitrate'] == 1:
-                                    Config._CONFIG['global']['bitrate'] = "128"
+                                    raise UnknownValue(
+                                        f"Unknown value in config - '{key}': {value} (type: {type(value).__name__})")
+                            elif not isinstance(dict1[key], type(dict2[key])):
+                                if isinstance(dict2[key], bool):
+                                    if dict1[key] == 1:
+                                        dict1[key] = True
+                                        modified += 1
+                                    if dict1[key] == 0:
+                                        dict1[key] = False
+                                        modified += 1
+                                else:
+                                    raise UnknownValue(
+                                        f"Unknown value in config - '{key}': {value} (type: {type(value).__name__})")
+                        elif not isinstance(dict1[key], type(dict2[key])):
+                            if isinstance(dict2[key], bool):
+                                if dict1[key] == 1:
+                                    dict1[key] = True
                                     modified += 1
-                                if Config._CONFIG['global']['bitrate'] == 3:
-                                    Config._CONFIG['global']['bitrate'] = "320"
+                                if dict1[key] == 0:
+                                    dict1[key] = False
                                     modified += 1
-                                if Config._CONFIG['global']['bitrate'] == 9:
-                                    Config._CONFIG['global']['bitrate'] = "FLAC"
-                                    modified += 1
-                            if Config._CONFIG['global']['bitrate'] not in ALLOWED_VALUES['bitrate']:
-                                raise UnknownValue(f"Unknown value specified for bitrate: "
-                                                   f"{Config._CONFIG['global']['bitrate']}")
+                            else:
+                                raise PropertyTypeMismatch(
+                                    f"Invalid type in config - '{str(key)}' incorrectly set as {type(value).__name__}")
+                        else:
+                            pass
 
-                        if k == "alerts":
-                            if Config._CONFIG['global']['alerts'] not in ALLOWED_VALUES['alerts']:
-                                raise UnknownValue(f"Unknown value specified for alerts: "
-                                                   f"{Config._CONFIG['global']['alerts']}")
-
-                    # if not isinstance(DEFAULT_CONFIG[k], type(Config._CONFIG[k])):
-                    #     raise PropertyTypeMismatch(f"Type mismatch on property '{k}'")
-
+        print("Loading configuration, please wait...")
+        Config._CONFIG = migrate_old_config(Config._CONFIG, deepcopy(DEFAULT_CONFIG))
+        test_values(Config._CONFIG, DEFAULT_CONFIG)
         return modified
 
     @staticmethod
@@ -399,11 +368,11 @@ class LoadProfile(object):
         for key, value in Config.get_config().items():
             if key in ['smtp_settings']:
                 continue
-            if type(value) == dict:
+            if isinstance(value, dict):
                 for k, v in value.items():
                     if k in ['arl', 'email']:
                         continue
-                    logger.debug(f"{k.replace('_', ' ').title()}: {v}")
+                    logger.debug(f"{key}/{k}: {v}")
             else:
-                logger.debug(f"{key.replace('_', ' ').title()}: {value}")
+                logger.debug(f"{key}: {value}")
         logger.debug("==============================")
