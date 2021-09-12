@@ -164,8 +164,7 @@ class Refresh:
                     self.total_new_releases += 1
                     artist_new_release_count += 1
 
-                    self.queue_list.append(download.QueueItem(artist['download_path'], artist['bitrate'],
-                                                              artist, album, None))
+                    self.queue_list.append(download.QueueItem(artist=artist, album=album))
                     logger.debug(f"Release {album['id']} added to queue")
                     if artist["alerts"]:
                         self.append_new_release(album['release_date'], artist['artist_name'],
