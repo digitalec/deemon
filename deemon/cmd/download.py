@@ -47,7 +47,7 @@ class QueueItem:
             self.url = track["link"]
 
         if playlist:
-            self.url = playlist["link"]
+            self.url = playlist["url"]
             self.playlist_title = playlist["title"]
 
         self.print_queue_to_log()
