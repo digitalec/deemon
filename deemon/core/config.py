@@ -86,6 +86,18 @@ class Config(object):
     def validate():
         modified = 0
 
+        def process_config(dict1, dict2):
+            """
+            Process user configuration, applying values to a default config
+            """
+            for key, value in dict1.items():
+                if key in dict2.keys():
+                    if isinstance(dict1[key], dict):
+                        process_config(dict1[key], dict2[key])
+                    else:
+                        dict2[key] = dict1[key]
+            return dict2
+
         def find_position(d, key):
             for k, v in d.items():
                 if isinstance(v, dict):
@@ -95,15 +107,15 @@ class Config(object):
                 elif k == key:
                     return [k]
 
-        def migrate_old_config(old_config, new_config):
+        def migrate_old_config(user_config, reference_config):
             nonlocal modified
-            # Old key > new key
             migration_map = [
+                {'check_update': 'check_update'},
+                {'debug_mode': 'debug_mode'},
                 {'plex_baseurl': 'base_url'},
                 {'plex_token': 'token'},
                 {'plex_library': 'library'},
                 {'deemix_path': 'path'},
-                {'debug_mode': 'debug_mode'},
                 {'arl': 'arl'},
                 {'smtp_recipient': 'email'},
                 {'smtp_server': 'server'},
@@ -119,24 +131,27 @@ class Config(object):
                 {'release_max_days': 'release_max_age'}
             ]
             for mlist in migration_map:
+
                 for old, new in mlist.items():
-                    if not old_config.get(old):
+                    user_config_tmp = deepcopy(user_config)
+                    user_config_copy = user_config
+                    if not user_config.get(old):
                         continue
-                    opos = find_position(old_config, old) or [old]
-                    npos = find_position(new_config, new) or [new]
-                    usertmp_old = old_config
-                    usertmp_new = new_config
-                    if len(opos):
-                        for i in opos[:-1]:
-                            usertmp_old = usertmp_old.setdefault(i, {})
-                    if len(npos):
-                        for i in npos[:-1]:
-                            usertmp_new = usertmp_new.setdefault(i, {})
-                    logger.debug("Migrating " + ':'.join([str(x) for x in opos]) + " -> " + ':'.join(
-                        [str(x) for x in npos]))
-                    usertmp_new[npos[-1]] = usertmp_old[opos[-1]]
+
+                    old_position = find_position(user_config, old) or [old]
+                    new_position = find_position(reference_config, new) or [new]
+
+                    for i in old_position[:-1]:
+                        user_config_tmp = user_config_tmp.setdefault(i, {})
+
+                    for i in new_position[:-1]:
+                        user_config_copy = user_config_copy.setdefault(i, {})
+
+                    logger.debug("Migrating " + ':'.join([str(x) for x in old_position]) + " -> " + ':'.join([str(x) for x in new_position]))
+                    user_config_copy[new_position[-1]] = user_config_tmp[old_position[-1]]
                     modified += 1
-            return new_config
+
+            return user_config
 
         def test_values(dict1, dict2):
             nonlocal modified
@@ -185,7 +200,8 @@ class Config(object):
                             pass
 
         logger.debug("Loading configuration, please wait...")
-        Config._CONFIG = migrate_old_config(Config._CONFIG, deepcopy(DEFAULT_CONFIG))
+        migrated_config = migrate_old_config(Config._CONFIG, DEFAULT_CONFIG)
+        Config._CONFIG = process_config(migrated_config, DEFAULT_CONFIG)
         test_values(Config._CONFIG, DEFAULT_CONFIG)
         return modified
 
