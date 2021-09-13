@@ -332,6 +332,10 @@ class Config(object):
             for k in property_path[:-1]:
                 tmpConfig = tmpConfig.setdefault(k, {})
             if property in ALLOWED_VALUES:
+                if isinstance(ALLOWED_VALUES[property], dict):
+                    if value in [str(x) for x in ALLOWED_VALUES[property].values()]:
+                        tmpConfig[property_path[-1]] = value
+                        return
                 if value in ALLOWED_VALUES[property]:
                     tmpConfig[property_path[-1]] = value
                     return
