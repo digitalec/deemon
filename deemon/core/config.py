@@ -184,7 +184,7 @@ class Config(object):
                         else:
                             pass
 
-        print("Loading configuration, please wait...")
+        logger.debug("Loading configuration, please wait...")
         Config._CONFIG = migrate_old_config(Config._CONFIG, deepcopy(DEFAULT_CONFIG))
         test_values(Config._CONFIG, DEFAULT_CONFIG)
         return modified
