@@ -69,12 +69,14 @@ def artist_lookup(query):
     modified = 0
     for property in ['bitrate', 'record_type', 'alerts', 'download_path']:
         allowed_opts = config.allowed_values(property)
+        if isinstance(allowed_opts, dict):
+            allowed_opts = [str(x) for x in allowed_opts.values()]
         while True:
             friendly_text = property.replace("_", " ").title()
             i = input(f"{friendly_text} [{result[property]}]: ")
             if i == "":
                 break
-            if not isinstance (i, type(result[property])):
+            if not isinstance(i, type(result[property])):
                 try:
                     i = int(i)
                 except ValueError:

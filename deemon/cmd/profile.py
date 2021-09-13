@@ -23,7 +23,7 @@ class ProfileConfig:
         menu = [
             {'setting': 'email', 'type': str, 'text': 'Email address', 'allowed': []},
             {'setting': 'alerts', 'type': bool, 'text': 'Alerts', 'allowed': config.allowed_values('alerts')},
-            {'setting': 'bitrate', 'type': str, 'text': 'Bitrate', 'allowed': config.allowed_values('bitrate')},
+            {'setting': 'bitrate', 'type': str, 'text': 'Bitrate', 'allowed': config.allowed_values('bitrate').values()},
             {'setting': 'record_type', 'type': str, 'text': 'Record Type', 'allowed': config.allowed_values('record_type')},
             {'setting': 'plex_baseurl', 'type': str, 'text': 'Plex Base URL', 'allowed': []},
             {'setting': 'plex_token', 'type': str, 'text': 'Plex Token', 'allowed': []},

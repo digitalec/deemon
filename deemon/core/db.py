@@ -64,7 +64,7 @@ class Database(object):
         self.query("CREATE TABLE monitor ("
                    "'artist_id' INTEGER,"
                    "'artist_name' TEXT,"
-                   "'bitrate' INTEGER,"
+                   "'bitrate' TEXT,"
                    "'record_type' TEXT,"
                    "'alerts' INTEGER,"
                    "'profile_id' INTEGER DEFAULT 1,"
@@ -74,7 +74,7 @@ class Database(object):
                    "'id' INTEGER UNIQUE,"
                    "'title' TEXT,"
                    "'url' TEXT,"
-                   "'bitrate' INTEGER,"
+                   "'bitrate' TEXT,"
                    "'alerts' INTEGER,"
                    "'profile_id' INTEGER DEFAULT 1,"
                    "'download_path' TEXT)")
@@ -108,7 +108,7 @@ class Database(object):
                    "'name' TEXT,"
                    "'email' TEXT,"
                    "'alerts' INTEGER,"
-                   "'bitrate' INTEGER,"
+                   "'bitrate' TEXT,"
                    "'record_type' TEXT,"
                    "'plex_baseurl' TEXT,"
                    "'plex_token' TEXT,"
@@ -158,7 +158,7 @@ class Database(object):
 
         # Upgrade database v1.1 to v1.3
         if current_ver < parse_version("1.3"):
-            sql_playlists_1 = "ALTER TABLE playlists ADD COLUMN bitrate INTEGER"
+            sql_playlists_1 = "ALTER TABLE playlists ADD COLUMN bitrate TEXT"
             sql_playlists_2 = "ALTER TABLE playlists ADD COLUMN alerts INTEGER"
             sql_updatever = "INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('version', '1.3')"
             self.query(sql_playlists_1)
@@ -184,7 +184,7 @@ class Database(object):
                        "'name' TEXT,"
                        "'email' TEXT,"
                        "'alerts' INTEGER,"
-                       "'bitrate' INTEGER,"
+                       "'bitrate' TEXT,"
                        "'record_type' TEXT,"
                        "'plex_baseurl' TEXT,"
                        "'plex_token' TEXT,"
