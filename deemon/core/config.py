@@ -391,15 +391,12 @@ class LoadProfile(object):
                 continue
             Config.set(key, value)
 
-        logger.debug("=========== CONFIG ===========")
         for key, value in Config.get_config().items():
-            if key in ['smtp_settings']:
-                continue
             if isinstance(value, dict):
                 for k, v in value.items():
-                    if k in ['arl', 'email']:
-                        continue
-                    logger.debug(f"{key}/{k}: {v}")
+                    if key in ['smtp_settings'] or k in ['arl', 'email', 'token']:
+                        if v:
+                            v = "********"
+                    logger.debug(f"> {key}/{k}: {v}")
             else:
-                logger.debug(f"{key}: {value}")
-        logger.debug("==============================")
+                logger.debug(f"> {key}: {value}")
