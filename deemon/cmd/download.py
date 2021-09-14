@@ -174,6 +174,8 @@ class Download:
         def process_artist_by_name(name):
             logger.debug("Processing artists by name")
             artist_result = get_api_result(artist=name)
+            if not artist_result:
+                return
             logger.debug(f"Requested Artist: '{name}', Found: '{artist_result['name']}'")
             if artist_result:
                 queue_filtered_releases(artist_result)
@@ -181,14 +183,17 @@ class Download:
         def process_artist_by_id(i):
             logger.debug("Processing artists by ID")
             artist_id_result = get_api_result(artist_id=i)
+            if not artist_id_result:
+                return
             logger.debug(f"Requested Artist ID: {i}, Found: {artist_id_result['name']}")
             if artist_id_result:
                 queue_filtered_releases(artist_id_result)
 
         def process_album_by_id(i):
             logger.debug("Processing album by name")
-            # TODO handle album_id_result = None when not found
             album_id_result = get_api_result(album_id=i)
+            if not album_id_result:
+                return
             logger.debug(f"Requested Album: {i}, "
                          f"Found: {album_id_result['artist']['name']} - {album_id_result['title']}")
             if album_id_result and not queue_item_exists(album_id_result['id']):
