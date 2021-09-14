@@ -351,7 +351,7 @@ class Database(object):
 
     def delete_profile(self, profile_name: str):
         profile = self.get_profile(profile_name)
-        vals = {'profile_id': profile['profile_id']}
+        vals = {'profile_id': profile['id']}
         self.query("DELETE FROM monitor WHERE profile_id = :profile_id", vals)
         self.query("DELETE FROM releases WHERE profile_id = :profile_id", vals)
         self.query("DELETE FROM playlists WHERE profile_id = :profile_id", vals)
