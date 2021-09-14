@@ -370,16 +370,19 @@ def reset_db():
 
 @run.command(name='profile')
 @click.argument('profile', required=False)
-@click.option('-a', '--add', is_flag=True, type=str, help="Add new profile")
-@click.option('-d', '--delete', is_flag=True, type=str, help="Delete an existing profile")
-@click.option('-e', '--edit', is_flag=True, type=str, help="Edit an existing profile")
-def profile_command(profile, add, delete, edit):
+@click.option('-a', '--add', is_flag=True, help="Add new profile")
+@click.option('-c', '--clear', is_flag=True, help="Clear config for existing profile")
+@click.option('-d', '--delete', is_flag=True, help="Delete an existing profile")
+@click.option('-e', '--edit', is_flag=True, help="Edit an existing profile")
+def profile_command(profile, add, clear, delete, edit):
     """Add, modify and delete configuration profiles"""
 
     pc = ProfileConfig(profile)
     if profile:
         if add:
             pc.add()
+        elif clear:
+            pc.clear()
         elif delete:
             pc.delete()
         elif edit:

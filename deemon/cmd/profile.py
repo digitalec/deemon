@@ -149,3 +149,16 @@ class ProfileConfig:
             print("{:<10} {:<40} {:<8} {:<8} {:<8} {:<25} "
                   "{:<20} {:<20} {:<20}".format(name, email, alerts, bitrate, rtype, url, token, lib, dl_path))
             print("")
+
+    def clear(self):
+        profile = self.db.get_profile(self.profile_name)
+        self.print_header(f"Configuring '{profile['name']}' (Profile ID: {profile['id']})")
+        if not profile:
+            return logger.error(f"Profile {self.profile_name} not found")
+
+        for value in profile:
+            if value in ["id", "name"]:
+                continue
+            profile[value] = None
+        self.db.update_profile(profile)
+        logger.info("All values have been cleared.")
