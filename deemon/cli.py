@@ -98,7 +98,7 @@ def download_command(artist, artist_id, album_id, url, file, bitrate, record_typ
         download -i 100 -t album -b 9
     """
     if bitrate:
-        config.set('bitrate', bitrate.upper())
+        config.set('bitrate', bitrate)
     if download_path:
         config.set('download_path', download_path)
     if record_type:

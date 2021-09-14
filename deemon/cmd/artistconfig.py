@@ -60,35 +60,35 @@ def get_artist(query: str):
 
 
 def artist_lookup(query):
-    print_header(f"Searching for: '{query}'")
     result = get_artist(query)
     if not result:
         return
-    else:
-        print_header(f"Configuring '{result['artist_name']}'")
+    print_header(f"Configuring '{result['artist_name']}' (Artist ID: {result['artist_id']})")
     modified = 0
-    for property in ['bitrate', 'record_type', 'alerts', 'download_path']:
+    for property in result:
+        if property not in ['alerts', 'bitrate', 'record_type', 'download_path']:
+            continue
         allowed_opts = config.allowed_values(property)
         if isinstance(allowed_opts, dict):
-            allowed_opts = [str(x) for x in allowed_opts.values()]
+            allowed_opts = [str(x.lower()) for x in allowed_opts.values()]
+
         while True:
             friendly_text = property.replace("_", " ").title()
-            i = input(f"{friendly_text} [{result[property]}]: ")
-            if i == "":
+            user_input = input(f"{friendly_text} [{result[property]}]: ").lower()
+            if user_input == "":
                 break
-            if not isinstance(i, type(result[property])):
-                try:
-                    i = int(i)
-                except ValueError:
-                    if allowed_opts:
-                        print(f"Allowed options: " + ', '.join(str(x) for x in allowed_opts))
-                    continue
-            if allowed_opts:
-                if i not in allowed_opts:
+            elif user_input == "false" or user_input == "0":
+                user_input = False
+            elif user_input == "true" or user_input == "1":
+                user_input = True
+            if user_input == "none":
+                user_input = None
+            elif allowed_opts:
+                if user_input not in allowed_opts:
                     print(f"Allowed options: " + ', '.join(str(x) for x in allowed_opts))
                     continue
-            logger.debug(f"User set {property} to {i}")
-            result[property] = i
+            logger.debug(f"User set {property} to {user_input}")
+            result[property] = user_input
             modified += 1
             break
     if modified > 0:

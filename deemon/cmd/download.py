@@ -71,6 +71,11 @@ class Download:
         if not self.di.login():
             sys.exit(1)
 
+    def get_deemix_bitrate(self):
+        for bitrate, name in config.allowed_values('bitrate').items():
+            if name.lower() == config.bitrate().lower():
+                return bitrate
+
     def get_plex_server(self):
         if (config.plex_baseurl() != "") and (config.plex_token() != ""):
             try:
@@ -103,8 +108,8 @@ class Download:
             current = 1
             total = len(self.queue_list)
             for q in self.queue_list:
-                dx_bitrates = {"128": 1, "320": 3, "FLAC": 9}
-                dx_bitrate = dx_bitrates[config.bitrate()]
+                dx_bitrate = self.get_deemix_bitrate()
+                logger.debug(f"deemix bitrate set to {str(dx_bitrate)} ({config.bitrate().upper()})")
                 if self.verbose == "true":
                     logger.debug(f"Processing queue item {vars(q)}")
                 if q.artist_name:

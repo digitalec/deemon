@@ -310,7 +310,7 @@ class Config(object):
         return Config._CONFIG.get('prompt_no_matches')
 
     @staticmethod
-    def allowed_values(prop) -> list:
+    def allowed_values(prop):
         return ALLOWED_VALUES.get(prop)
 
     @staticmethod
@@ -329,6 +329,10 @@ class Config(object):
             Config._CONFIG[property] = value
         if Config._CONFIG.get(property):
             if property in ALLOWED_VALUES:
+                if value.lower() == "true" or value == "1":
+                    value = True
+                elif value.lower() == "false" or value == "0":
+                    value = ""
                 if value in ALLOWED_VALUES[property]:
                     Config._CONFIG[property] = value
                     return
@@ -348,16 +352,19 @@ class Config(object):
             for k in property_path[:-1]:
                 tmpConfig = tmpConfig.setdefault(k, {})
             if property in ALLOWED_VALUES:
+                if isinstance(value, str):
+                    if value.lower() == "true" or value == "1":
+                        value = True
+                    elif value.lower() == "false" or value == "0":
+                        value = False
                 if isinstance(ALLOWED_VALUES[property], dict):
-                    if value in [str(x) for x in ALLOWED_VALUES[property].values()]:
+                    if value in [str(x.lower()) for x in ALLOWED_VALUES[property].values()]:
                         tmpConfig[property_path[-1]] = value
                         return
                 if value in ALLOWED_VALUES[property]:
                     tmpConfig[property_path[-1]] = value
                     return
-                raise ValueNotAllowed(f"Property {property} requires one of "
-                                      f"'{', '.join(str(x) for x in ALLOWED_VALUES[property])}', "
-                                      f"not {value} of type {type(value)}.")
+                raise ValueNotAllowed(f"Value for {property} is invalid: {value} (type: {type(value).__name__})")
 
             if isinstance(value, type(tmpConfig[property])):
                 tmpConfig[property] = value
