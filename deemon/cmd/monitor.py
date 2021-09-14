@@ -73,7 +73,7 @@ def monitor(profile, value, artist_config: dict = None, remove=False, dl_obj=Non
             return api_data[0]
         else:
             logger.error(f"Artist {value} not found. Try again using --search")
-            sys.exit(0)
+            return
 
     # TODO move this to config!
     if not Path(config.download_path()).exists:
@@ -83,7 +83,6 @@ def monitor(profile, value, artist_config: dict = None, remove=False, dl_obj=Non
         if profile == "artist":
             if remove:
                 return purge_artist(name=value)
-
             api_result = dz.api.search_artist(value, limit=config.query_limit())["data"]
 
             if len(api_result) == 0:
@@ -94,7 +93,6 @@ def monitor(profile, value, artist_config: dict = None, remove=False, dl_obj=Non
             api_result = get_best_result(api_result)
 
             if not api_result:
-                logger.error(f"No result selected")
                 return
         else:
             if remove:
