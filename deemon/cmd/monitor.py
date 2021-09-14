@@ -10,7 +10,12 @@ import deezer
 logger = logging.getLogger(__name__)
 
 
-def monitor(profile, value, remove=False, dl_obj=None, is_search=False):
+def monitor(profile, value, artist_config: dict = None, remove=False, dl_obj=None, is_search=False):
+
+    bitrate = artist_config.get('bitrate')
+    alerts = artist_config.get('alerts')
+    record_type = artist_config.get('record_type')
+    download_path = artist_config.get('download_path')
 
     dz = deezer.Deezer()
     db = Database()
@@ -70,6 +75,7 @@ def monitor(profile, value, remove=False, dl_obj=None, is_search=False):
             logger.error(f"Artist {value} not found. Try again using --search")
             sys.exit(0)
 
+    # TODO move this to config!
     if not Path(config.download_path()).exists:
         return logger.error(f"Invalid download path: {config.download_path()}")
 
@@ -106,10 +112,10 @@ def monitor(profile, value, remove=False, dl_obj=None, is_search=False):
         sql_values = {
             'artist_id': api_result['id'],
             'artist_name': api_result['name'],
-            'bitrate': config.bitrate(),
-            'record_type': config.record_type(),
-            'alerts': config.alerts(),
-            'download_path': config.download_path(),
+            'bitrate': bitrate,
+            'record_type': record_type,
+            'alerts': alerts,
+            'download_path': download_path,
             'profile_id': config.profile_id()
         }
         query = ("INSERT INTO monitor "
@@ -123,8 +129,8 @@ def monitor(profile, value, remove=False, dl_obj=None, is_search=False):
             logger.info(e)
 
         logger.info(f"Now monitoring artist '{api_result['name']}'")
-        logger.debug(f"bitrate: {config.bitrate()}, record_type: {config.record_type()}, "
-                     f"alerts: {config.alerts()}, download_path: {config.download_path()}")
+        logger.debug(f"bitrate: {bitrate}, record_type: {record_type}, "
+                     f"alerts: {alerts}, download_path: {download_path}")
         if dl_obj:
             dl_obj.download(None, [api_result['id']], None, None, None, False)
         db.commit()

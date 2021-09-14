@@ -129,7 +129,7 @@ def download_command(artist, artist_id, album_id, url, file, bitrate, record_typ
 @click.option('-s', '--search', 'search_flag', is_flag=True, help='Show similar artist results to choose from')
 @click.option('-b', '--bitrate', help="Specify bitrate")
 @click.option('-t', '--record-type', type=str, help='Specify record types to download')
-@click.option('-a', '--alerts', type=int, help="Enable or disable alerts")
+@click.option('-a', '--alerts', type=str, help="Enable or disable alerts")
 @click.option('-n', '--no-refresh', is_flag=True, help='Skip refresh after adding or removing artist')
 @click.option('-D', '--download', 'dl', is_flag=True, help='Download all releases matching record type')
 @click.option('-o', '--download-path', type=str, metavar="PATH", help='Specify custom download directory')
@@ -152,15 +152,16 @@ def monitor_command(artist, im, playlist, no_refresh, bitrate, record_type, aler
 
     new_artists = []
     new_playlists = []
+    cfg = {}
 
     if bitrate:
-        config.set('bitrate', bitrate.upper())
+        cfg['bitrate'] = bitrate
     if download_path:
-        config.set('download_path', download_path)
+        cfg['download_path'] = download_path
     if record_type:
-        config.set('record_type', record_type)
+        cfg['record_type'] = record_type
     if alerts:
-        config.set('alerts', alerts)
+        cfg['alerts'] = alerts
 
     if download_path and download_path != "":
         if Path(download_path).exists:
@@ -179,18 +180,18 @@ def monitor_command(artist, im, playlist, no_refresh, bitrate, record_type, aler
             artist_int_list, artist_str_list = dataprocessor.process_input_file(imported_file)
             if artist_str_list:
                 for a in artist_str_list:
-                    result = monitor.monitor("artist", a, remove=remove, dl_obj=dl, is_search=search_flag)
+                    result = monitor.monitor("artist", a, artist_config=cfg, remove=remove, dl_obj=dl, is_search=search_flag)
                     if type(result) == int:
                         new_artists.append(result)
             if artist_int_list:
                 for aid in artist_int_list:
-                    result = monitor.monitor("artist_id", aid, remove=remove, dl_obj=dl, is_search=search_flag)
+                    result = monitor.monitor("artist_id", aid, artist_config=cfg, remove=remove, dl_obj=dl, is_search=search_flag)
                     if type(result) == int:
                         new_artists.append(result)
         elif Path(im).is_dir():
             import_list = [x.relative_to(im) for x in sorted(Path(im).iterdir()) if x.is_dir()]
             for a in import_list:
-                result = monitor.monitor("artist", a, remove=remove, dl_obj=dl, is_search=search_flag)
+                result = monitor.monitor("artist", a, artist_config=cfg, remove=remove, dl_obj=dl, is_search=search_flag)
                 if type(result) == int:
                     new_artists.append(result)
         else:
@@ -199,7 +200,7 @@ def monitor_command(artist, im, playlist, no_refresh, bitrate, record_type, aler
 
     if artist:
         for a in dataprocessor.artists_to_csv(artist):
-            result = monitor.monitor("artist", a, remove=remove, dl_obj=dl, is_search=search_flag)
+            result = monitor.monitor("artist", a, artist_config=cfg, remove=remove, dl_obj=dl, is_search=search_flag)
             if isinstance(result, int):
                 new_artists.append(result)
 
@@ -215,13 +216,13 @@ def monitor_command(artist, im, playlist, no_refresh, bitrate, record_type, aler
 
     if artist_id:
         for aid in artist_id:
-            result = monitor.monitor("artist_id", aid, remove=remove, dl_obj=dl, is_search=search_flag)
+            result = monitor.monitor("artist_id", aid, artist_config=cfg, remove=remove, dl_obj=dl, is_search=search_flag)
             if isinstance(result, int):
                 new_artists.append(result)
 
     if playlists:
         for p in playlists:
-            result = monitor.monitor("playlist", p, remove=remove, dl_obj=dl, is_search=search_flag)
+            result = monitor.monitor("playlist", p, artist_config=cfg, remove=remove, dl_obj=dl, is_search=search_flag)
             if isinstance(result, int):
                 new_playlists.append(result)
 

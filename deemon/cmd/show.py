@@ -22,7 +22,7 @@ class Show:
             print("{:<10} {:<35} {:<10} {:<10} {:<10} {:<25}".format('ID', 'Artist', 'Alerts',
                                                            'Bitrate', 'Type', 'Download Path'))
 
-            print("{:<10} {:<35} {:<10} {:<10} {:<10} {:<25}".format(mon['artist_id'], mon['artist_name'],
+            print("{!s:<10} {!s:<35} {!s:<10} {!s:<10} {!s:<10} {!s:<25}".format(mon['artist_id'], mon['artist_name'],
                                                                      mon['alerts'], mon['bitrate'],
                                                                      mon['record_type'], mon['download_path']))
             print("")
