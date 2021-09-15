@@ -132,7 +132,7 @@ def download_command(artist, artist_id, album_id, url, file, bitrate, record_typ
 @click.option('-a', '--alerts', type=str, help="Enable or disable alerts")
 @click.option('-n', '--no-refresh', is_flag=True, help='Skip refresh after adding or removing artist')
 @click.option('-D', '--download', 'dl', is_flag=True, help='Download all releases matching record type')
-@click.option('-o', '--download-path', type=str, metavar="PATH", help='Specify custom download directory')
+@click.option('-d', '--download-path', type=str, metavar="PATH", help='Specify custom download directory')
 @click.option('-R', '--remove', is_flag=True, help='Stop monitoring an artist')
 def monitor_command(artist, im, playlist, no_refresh, bitrate, record_type, alerts, artist_id, remove,
                     url, dl, download_path, search_flag):
@@ -244,12 +244,13 @@ def refresh_command(name, playlist, skip_download, time_machine):
 
         for n in dataprocessor.artists_to_csv(name):
             list_of_names.append(n)
+        name = list_of_names
 
     if name and playlist:
         playlist = list_of_names
         name = None
 
-    Refresh(artist_name=list_of_names, playlist_title=list_of_names, skip_download=skip_download, time_machine=time_machine)
+    Refresh(artist_name=name, playlist_title=playlist, skip_download=skip_download, time_machine=time_machine)
 
 
 @click.group(name="show")
