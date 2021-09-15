@@ -160,6 +160,10 @@ def monitor(profile, value, artist_config: dict = None, remove=False, dl_obj=Non
             logger.warning(f"Playlist '{api_result['title']}' is already being monitored")
             return
 
+        api_result['bitrate'] = artist_config['bitrate'] or None
+        api_result['alerts'] = artist_config['alerts'] or None
+        api_result['download_path'] = artist_config['download_path'] or None
+
         try:
             db.monitor_playlist(api_result)
         except OperationalError as e:

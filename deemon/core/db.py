@@ -336,8 +336,8 @@ class Database(object):
 
     def monitor_playlist(self, api_result):
         values = {'id': api_result['id'], 'title': api_result['title'], 'url': api_result['link'],
-                'bitrate': config.bitrate(), 'alerts': config.alerts(), 'download_path': config.download_path(),
-                'profile_id': config.profile_id()}
+                  'bitrate': api_result['bitrate'], 'alerts': api_result['alerts'],
+                  'download_path': api_result['download_path'], 'profile_id': config.profile_id()}
         query = ("INSERT INTO playlists ('id', 'title', 'url', 'bitrate', 'alerts', 'download_path', 'profile_id') "
                  "VALUES (:id, :title, :url, :bitrate, :alerts, :download_path, :profile_id)")
         self.query(query, values)

@@ -248,27 +248,31 @@ def show_command():
 
 @show_command.command(name="artists")
 @click.argument('artist', nargs=-1, required=False)
-@click.option('-i', '--artist-ids', is_flag=True, help='Show artist IDs currently being monitored')
+@click.option('-i', '--artist-id', is_flag=True, help='Show artist info by artist ID')
 @click.option('-c', '--csv', is_flag=True, help='Output artists as CSV')
 @click.option('-H', '--hide-header', is_flag=True, help='Hide header on CSV output')
 @click.option('-f', '--filter', type=str, help='Specify filter for CSV output')
-def show_artists(artist, artist_ids, csv, filter, hide_header):
+def show_artists(artist, artist_id, csv, filter, hide_header):
     """Show artist info monitored by profile"""
     if artist:
         artist = ' '.join([x for x in artist])
 
     show = Show()
-    if filter is None:
-        filter = "name"
-    show.artists(csv, artist_ids, filter, hide_header, artist=artist)
+    show.monitoring(artist=True, query=artist, csv=csv, filter=filter, hide_header=hide_header, is_id=artist_id)
 
+@show_command.command(name="playlists")
+@click.argument('title', nargs=-1, required=False)
+@click.option('-i', '--playlist-id', is_flag=True, help='Show playlist info by playlist ID')
+@click.option('-c', '--csv', is_flag=True, help='Output artists as CSV')
+@click.option('-H', '--hide-header', is_flag=True, help='Hide header on CSV output')
+@click.option('-f', '--filter', type=str, help='Specify filter for CSV output')
+def show_artists(title, playlist_id, csv, filter, hide_header):
+    """Show playlist info monitored by profile"""
+    if title:
+        title = ' '.join([x for x in title])
 
-@show_command.command(name="playlists", hidden=True)
-@click.option('-c', '--csv', is_flag=True, help='Used with -a, -i; output artists as CSV')
-def show_playlists(csv):
-    """Show playlists monitored by profile"""
     show = Show()
-    show.playlists(csv)
+    show.monitoring(artist=False, query=title, csv=csv, filter=filter, hide_header=hide_header, is_id=playlist_id)
 
 
 @show_command.command(name="releases")
