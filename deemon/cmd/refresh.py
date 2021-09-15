@@ -1,3 +1,5 @@
+import os
+
 from deemon.cmd import download
 from deemon.core.db import Database
 from deemon.core.config import Config as config
@@ -17,6 +19,8 @@ class Refresh:
         self.artist_name = artist_name
         self.playlist_title = playlist_title
         self.playlist_id = playlist_id or []
+        self.max_cols = self.get_progress_bar_size()
+        self.message_queue = []
         self.skip_download = skip_download
         self.time_machine = time_machine
         self.total_new_releases = 0
@@ -43,6 +47,29 @@ class Refresh:
         else:
             return dates.get_todays_date()
 
+    @staticmethod
+    def get_progress_bar_size() -> int:
+        screen_size = int(os.get_terminal_size().columns)
+        dynamic_size = int(screen_size / 4)
+        if dynamic_size > 30:
+            return 30
+        elif dynamic_size < 16:
+            return 16
+        else:
+            return dynamic_size
+
+    def set_progress_bar_text(self, msg) -> str:
+        while len(msg) < self.max_cols:
+            msg += " "
+        while len(msg) > self.max_cols:
+            msg = msg[:-1]
+        msg += "..."
+        return msg
+
+    def store_message(self, message):
+        if message:
+            self.message_queue.append(message)
+
     def run(self):
         logger.debug("Starting refresh...")
         if not self.refresh_date:
@@ -54,8 +81,7 @@ class Refresh:
                 if artist:
                     self.artist_id.append(artist['artist_id'])
                 else:
-                    # TODO Capture to show at the end
-                    logger.error(f"Artist '{name}' is not being monitored")
+                    self.store_message(f"Artist '{name}' is not being monitored")
             if not len(self.artist_id):
                 return
         elif self.playlist_title:
@@ -64,8 +90,7 @@ class Refresh:
                 if playlist:
                     self.playlist_id.append(playlist['id'])
                 else:
-                    # TODO Capture to show at the end
-                    logger.error(f"Playlist '{title}' is not being monitored")
+                    self.store_message(f"Playlist '{title}' is not being monitored")
             if not len(self.playlist_id):
                 return
 
@@ -84,6 +109,11 @@ class Refresh:
 
             if self.monitoring_artists():
                 self.refresh_artists()
+
+        if len(self.message_queue):
+            print("\nThe following could not be refreshed:")
+            for msg in self.message_queue:
+                print(" - " + msg)
 
         if len(self.queue_list) > 0 and not self.skip_download:
             if not self.dl:
@@ -110,13 +140,15 @@ class Refresh:
             monitored = self.db.get_all_monitored_playlists()
 
         progress = tqdm.tqdm(monitored, ascii=" #",
-                             bar_format='{desc}...  {n_fmt}/{total_fmt} [{bar:40}] {percentage:3.0f}%')
+                             bar_format='{desc}  {n_fmt}/{total_fmt} [{bar}] {percentage:3.0f}%')
 
         for playlist in progress:
+            descr = self.set_progress_bar_text(f"Refreshing {playlist['title']}")
+            progress.set_description_str(descr)
+
             new_track_count = 0
             new_playlist = self.existing_playlist(playlist['id'])
             playlist_api = self.dz.api.get_playlist(playlist['id'])
-            progress.set_description_str(f"Refreshing {playlist['title']}")
 
             for track in playlist_api['tracks']['data']:
                 if not self.existing_playlist_track(playlist_api['id'], track['id']):
@@ -146,9 +178,12 @@ class Refresh:
         monitored = sorted(monitored, key=lambda x: x['artist_name'].lower())
 
         progress = tqdm.tqdm(monitored, ascii=" #",
-                             bar_format='{desc}...  {n_fmt}/{total_fmt} [{bar:40}] {percentage:3.0f}%')
+                             bar_format='{desc}  {n_fmt}/{total_fmt} [{bar}] {percentage:3.0f}%')
 
         for artist in progress:
+            descr = self.set_progress_bar_text(f"Refreshing {artist['artist_name']}")
+            progress.set_description_str(descr)
+
             logger.debug(f"Artist settings for {artist['artist_name']} ({artist['artist_id']}): bitrate={artist['bitrate']}, "
                          f"record_type={artist['record_type']}, alerts={artist['alerts']}, "
                          f"download_path={artist['download_path']}")
@@ -160,8 +195,6 @@ class Refresh:
 
             artist_new_release_count = 0
             new_artist = self.existing_artist(artist['artist_id'])
-            description_artist = artist['artist_name'][:20]
-            progress.set_description_str("Refreshing " + description_artist)
             artist_albums = self.dz.api.get_artist_albums(artist['artist_id'])['data']
 
             for album in artist_albums:
