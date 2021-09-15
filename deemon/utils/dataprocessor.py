@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 
 
 def read_file_as_csv(file):
-    with open(file, 'r', encoding="utf8", errors="replace") as f:
+    with open(file, 'r', encoding="utf-8", errors="replace") as f:
         make_csv = f.read()
         csv_to_list = make_csv.split('\n')
         sorted_list = sorted(list(filter(None, csv_to_list)))
