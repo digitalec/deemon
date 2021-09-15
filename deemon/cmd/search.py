@@ -97,6 +97,8 @@ class Search:
             if artist_selected:
                 self.user_search_query = search_query
                 return [artist_selected]
+            elif quick_search:
+                return
 
     def queue_menu_options(self):
         ui_options = ("(d) Download Queue  (c) Clear Queue  (b) Back")
@@ -133,8 +135,10 @@ class Search:
             elif response == "b":
                 break
             elif response == "exit":
-                if self.exit_search():
+                if self.exit_search() and not artist_only:
                     sys.exit()
+                else:
+                    return
             elif response == "":
                 continue
 

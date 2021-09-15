@@ -59,12 +59,14 @@ def monitor(profile, value, artist_config: dict = None, remove=False, dl_obj=Non
             if is_search or config.prompt_duplicates():
                 menu = search.Search()
                 ask_user = menu.search_menu(value)
-                return ask_user[0]
+                if ask_user:
+                    return ask_user[0]
+                return logger.debug("No artist selected, skipping...")
             else:
                 if not config.prompt_duplicates():
                     return matches[0]
                 logger.error(f"Duplicate artist names found for {value}. Try again using --search")
-        elif is_search:
+        elif is_search or config.prompt_no_matches():
             menu = search.Search()
             ask_user = menu.search_menu(value)
             if ask_user:
