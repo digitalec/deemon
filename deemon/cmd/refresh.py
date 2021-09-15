@@ -184,8 +184,8 @@ class Refresh:
 
                 if new_artist:
                     if len(artist_albums) == 0:
-                        logger.warning(
-                            f"WARNING: Artist '{artist['artist_name']}' setup for monitoring but no releases were found.")
+                        self.store_message(f"Artist '{artist['artist_name']}' setup for monitoring "
+                                            f"but no releases were found.")
                     continue
                     
                 if (artist['record_type'] == album['record_type']) or artist['record_type'] == "all":
@@ -217,6 +217,7 @@ class Refresh:
         else:
             return 0
 
+    # TODO move to db.py
     def monitoring_playlists(self):
         vals = {'profile_id': config.profile_id()}
         query = "SELECT * FROM 'playlists' WHERE profile_id = :profile_id"
@@ -224,6 +225,7 @@ class Refresh:
         if result and len(result) > 0:
             return True
 
+    # TODO move to db.py
     def monitoring_artists(self):
         vals = {'profile_id': config.profile_id()}
         query = "SELECT * FROM 'monitor' WHERE profile_id = :profile_id"
@@ -231,6 +233,7 @@ class Refresh:
         if result and len(result) > 0:
             return True
 
+    # TODO move to db.py
     def existing_artist(self, artist_id):
         sql_values = {'artist_id': artist_id, 'profile_id': config.profile_id()}
         # TODO BUG - issue #25 - Artist treated as new artist until at least one release has been seen
@@ -268,6 +271,7 @@ class Refresh:
         result = self.db.query(query, values)
         return result
 
+    # TODO move to db.py
     def append_new_release(self, release_date, artist, album, cover):
         for days in self.new_releases:
             for key in days:
