@@ -1,0 +1,22 @@
+import os
+
+
+def get_progress_bar_size() -> int:
+    screen_size = int(os.get_terminal_size().columns)
+    dynamic_size = int(screen_size / 4)
+    if dynamic_size > 30:
+        return 30
+    elif dynamic_size < 16:
+        return 16
+    else:
+        return dynamic_size
+
+
+def set_progress_bar_text(msg) -> str:
+    max_cols = get_progress_bar_size()
+    while len(msg) < max_cols:
+        msg += " "
+    while len(msg) > max_cols:
+        msg = msg[:-1]
+    msg += "..."
+    return msg

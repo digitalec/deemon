@@ -1,13 +1,12 @@
-import os
-
 from deemon.cmd import download
 from deemon.core.db import Database
 from deemon.core.config import Config as config
-from deemon.utils import notifier, validate, dates
+from deemon.utils import notifier, validate, dates, ui
 import time
 import tqdm
 import logging
 import deezer
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +18,6 @@ class Refresh:
         self.artist_name = artist_name
         self.playlist_title = playlist_title
         self.playlist_id = playlist_id or []
-        self.max_cols = self.get_progress_bar_size()
         self.message_queue = []
         self.skip_download = skip_download
         self.time_machine = time_machine
@@ -47,25 +45,6 @@ class Refresh:
         else:
             return dates.get_todays_date()
 
-    @staticmethod
-    def get_progress_bar_size() -> int:
-        screen_size = int(os.get_terminal_size().columns)
-        dynamic_size = int(screen_size / 4)
-        if dynamic_size > 30:
-            return 30
-        elif dynamic_size < 16:
-            return 16
-        else:
-            return dynamic_size
-
-    def set_progress_bar_text(self, msg) -> str:
-        while len(msg) < self.max_cols:
-            msg += " "
-        while len(msg) > self.max_cols:
-            msg = msg[:-1]
-        msg += "..."
-        return msg
-
     def store_message(self, message):
         if message:
             self.message_queue.append(message)
@@ -86,7 +65,7 @@ class Refresh:
                 return
         elif self.playlist_title:
             for title in self.playlist_title:
-                playlist = self.db.get_monitored_artist_by_name(title)
+                playlist = self.db.get_monitored_playlist_by_name(title)
                 if playlist:
                     self.playlist_id.append(playlist['id'])
                 else:
@@ -147,7 +126,7 @@ class Refresh:
                              bar_format='{desc}  {n_fmt}/{total_fmt} [{bar}] {percentage:3.0f}%')
 
         for playlist in progress:
-            descr = self.set_progress_bar_text(f"Refreshing {playlist['title']}")
+            descr = ui.set_progress_bar_text(f"Refreshing {playlist['title']}")
             progress.set_description_str(descr)
 
             new_track_count = 0
@@ -158,7 +137,7 @@ class Refresh:
                 if not self.existing_playlist_track(playlist_api['id'], track['id']):
                     if not new_playlist:
                         logger.debug(f"New track {track['id']} detected on playlist {playlist_api['id']}")
-                    self.add_playlist_track(playlist_api, track)
+                    self.db.add_playlist_track(playlist_api, track)
                     new_track_count += 1
 
             if new_track_count > 0 and not new_playlist:
@@ -185,7 +164,7 @@ class Refresh:
                              bar_format='{desc}  {n_fmt}/{total_fmt} [{bar}] {percentage:3.0f}%')
 
         for artist in progress:
-            descr = self.set_progress_bar_text(f"Refreshing {artist['artist_name']}")
+            descr = ui.set_progress_bar_text(f"Refreshing {artist['artist_name']}")
             progress.set_description_str(descr)
 
             logger.debug(f"Artist settings for {artist['artist_name']} ({artist['artist_id']}): bitrate={artist['bitrate']}, "
