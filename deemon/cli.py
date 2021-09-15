@@ -9,6 +9,7 @@ from deemon.cmd.search import Search
 from deemon.cmd.refresh import Refresh
 from deemon.cmd.show import Show
 from deemon.cmd.artistconfig import artist_lookup
+from deemon.cmd import backup
 from deemon import __version__
 from datetime import datetime
 from pathlib import Path
@@ -302,24 +303,12 @@ def show_releases(n):
 run.add_command(show_command)
 
 
-@run.command()
+@run.command(name="backup")
 @click.option('--include-logs', is_flag=True, help='include log files in backup')
-def backup(include_logs):
+def backup_command(include_logs):
     """Backup configuration and database to a tar file"""
 
-    def filter_func(item):
-        exclusions = ['deemon/backups']
-        if not include_logs:
-            exclusions.append('deemon/logs')
-        if item.name not in exclusions:
-            return item
-
-    backup_tar = datetime.today().strftime('%Y%m%d-%H%M%S') + ".tar"
-    backup_path = Path(startup.get_appdata_dir() / "backups")
-
-    with tarfile.open(backup_path / backup_tar, "w") as tar:
-        tar.add(startup.get_config(), arcname='deemon', filter=filter_func)
-        logger.info(f"Backed up to {backup_path / backup_tar}")
+    backup.run(include_logs)
 
 
 # TODO @click.option does not support nargs=-1; unable to use spaces without quotations
