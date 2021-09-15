@@ -11,6 +11,10 @@ def get_todays_date():
     return today_date
 
 
+def generate_date_filename(prefix: str):
+    return prefix + datetime.today().strftime('%Y%m%d-%H%M%S')
+
+
 def get_max_release_date(days):
     day_in_secs = 86400
     input_days_in_secs = days * day_in_secs

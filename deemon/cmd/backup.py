@@ -1,8 +1,8 @@
 import logging
 from pathlib import Path
-from deemon.utils import startup
+from deemon.utils import startup, dates
 import tarfile
-from datetime import datetime
+from deemon import __version__
 
 
 logger = logging.getLogger(__name__)
@@ -17,7 +17,7 @@ def run(include_logs: bool = False):
         if item.name not in exclusions:
             return item
 
-    backup_tar = datetime.today().strftime('%Y%m%d-%H%M%S') + ".tar"
+    backup_tar = dates.generate_date_filename("backup-" + __version__ + "-") + ".tar"
     backup_path = Path(startup.get_appdata_dir() / "backups")
 
     with tarfile.open(backup_path / backup_tar, "w") as tar:
