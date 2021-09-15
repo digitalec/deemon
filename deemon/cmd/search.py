@@ -432,10 +432,12 @@ class Search:
         return sorted(apply_filter, key=lambda x: x[self.sort], reverse=self.desc)
 
     def start_queue(self):
+        self.clear()
         dl = download.Download()
         dl.queue_list = self.queue_list
         dl.download_queue()
         self.queue_list.clear()
+        self.status_message = "Downloads complete"
 
     def send_to_queue(self, item):
         if item['type'] == 'album':
