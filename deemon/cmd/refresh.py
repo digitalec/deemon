@@ -120,6 +120,8 @@ class Refresh:
             logger.debug("Refreshing all monitored artists...")
             monitored = self.db.get_all_monitored_artists()
 
+        monitored = sorted(monitored, key=lambda x: x['artist_name'].lower())
+
         progress = tqdm.tqdm(monitored, ascii=" #",
                              bar_format='{desc}...  {n_fmt}/{total_fmt} [{bar:40}] {percentage:3.0f}%')
 
