@@ -232,11 +232,24 @@ def monitor_command(artist, im, playlist, no_refresh, bitrate, record_type, aler
 
 
 @run.command(name='refresh')
+@click.argument('NAME', nargs=-1, type=str, required=False)
+@click.option('-p', '--playlist', is_flag=True, help="Refresh a specific playlist by name")
 @click.option('-s', '--skip-download', is_flag=True, help="Skips downloading of new releases")
 @click.option('-t', '--time-machine', metavar='DATE', type=str, help='Refresh as if it were this date (YYYY-MM-DD)')
-def refresh_command(skip_download, time_machine):
+def refresh_command(name, playlist, skip_download, time_machine):
     """Check artists for new releases"""
-    Refresh(skip_download=skip_download, time_machine=time_machine)
+    list_of_names = []
+    if name:
+        name = list(name)
+
+        for n in dataprocessor.artists_to_csv(name):
+            list_of_names.append(n)
+
+    if name and playlist:
+        playlist = list_of_names
+        name = None
+
+    Refresh(artist_name=list_of_names, playlist_title=list_of_names, skip_download=skip_download, time_machine=time_machine)
 
 
 @click.group(name="show")

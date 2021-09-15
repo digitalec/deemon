@@ -12,9 +12,11 @@ logger = logging.getLogger(__name__)
 
 class Refresh:
 
-    def __init__(self, artist_id=None, playlist_id=None, skip_download=False, time_machine=None, dl_obj=None):
-        self.artist_id = artist_id if artist_id else None
-        self.playlist_id = playlist_id if playlist_id else None
+    def __init__(self, artist_name: list = None, artist_id: list = None, playlist_title:list = None, playlist_id: list = None, skip_download=False, time_machine=None, dl_obj=None):
+        self.artist_id = artist_id or []
+        self.artist_name = artist_name
+        self.playlist_title = playlist_title
+        self.playlist_id = playlist_id or []
         self.skip_download = skip_download
         self.time_machine = time_machine
         self.total_new_releases = 0
@@ -45,6 +47,27 @@ class Refresh:
         logger.debug("Starting refresh...")
         if not self.refresh_date:
             logger.error(f"Error while setting time machine to {self.time_machine}")
+
+        if self.artist_name:
+            for name in self.artist_name:
+                artist = self.db.get_monitored_artist_by_name(name)
+                if artist:
+                    self.artist_id.append(artist['artist_id'])
+                else:
+                    # TODO Capture to show at the end
+                    logger.error(f"Artist '{name}' is not being monitored")
+            if not len(self.artist_id):
+                return
+        elif self.playlist_title:
+            for title in self.playlist_title:
+                playlist = self.db.get_monitored_artist_by_name(title)
+                if playlist:
+                    self.playlist_id.append(playlist['id'])
+                else:
+                    # TODO Capture to show at the end
+                    logger.error(f"Playlist '{title}' is not being monitored")
+            if not len(self.playlist_id):
+                return
 
         if self.playlist_id or self.artist_id:
             if self.playlist_id:
@@ -93,7 +116,7 @@ class Refresh:
             new_track_count = 0
             new_playlist = self.existing_playlist(playlist['id'])
             playlist_api = self.dz.api.get_playlist(playlist['id'])
-            progress.set_description_str("Refreshing playlists")
+            progress.set_description_str(f"Refreshing {playlist['title']}")
 
             for track in playlist_api['tracks']['data']:
                 if not self.existing_playlist_track(playlist_api['id'], track['id']):
@@ -137,7 +160,8 @@ class Refresh:
 
             artist_new_release_count = 0
             new_artist = self.existing_artist(artist['artist_id'])
-            progress.set_description_str("Refreshing artists")
+            description_artist = artist['artist_name'][:20]
+            progress.set_description_str("Refreshing " + description_artist)
             artist_albums = self.dz.api.get_artist_albums(artist['artist_id'])['data']
 
             for album in artist_albums:
