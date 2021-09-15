@@ -1,10 +1,11 @@
 import os
+from pathlib import Path
+from typing import Union
 
 from deemon.core.db import Database
-from operator import itemgetter
+from deemon.utils.dates import generate_date_filename
 import logging
 import time
-import sys
 
 logger = logging.getLogger(__name__)
 
@@ -14,7 +15,17 @@ class Show:
     def __init__(self):
         self.db = Database()
 
-    def monitoring(self, artist: bool = True, query:str = None, csv: bool = False, filter: str = None, hide_header: bool = False, is_id: bool = False):
+    def monitoring(self, artist: bool = True, query:str = None, csv: bool = False,
+                   save_path: Union[str, Path] = None, filter: str = None, hide_header: bool = False,
+                   is_id: bool = False):
+
+        def csv_output(line: str):
+            if save_path:
+                output_to_file.append(line)
+            else:
+                print(line)
+
+        output_to_file = []
 
         if artist:
             if query:
@@ -79,7 +90,7 @@ class Show:
                                                                         db_result['download_path']))
             print("")
         else:
-            if csv:
+            if csv or save_path:
                 if artist:
                     if not filter:
                         filter = "name,id,bitrate,alerts,type,path"
@@ -102,7 +113,7 @@ class Show:
                         column_names.remove(column)
 
                 if not hide_header:
-                    print(','.join(filter))
+                    csv_output(','.join(filter))
                 for artist in db_result:
                     filtered_artists = []
                     for key, value in artist.items():
@@ -111,7 +122,19 @@ class Show:
                     for column in column_names:
                         filtered_artists.append(str(artist[column]))
                     if len(filtered_artists):
-                        print(",".join(filtered_artists))
+                        csv_output(",".join(filtered_artists))
+
+                if output_to_file:
+                    if Path(save_path).is_dir():
+                        output_filename = Path(save_path / f"{generate_date_filename('deemon_')}.csv")
+                    else:
+                        output_filename = Path(save_path)
+
+                    with open(output_filename, 'w', encoding="utf-8") as f:
+                        for line in output_to_file:
+                            f.writelines(line + "\n")
+                    return logger.info("CSV data has been saved to: " + str(output_filename))
+
                 return
 
             if artist:

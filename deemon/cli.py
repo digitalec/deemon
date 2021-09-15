@@ -265,15 +265,16 @@ def show_command():
 @click.argument('artist', nargs=-1, required=False)
 @click.option('-i', '--artist-id', is_flag=True, help='Show artist info by artist ID')
 @click.option('-c', '--csv', is_flag=True, help='Output artists as CSV')
+@click.option('-e', '--export', type=Path, help='Export CSV data to file; same as -ce')
 @click.option('-H', '--hide-header', is_flag=True, help='Hide header on CSV output')
 @click.option('-f', '--filter', type=str, help='Specify filter for CSV output')
-def show_artists(artist, artist_id, csv, filter, hide_header):
+def show_artists(artist, artist_id, csv, export, filter, hide_header):
     """Show artist info monitored by profile"""
     if artist:
         artist = ' '.join([x for x in artist])
 
     show = Show()
-    show.monitoring(artist=True, query=artist, csv=csv, filter=filter, hide_header=hide_header, is_id=artist_id)
+    show.monitoring(artist=True, query=artist, csv=csv, save_path=export, filter=filter, hide_header=hide_header, is_id=artist_id)
 
 @show_command.command(name="playlists")
 @click.argument('title', nargs=-1, required=False)
