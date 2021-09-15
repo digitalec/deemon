@@ -236,6 +236,41 @@ class Database(object):
         return self.query(f"SELECT * FROM monitor WHERE artist_name = :name COLLATE NOCASE "
                           f"AND profile_id = :profile_id", values).fetchone()
 
+    def get_all_monitored_playlists(self):
+        vals = {'profile_id': config.profile_id()}
+        return self.query("SELECT * FROM playlists WHERE profile_id = :profile_id", vals).fetchall()
+
+    def get_monitored_playlist_by_id(self, playlist_id):
+        values = {'id': playlist_id, 'profile_id': config.profile_id()}
+        return self.query("SELECT * FROM playlists WHERE id = :id AND profile_id = :profile_id", values).fetchone()
+
+    def get_monitored_playlist_by_name(self, title):
+        values = {'title': title, 'profile_id': config.profile_id()}
+        return self.query("SELECT * FROM playlists WHERE title = :title COLLATE NOCASE "
+                          "AND profile_id = :profile_id", values).fetchone()
+
+    def monitor_artist(self, artist: dict, artist_config: dict):
+        vals = {
+            'artist_id': artist['id'], 'artist_name': artist['name'], 'bitrate': artist_config['bitrate'],
+            'record_type': artist_config['record_type'], 'alerts': artist_config['alerts'],
+            'download_path': artist_config['download_path'], 'profile_id': config.profile_id()
+        }
+        query = ("INSERT INTO monitor "
+                 "(artist_id, artist_name, bitrate, record_type, alerts, download_path, profile_id) "
+                 "VALUES "
+                 "(:artist_id, :artist_name, :bitrate, :record_type, :alerts, :download_path, :profile_id)")
+        self.query(query, vals)
+        self.commit()
+
+    def monitor_playlist(self, api_result):
+        values = {'id': api_result['id'], 'title': api_result['title'], 'url': api_result['link'],
+                  'bitrate': api_result['bitrate'], 'alerts': api_result['alerts'],
+                  'download_path': api_result['download_path'], 'profile_id': config.profile_id()}
+        query = ("INSERT INTO playlists ('id', 'title', 'url', 'bitrate', 'alerts', 'download_path', 'profile_id') "
+                 "VALUES (:id, :title, :url, :bitrate, :alerts, :download_path, :profile_id)")
+        self.query(query, values)
+        self.commit()
+
     def remove_monitored_artist(self, id: int = None, name: str = None):
         values = {'id': id, 'name': name, 'profile_id': config.profile_id()}
         self.query("DELETE FROM monitor WHERE artist_id = :id AND profile_id = :profile_id", values)
@@ -275,28 +310,10 @@ class Database(object):
         sql = "SELECT * FROM 'releases' WHERE album_release >= :from AND album_release <= :today AND profile_id = :profile_id"
         return self.query(sql, values).fetchall()
 
-    def get_artist_by_id(self, artist_id):
-        values = {'id': artist_id, 'profile_id': config.profile_id()}
-        sql = "SELECT * FROM 'releases' WHERE artist_id = :id AND profile_id = :profile_id"
-        return self.query(sql, values).fetchone()
-
     def get_album_by_id(self, album_id):
         values = {'id': album_id, 'profile_id': config.profile_id()}
         sql = "SELECT * FROM 'releases' WHERE album_id = :id AND profile_id = :profile_id"
         return self.query(sql, values).fetchone()
-
-    def get_all_monitored_playlists(self):
-        vals = {'profile_id': config.profile_id()}
-        return self.query("SELECT * FROM playlists WHERE profile_id = :profile_id", vals).fetchall()
-
-    def get_monitored_playlist_by_id(self, playlist_id):
-        values = {'id': playlist_id, 'profile_id': config.profile_id()}
-        return self.query("SELECT * FROM playlists WHERE id = :id AND profile_id = :profile_id", values).fetchone()
-
-    def get_monitored_playlist_by_name(self, title):
-        values = {'title': title, 'profile_id': config.profile_id()}
-        return self.query("SELECT * FROM playlists WHERE title = :title COLLATE NOCASE "
-                          "AND profile_id = :profile_id", values).fetchone()
 
     def reset_database(self):
         self.query("DELETE FROM monitor")
@@ -306,42 +323,18 @@ class Database(object):
         self.commit()
         logger.info("Database has been reset")
 
-    def last_update_check(self):
-        return self.query("SELECT value FROM 'deemon' WHERE property = 'last_update_check'").fetchone()['value']
-
-    def set_last_update_check(self):
-        now = int(time.time())
-        self.query(f"UPDATE deemon SET value = {now} WHERE property = 'last_update_check'")
-        self.commit()
-
-    def get_profile(self, profile_name: str):
-        vals = {'profile': profile_name}
-        return self.query("SELECT * FROM profiles WHERE name = :profile COLLATE NOCASE", vals).fetchone()
-
-    def get_profile_by_id(self, profile_id: int):
-        vals = {'profile_id': profile_id}
-        return self.query("SELECT * FROM profiles WHERE id = :profile_id", vals).fetchone()
-
     def update_artist(self, settings: dict):
         self.query("UPDATE monitor SET bitrate = :bitrate, alerts = :alerts, record_type = :record_type,"
                    "download_path = :download_path WHERE artist_id = :artist_id AND profile_id = :profile_id", settings)
         self.commit()
 
-    def update_profile(self, settings: dict):
-        self.query("UPDATE profiles SET name = :name, email = :email, alerts = :alerts, bitrate = :bitrate,"
-                   "record_type = :record_type, plex_baseurl = :plex_baseurl, plex_token = :plex_token,"
-                   "plex_library = :plex_library, download_path = :download_path "
-                   "WHERE id = :id", settings)
-        self.commit()
-
-    def monitor_playlist(self, api_result):
-        values = {'id': api_result['id'], 'title': api_result['title'], 'url': api_result['link'],
-                  'bitrate': api_result['bitrate'], 'alerts': api_result['alerts'],
-                  'download_path': api_result['download_path'], 'profile_id': config.profile_id()}
-        query = ("INSERT INTO playlists ('id', 'title', 'url', 'bitrate', 'alerts', 'download_path', 'profile_id') "
-                 "VALUES (:id, :title, :url, :bitrate, :alerts, :download_path, :profile_id)")
-        self.query(query, values)
-        self.commit()
+    def add_playlist_track(self, playlist, track):
+        values = {'pid': playlist['id'], 'tid': track['id'], 'tname': track['title'], 'aid': track['artist']['id'],
+                  'aname': track['artist']['name'], 'time': int(time.time()), 'profile_id': config.profile_id()}
+        query = ("INSERT INTO 'playlist_tracks' "
+                 "('track_id', 'playlist_id', 'artist_id', 'artist_name', 'track_name', 'track_added', 'profile_id') "
+                 "VALUES (:tid, :pid, :aid, :aname, :tname, :time, :profile_id)")
+        return self.db.query(query, values)
 
     def create_profile(self, settings: dict):
         self.query("INSERT INTO profiles (name, email, alerts, bitrate, record_type, plex_baseurl, plex_token,"
@@ -361,3 +354,26 @@ class Database(object):
 
     def get_all_profiles(self):
         return self.query("SELECT * FROM profiles").fetchall()
+
+    def get_profile(self, profile_name: str):
+        vals = {'profile': profile_name}
+        return self.query("SELECT * FROM profiles WHERE name = :profile COLLATE NOCASE", vals).fetchone()
+
+    def get_profile_by_id(self, profile_id: int):
+        vals = {'profile_id': profile_id}
+        return self.query("SELECT * FROM profiles WHERE id = :profile_id", vals).fetchone()
+
+    def update_profile(self, settings: dict):
+        self.query("UPDATE profiles SET name = :name, email = :email, alerts = :alerts, bitrate = :bitrate,"
+                   "record_type = :record_type, plex_baseurl = :plex_baseurl, plex_token = :plex_token,"
+                   "plex_library = :plex_library, download_path = :download_path "
+                   "WHERE id = :id", settings)
+        self.commit()
+
+    def last_update_check(self):
+        return self.query("SELECT value FROM 'deemon' WHERE property = 'last_update_check'").fetchone()['value']
+
+    def set_last_update_check(self):
+        now = int(time.time())
+        self.query(f"UPDATE deemon SET value = {now} WHERE property = 'last_update_check'")
+        self.commit()

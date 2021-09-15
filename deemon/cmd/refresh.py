@@ -100,14 +100,18 @@ class Refresh:
             else:
                 self.refresh_artists()
         else:
-            if not self.monitoring_playlists() and not self.monitoring_artists():
+
+            monitored_playlists = self.db.get_all_monitored_playlists()
+            monitored_artists = self.db.get_all_monitored_artists()
+
+            if not monitored_playlists and not monitored_artists:
                 logger.info("Nothing to refresh. Try monitoring an artist or playlist first!")
                 return
 
-            if self.monitoring_playlists():
+            if monitored_playlists:
                 self.refresh_playlists()
 
-            if self.monitoring_artists():
+            if monitored_artists:
                 self.refresh_artists()
 
         if len(self.message_queue):
@@ -251,22 +255,6 @@ class Refresh:
             return 0
 
     # TODO move to db.py
-    def monitoring_playlists(self):
-        vals = {'profile_id': config.profile_id()}
-        query = "SELECT * FROM 'playlists' WHERE profile_id = :profile_id"
-        result = self.db.query(query, vals).fetchall()
-        if result and len(result) > 0:
-            return True
-
-    # TODO move to db.py
-    def monitoring_artists(self):
-        vals = {'profile_id': config.profile_id()}
-        query = "SELECT * FROM 'monitor' WHERE profile_id = :profile_id"
-        result = self.db.query(query, vals).fetchall()
-        if result and len(result) > 0:
-            return True
-
-    # TODO move to db.py
     def existing_artist(self, artist_id):
         sql_values = {'artist_id': artist_id, 'profile_id': config.profile_id()}
         # TODO BUG - issue #25 - Artist treated as new artist until at least one release has been seen
@@ -294,17 +282,6 @@ class Refresh:
         if result:
             return True
 
-    # TODO move to db.py
-    def add_playlist_track(self, playlist, track):
-        values = {'pid': playlist['id'], 'tid': track['id'], 'tname': track['title'], 'aid': track['artist']['id'],
-                  'aname': track['artist']['name'], 'time': int(time.time()), 'profile_id': config.profile_id()}
-        query = ("INSERT INTO 'playlist_tracks' "
-                 "('track_id', 'playlist_id', 'artist_id', 'artist_name', 'track_name', 'track_added', 'profile_id') "
-                 "VALUES (:tid, :pid, :aid, :aname, :tname, :time, :profile_id)")
-        result = self.db.query(query, values)
-        return result
-
-    # TODO move to db.py
     def append_new_release(self, release_date, artist, album, cover):
         for days in self.new_releases:
             for key in days:
