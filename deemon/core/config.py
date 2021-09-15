@@ -18,7 +18,7 @@ DEFAULT_CONFIG = {
     "check_update": 1,
     "debug_mode": False,
     "query_limit": 5,
-    "ranked_duplicates": True,
+    "prompt_duplicates": False,
     "prompt_no_matches": True,
     "new_releases": {
         "by_release_date": True,
@@ -128,7 +128,8 @@ class Config(object):
                 {'record_type': 'record_type'},
                 {'download_path': 'download_path'},
                 {'release_by_date': 'by_release_date'},
-                {'release_max_days': 'release_max_age'}
+                {'release_max_days': 'release_max_age'},
+                {'ranked_duplicates': 'prompt_duplicates'}
             ]
             for mlist in migration_map:
 
@@ -302,8 +303,8 @@ class Config(object):
         return Config._CONFIG.get('query_limit')
 
     @staticmethod
-    def ranked_duplicates() -> int:
-        return Config._CONFIG.get('ranked_duplicates')
+    def prompt_duplicates() -> int:
+        return Config._CONFIG.get('prompt_duplicates')
 
     @staticmethod
     def prompt_no_matches() -> bool:
