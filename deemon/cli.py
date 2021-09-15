@@ -249,24 +249,23 @@ def show_command():
 @show_command.command(name="artists")
 @click.argument('artist', nargs=-1, required=False)
 @click.option('-i', '--artist-ids', is_flag=True, help='Show artist IDs currently being monitored')
-@click.option('-e', '--extended', is_flag=True, help='Show extended artist data')
 @click.option('-c', '--csv', is_flag=True, help='Output artists as CSV')
 @click.option('-H', '--hide-header', is_flag=True, help='Hide header on CSV output')
 @click.option('-f', '--filter', type=str, help='Specify filter for CSV output')
-def show_artists(artist, artist_ids, csv, extended, filter, hide_header):
+def show_artists(artist, artist_ids, csv, filter, hide_header):
     """Show artist info monitored by profile"""
     if artist:
         artist = ' '.join([x for x in artist])
 
     show = Show()
     if filter is None:
-        filter = "name,id"
-    show.artists(csv, artist_ids, extended, filter, hide_header, artist=artist)
+        filter = "name"
+    show.artists(csv, artist_ids, filter, hide_header, artist=artist)
 
 
 @show_command.command(name="playlists", hidden=True)
 @click.option('-c', '--csv', is_flag=True, help='Used with -a, -i; output artists as CSV')
-def show_playlists(csv, extended):
+def show_playlists(csv):
     """Show playlists monitored by profile"""
     show = Show()
     show.playlists(csv)

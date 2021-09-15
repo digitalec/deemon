@@ -16,7 +16,7 @@ class Show:
 
         if artist:
             mon = self.db.get_monitored_artist_by_name(artist)
-            if len(mon) == 0:
+            if not mon:
                 return logger.info(f"Artist '{artist}' is not being monitored")
 
             print("{:<10} {:<35} {:<10} {:<10} {:<10} {:<25}".format('ID', 'Artist', 'Alerts',
