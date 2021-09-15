@@ -109,28 +109,12 @@ def monitor(profile, value, artist_config: dict = None, remove=False, dl_obj=Non
             logger.warning(f"Artist '{api_result['name']}' is already being monitored")
             return
 
-        sql_values = {
-            'artist_id': api_result['id'],
-            'artist_name': api_result['name'],
-            'bitrate': bitrate,
-            'record_type': record_type,
-            'alerts': alerts,
-            'download_path': download_path,
-            'profile_id': config.profile_id()
-        }
-        query = ("INSERT INTO monitor "
-                 "(artist_id, artist_name, bitrate, record_type, alerts, download_path, profile_id) "
-                 "VALUES "
-                 "(:artist_id, :artist_name, :bitrate, :record_type, :alerts, :download_path, :profile_id)")
+        artist_config = {'bitrate': bitrate, 'record_type': record_type,
+                         'alerts': alerts, 'download_path': download_path}
 
-        try:
-            db.query(query, sql_values)
-        except OperationalError as e:
-            logger.info(e)
+        db.monitor_artist(api_result, artist_config)
 
         logger.info(f"Now monitoring artist '{api_result['name']}'")
-        logger.debug(f"bitrate: {bitrate}, record_type: {record_type}, "
-                     f"alerts: {alerts}, download_path: {download_path}")
         if dl_obj:
             dl_obj.download(None, [api_result['id']], None, None, None, False)
         db.commit()
