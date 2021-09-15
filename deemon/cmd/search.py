@@ -440,17 +440,17 @@ class Search:
     def send_to_queue(self, item):
         if item['type'] == 'album':
             album = {'id': item['id'], 'title': item['title'], 'link': item['link'], 'artist': {'name': self.artist}}
-            for q in self.queue_list:
+            for i, q in enumerate(self.queue_list):
                 if q.album_id == album['id']:
-                    self.status_message = "Album already in queue"
+                    del self.queue_list[i]
                     return
             self.queue_list.append(download.QueueItem(album=album))
 
         elif item['type'] == 'track':
             track = {'id': item['id'], 'title': item['title'], 'link': item['link'], 'artist': self.artist}
-            for q in self.queue_list:
+            for i, q in enumerate(self.queue_list):
                 if q.track_id == track['id']:
-                    self.status_message = "Track already in queue"
+                    del self.queue_list[i]
                     return
             self.queue_list.append(download.QueueItem(track=track))
 
