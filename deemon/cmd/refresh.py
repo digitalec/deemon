@@ -122,11 +122,17 @@ class Refresh:
             logger.debug("Refreshing all monitored playlists...")
             monitored = self.db.get_all_monitored_playlists()
 
+        max_title_length = 0
+        for m in monitored:
+            string_len = len(m['title'])
+            if string_len > max_title_length:
+                max_title_length = string_len
+
         progress = tqdm.tqdm(monitored, ascii=" #",
                              bar_format='{desc}  {n_fmt}/{total_fmt} [{bar}] {percentage:3.0f}%')
 
         for playlist in progress:
-            descr = ui.set_progress_bar_text(f"Refreshing {playlist['title']}")
+            descr = ui.set_progress_bar_text(f"Refreshing {playlist['title']}", max_title_length)
             progress.set_description_str(descr)
 
             playlist['bitrate'] = playlist['bitrate'] or config.bitrate()
@@ -154,6 +160,9 @@ class Refresh:
             else:
                 logger.debug(f"No new tracks have been added to playlist '{playlist_api['title']}'")
 
+            if playlist == monitored[-1]:
+                progress.set_description_str("Refresh complete")
+
     def refresh_artists(self):
         if self.artist_id:
             logger.debug("Artist ID(s) have been passed, refreshing only those...")
@@ -164,11 +173,17 @@ class Refresh:
             logger.debug("Refreshing all monitored artists...")
             monitored = self.db.get_all_monitored_artists()
 
+        max_title_length = 0
+        for m in monitored:
+            string_len = len(m['artist_name'])
+            if string_len > max_title_length:
+                max_title_length = string_len
+
         progress = tqdm.tqdm(monitored, ascii=" #",
                              bar_format='{desc}  {n_fmt}/{total_fmt} [{bar}] {percentage:3.0f}%')
 
         for artist in progress:
-            descr = ui.set_progress_bar_text(f"Refreshing {artist['artist_name']}")
+            descr = ui.set_progress_bar_text(f"Refreshing {artist['artist_name']}", max_title_length)
             progress.set_description_str(descr)
 
             logger.debug(f"Artist settings for {artist['artist_name']} ({artist['artist_id']}): bitrate={artist['bitrate']}, "
@@ -232,6 +247,9 @@ class Refresh:
             else:
                 if not new_artist:
                     logger.debug(f"No new releases found for artist {artist['artist_name']} ({artist['artist_id']})")
+
+            if artist == monitored[-1]:
+                progress.set_description_str("Refresh complete")
 
     def is_future_release(self, release_date):
         if release_date > self.refresh_date:

@@ -12,8 +12,13 @@ def get_progress_bar_size() -> int:
         return dynamic_size
 
 
-def set_progress_bar_text(msg) -> str:
+def set_progress_bar_text(msg: str, max_length: int) -> str:
     max_cols = get_progress_bar_size()
+    max_length += 11
+
+    if max_length < max_cols:
+        max_cols = max_length
+
     while len(msg) < max_cols:
         msg += " "
     while len(msg) > max_cols:
