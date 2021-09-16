@@ -50,5 +50,3 @@ def setup_logger(log_level='DEBUG', log_file=None):
     stream.setLevel(log_level)
     stream.setFormatter(logging.Formatter(LOG_FORMATS[log_level], datefmt=LOG_DATE))
     deemon_logger.addHandler(stream)
-
-    return logger

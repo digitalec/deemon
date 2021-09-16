@@ -1,10 +1,11 @@
 import platform
-
-import deemix
-from packaging.version import parse as parse_version
-from deemon.cmd import monitor, download
+import logging
+import sys
 from deemon.core.logger import setup_logger
 from deemon.utils import notifier, startup, dataprocessor
+from deemon import __version__
+from packaging.version import parse as parse_version
+from deemon.cmd import monitor, download
 from deemon.core.db import Database
 from deemon.core.config import Config, LoadProfile
 from deemon.cmd.profile import ProfileConfig
@@ -13,38 +14,39 @@ from deemon.cmd.refresh import Refresh
 from deemon.cmd.show import Show
 from deemon.cmd.artistconfig import artist_lookup
 from deemon.cmd import backup
-from deemon import __version__
-from datetime import datetime
 from pathlib import Path
-import tarfile
-import logging
 import click
-import sys
 
-appdata = startup.get_appdata_dir()
-startup.init_appdata_dir(appdata)
-config = Config()
-setup_logger(log_level='DEBUG' if config.debug_mode() else 'INFO', log_file=startup.get_log_file())
-logger = logging.getLogger(__name__)
-
-logger.debug(f"deemon {__version__}")
-logger.debug(f"command: \"{' '.join([x for x in sys.argv[1:]])}\"")
-logger.debug("Python " + platform.python_version())
-logger.debug(platform.platform())
-
-db = Database()
+logger = None
+config = None
+db = None
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
 @click.group(context_settings=CONTEXT_SETTINGS)
 @click.version_option(__version__, '-V', '--version', message='deemon %(version)s')
+@click.option('-v', '--verbose', is_flag=True, help="Show debug output")
 @click.option('-P', '--profile', help="Specify profile to run deemon as")
-def run(profile):
+def run(verbose, profile):
     """Monitoring and alerting tool for new music releases using the Deezer API.
 
     deemon is a free and open source tool. To report issues or to contribute,
     please visit https://github.com/digitalec/deemon
     """
+
+    setup_logger(log_level='DEBUG' if verbose else 'INFO', log_file=startup.get_log_file())
+    logger = logging.getLogger(__name__)
+    logger.debug(f"deemon {__version__}")
+    logger.debug(f"command: \"{' '.join([x for x in sys.argv[1:]])}\"")
+    logger.debug("Python " + platform.python_version())
+    logger.debug(platform.platform())
+
+    config = Config()
+    db = Database()
+
+    appdata = startup.get_appdata_dir()
+    startup.init_appdata_dir(appdata)
+
     db.do_upgrade()
     if profile:
         profile_config = db.get_profile(profile)

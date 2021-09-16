@@ -16,7 +16,6 @@ ALLOWED_VALUES = {
 
 DEFAULT_CONFIG = {
     "check_update": 1,
-    "debug_mode": False,
     "query_limit": 5,
     "prompt_duplicates": False,
     "prompt_no_matches": True,
@@ -111,7 +110,6 @@ class Config(object):
             nonlocal modified
             migration_map = [
                 {'check_update': 'check_update'},
-                {'debug_mode': 'debug_mode'},
                 {'plex_baseurl': 'base_url'},
                 {'plex_token': 'token'},
                 {'plex_library': 'library'},
@@ -148,9 +146,10 @@ class Config(object):
                     for i in new_position[:-1]:
                         user_config_copy = user_config_copy.setdefault(i, {})
 
-                    logger.debug("Migrating " + ':'.join([str(x) for x in old_position]) + " -> " + ':'.join([str(x) for x in new_position]))
-                    user_config_copy[new_position[-1]] = user_config_tmp[old_position[-1]]
-                    modified += 1
+                    if user_config_tmp != user_config_copy:
+                        logger.debug("Migrating " + ':'.join([str(x) for x in old_position]) + " -> " + ':'.join([str(x) for x in new_position]))
+                        user_config_copy[new_position[-1]] = user_config_tmp[old_position[-1]]
+                        modified += 1
 
             return user_config
 
