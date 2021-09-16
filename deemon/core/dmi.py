@@ -35,6 +35,7 @@ class DeemixInterface:
             self.download_path = Path(self.config.download_path())
             self.dx_settings['downloadLocation'] = str(self.download_path)
 
+        logger.debug("deemix " + deemix.__version__)
         logger.debug(f"deemix Config Path: {self.config_dir}")
         logger.debug(f"deemix Download Path: {self.dx_settings['downloadLocation']}")
 

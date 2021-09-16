@@ -1,3 +1,6 @@
+import platform
+
+import deemix
 from packaging.version import parse as parse_version
 from deemon.cmd import monitor, download
 from deemon.core.logger import setup_logger
@@ -23,8 +26,11 @@ startup.init_appdata_dir(appdata)
 config = Config()
 setup_logger(log_level='DEBUG' if config.debug_mode() else 'INFO', log_file=startup.get_log_file())
 logger = logging.getLogger(__name__)
+
 logger.debug(f"deemon {__version__}")
-logger.debug(f"Command executed: \"{' '.join([x for x in sys.argv[1:]])}\"")
+logger.debug(f"command: \"{' '.join([x for x in sys.argv[1:]])}\"")
+logger.debug("Python " + platform.python_version())
+logger.debug(platform.platform())
 
 db = Database()
 
