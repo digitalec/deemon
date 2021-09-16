@@ -225,7 +225,8 @@ class Database(object):
 
     def get_all_monitored_artists(self):
         vals = {'profile_id': config.profile_id()}
-        return self.query(f"SELECT * FROM monitor WHERE profile_id = :profile_id ORDER BY artist_name", vals).fetchall()
+        return self.query(f"SELECT * FROM monitor WHERE profile_id = :profile_id "
+                          f"ORDER BY artist_name COLLATE NOCASE ASC", vals).fetchall()
 
     def get_monitored_artist_by_id(self, artist_id: int):
         values = {'id': artist_id, 'profile_id': config.profile_id()}
@@ -238,7 +239,8 @@ class Database(object):
 
     def get_all_monitored_playlists(self):
         vals = {'profile_id': config.profile_id()}
-        return self.query("SELECT * FROM playlists WHERE profile_id = :profile_id", vals).fetchall()
+        return self.query("SELECT * FROM playlists WHERE profile_id = :profile_id "
+                          "ORDER BY title COLLATE NOCASE ASC", vals).fetchall()
 
     def get_monitored_playlist_by_id(self, playlist_id):
         values = {'id': playlist_id, 'profile_id': config.profile_id()}
