@@ -22,19 +22,13 @@ def monitor(profile, value, artist_config: dict = None, remove=False, dl_obj=Non
     dz = deezer.Deezer()
     db = Database()
 
-    def purge_playlist(playlist_id, title):
-        if playlist_id:
-            output = str(playlist_id)
-            playlist = db.get_monitored_playlist_by_id(playlist_id)
-        else:
-            output = title
-            playlist = db.get_monitored_playlist_by_name(title)
-
+    def purge_playlist(id: int):
+        playlist = db.get_monitored_playlist_by_id(id)
         if playlist:
-            db.remove_monitored_playlists(playlist['id'])
+            db.remove_monitored_playlists(id)
             logger.info(f"No longer monitoring playlist '{playlist['title']}'")
         else:
-            logger.error(f"Unable to remove from monitoring: '{output}' not found.")
+            logger.error(f"Unable to remove from monitoring: playlist not found.")
 
     def purge_artist(id: int = None, name: str = None):
         if id:
@@ -117,6 +111,8 @@ def monitor(profile, value, artist_config: dict = None, remove=False, dl_obj=Non
         db.monitor_artist(api_result, artist_config)
 
         logger.info(f"Now monitoring artist '{api_result['name']}'")
+
+        # TODO - does this work?
         if dl_obj:
             dl_obj.download(None, [api_result['id']], None, None, None, False)
         db.commit()
@@ -127,30 +123,24 @@ def monitor(profile, value, artist_config: dict = None, remove=False, dl_obj=Non
         try:
             playlist_id = int(playlist_id_from_url[1])
         except (IndexError, ValueError):
-            logger.error(f"Invalid playlist URL -- {playlist_id_from_url}")
-            return
+            return logger.error(f"Invalid playlist URL -- {playlist_id_from_url}")
+
+        if remove:
+            return purge_playlist(playlist_id)
+
         try:
             api_result = dz.api.get_playlist(playlist_id)
         except deezer.api.DataException:
-            logger.error(f"Playlist ID {playlist_id} not found.")
-            return
+            return logger.error(f"Playlist ID {playlist_id} not found.")
 
         playlist_exists = db.get_monitored_playlist_by_id(api_result['id'])
 
-        # TODO remove should NOT access API!
-        if remove:
-            if not playlist_exists:
-                logger.warning(f"Playlist '{api_result['title']}' is not being monitored yet")
-                return
-            purge_playlist(api_result['id'], api_result['title'])
-            return
         if playlist_exists:
-            logger.warning(f"Playlist '{api_result['title']}' is already being monitored")
-            return
+            return logger.warning(f"Playlist '{api_result['title']}' is already being monitored")
 
-        api_result['bitrate'] = artist_config['bitrate'] or None
-        api_result['alerts'] = artist_config['alerts'] or None
-        api_result['download_path'] = artist_config['download_path'] or None
+        api_result['bitrate'] = artist_config.get('bitrate')
+        api_result['alerts'] = artist_config.get('alerts')
+        api_result['download_path'] = artist_config.get('download_path')
 
         try:
             db.monitor_playlist(api_result)
@@ -158,6 +148,8 @@ def monitor(profile, value, artist_config: dict = None, remove=False, dl_obj=Non
             logger.error("sqlite Operational Error: " + e)
 
         logger.info(f"Now monitoring playlist '{api_result['title']}'")
+
+        # TODO - does this work?
         if dl_obj:
             dl_obj.download(None, None, None, [api_result['link']], None, False)
         db.commit()
