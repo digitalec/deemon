@@ -12,6 +12,8 @@ logger = logging.getLogger(__name__)
 
 def monitor(profile, value, artist_config: dict = None, remove=False, dl_obj=None, is_search=False):
 
+    artist_config = artist_config or {}
+
     bitrate = artist_config.get('bitrate')
     alerts = artist_config.get('alerts')
     record_type = artist_config.get('record_type')
