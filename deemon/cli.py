@@ -33,6 +33,9 @@ def run(verbose, profile):
     deemon is a free and open source tool. To report issues or to contribute,
     please visit https://github.com/digitalec/deemon
     """
+    global logger
+    global config
+    global db
 
     setup_logger(log_level='DEBUG' if verbose else 'INFO', log_file=startup.get_log_file())
     logger = logging.getLogger(__name__)
