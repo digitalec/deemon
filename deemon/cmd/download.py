@@ -15,7 +15,8 @@ logger = logging.getLogger(__name__)
 
 class QueueItem:
     # TODO - Accept new playlist tracks for output/alerts
-    def __init__(self, artist=None, album=None, track=None, playlist=None):
+    def __init__(self, artist=None, album=None, track=None, playlist=None,
+                 bitrate: str = None, download_path: str = None):
         self.artist_name = None
         self.album_id = None
         self.album_title = None
@@ -23,6 +24,8 @@ class QueueItem:
         self.track_title = None
         self.url = None
         self.playlist_title = None
+        self.bitrate = bitrate or config.bitrate()
+        self.download_path = download_path or config.download_path()
         self.verbose = os.environ.get('VERBOSE')
 
         if artist:
@@ -71,10 +74,10 @@ class Download:
         if not self.di.login():
             sys.exit(1)
 
-    def get_deemix_bitrate(self):
-        for bitrate, name in config.allowed_values('bitrate').items():
-            if name.lower() == config.bitrate().lower():
-                return bitrate
+    def get_deemix_bitrate(self, bitrate: str):
+        for bitrate_id, bitrate_name in config.allowed_values('bitrate').items():
+            if bitrate_name.lower() == bitrate.lower():
+                return bitrate_id
 
     def get_plex_server(self):
         if (config.plex_baseurl() != "") and (config.plex_token() != ""):
@@ -108,8 +111,8 @@ class Download:
             current = 1
             total = len(self.queue_list)
             for q in self.queue_list:
-                dx_bitrate = self.get_deemix_bitrate()
-                logger.debug(f"deemix bitrate set to {str(dx_bitrate)} ({config.bitrate().upper()})")
+                dx_bitrate = self.get_deemix_bitrate(q.bitrate)
+                logger.debug(f"deemix bitrate set to {str(dx_bitrate)} ({q.bitrate.upper()})")
                 if self.verbose == "true":
                     logger.debug(f"Processing queue item {vars(q)}")
                 if q.artist_name:
@@ -120,7 +123,7 @@ class Download:
                     self.di.download_url([q.url], dx_bitrate, config.download_path())
                 else:
                     logger.info(f"+ {q.playlist_title} (playlist)...")
-                    self.di.download_url([q.url], dx_bitrate, config.download_path(), override_deemix=False)
+                    self.di.download_url([q.url], dx_bitrate, q.download_path, override_deemix=False)
                 current += 1
             print("")
             logger.info("Downloads complete!")

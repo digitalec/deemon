@@ -129,6 +129,11 @@ class Refresh:
             descr = ui.set_progress_bar_text(f"Refreshing {playlist['title']}")
             progress.set_description_str(descr)
 
+            playlist['bitrate'] = playlist['bitrate'] or config.bitrate()
+            playlist['alerts'] = playlist['alerts'] or config.alerts()
+            playlist['record_type'] = playlist['record_type'] or config.record_type()
+            playlist['download_path'] = playlist['download_path'] or config.download_path()
+
             new_track_count = 0
             new_playlist = self.existing_playlist(playlist['id'])
             playlist_api = self.dz.api.get_playlist(playlist['id'])
@@ -142,7 +147,8 @@ class Refresh:
 
             if new_track_count > 0 and not new_playlist:
                 self.queue_list.append(
-                    download.QueueItem(playlist=playlist)
+                    download.QueueItem(playlist=playlist, bitrate=playlist['bitrate'],
+                                       download_path=playlist['download_path'])
                 )
                 logger.info(f"Playlist '{playlist_api['title']}' has {new_track_count} new track(s)")
             else:
@@ -211,7 +217,8 @@ class Refresh:
                     self.total_new_releases += 1
                     artist_new_release_count += 1
 
-                    self.queue_list.append(download.QueueItem(artist=artist, album=album))
+                    self.queue_list.append(download.QueueItem(artist=artist, album=album, bitrate=artist['bitrate'],
+                                                              download_path=artist['download_path']))
                     logger.debug(f"Release {album['id']} added to queue")
                     if artist["alerts"]:
                         self.append_new_release(album['release_date'], artist['artist_name'],
