@@ -276,6 +276,7 @@ def show_artists(artist, artist_id, csv, export, filter, hide_header):
     show = Show()
     show.monitoring(artist=True, query=artist, csv=csv, save_path=export, filter=filter, hide_header=hide_header, is_id=artist_id)
 
+
 @show_command.command(name="playlists")
 @click.argument('title', nargs=-1, required=False)
 @click.option('-i', '--playlist-id', is_flag=True, help='Show playlist info by playlist ID')
@@ -305,11 +306,15 @@ run.add_command(show_command)
 
 
 @run.command(name="backup")
-@click.option('--include-logs', is_flag=True, help='include log files in backup')
-def backup_command(include_logs):
+@click.option('-r', '--restore', is_flag=True, help='Restore from existing backup')
+@click.option('-i', '--include-logs', is_flag=True, help='include log files in backup')
+def backup_command(restore, include_logs):
     """Backup configuration and database to a tar file"""
 
-    backup.run(include_logs)
+    if restore:
+        backup.restore()
+    else:
+        backup.run(include_logs)
 
 
 # TODO @click.option does not support nargs=-1; unable to use spaces without quotations

@@ -26,6 +26,10 @@ def get_appdata_dir():
     return appdata_dir
 
 
+def get_backup_dir():
+    return Path(get_appdata_dir() / "backups")
+
+
 def init_appdata_dir(appdata):
     Path(appdata / 'logs').mkdir(parents=True, exist_ok=True)
     Path(appdata / 'backups').mkdir(exist_ok=True)
