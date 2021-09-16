@@ -135,11 +135,11 @@ class Refresh:
             playlist['download_path'] = playlist['download_path'] or config.download_path()
 
             new_track_count = 0
-            new_playlist = self.existing_playlist(playlist['id'])
+            new_playlist = self.db.get_playlist_tracks(playlist['id'])
             playlist_api = self.dz.api.get_playlist(playlist['id'])
 
             for track in playlist_api['tracks']['data']:
-                if not self.existing_playlist_track(playlist_api['id'], track['id']):
+                if not self.db.get_track_from_playlist(playlist_api['id'], track['id']):
                     if not new_playlist:
                         logger.debug(f"New track {track['id']} detected on playlist {playlist_api['id']}")
                     self.db.add_playlist_track(playlist_api, track)
@@ -181,7 +181,7 @@ class Refresh:
             artist['download_path'] = artist['download_path'] or config.download_path()
 
             artist_new_release_count = 0
-            new_artist = self.existing_artist(artist['artist_id'])
+            new_artist = self.db.get_artist_releases(artist['artist_id'])
             artist_albums = self.dz.api.get_artist_albums(artist['artist_id'])['data']
 
             for album in artist_albums:
@@ -226,6 +226,7 @@ class Refresh:
                 else:
                     logger.debug(f"Release {album['id']} does not meet album_type "
                                  f"requirement of '{config.record_type()}'")
+
             if artist_new_release_count > 0:
                 logger.info(f"{artist['artist_name']}: {artist_new_release_count} new release(s)")
             else:
@@ -237,34 +238,6 @@ class Refresh:
             return 1
         else:
             return 0
-
-    # TODO move to db.py
-    def existing_artist(self, artist_id):
-        sql_values = {'artist_id': artist_id, 'profile_id': config.profile_id()}
-        # TODO BUG - issue #25 - Artist treated as new artist until at least one release has been seen
-        query = "SELECT * FROM 'releases' WHERE artist_id = :artist_id AND profile_id = :profile_id"
-        artist_exists = self.db.query(query, sql_values).fetchone()
-        if not artist_exists:
-            logger.debug(f"New artist {artist_id}")
-            return True
-
-    # TODO move to db.py
-    def existing_playlist(self, playlist_id):
-        sql_values = {'playlist_id': playlist_id, 'profile_id': config.profile_id()}
-        # TODO BUG - issue #25 - Artist/playlist treated as new until at least one release has been seen
-        query = "SELECT * FROM 'playlist_tracks' WHERE playlist_id = :playlist_id AND profile_id = :profile_id"
-        playlist_exists = self.db.query(query, sql_values).fetchone()
-        if not playlist_exists:
-            logger.debug(f"Found new playlist {playlist_id}")
-            return True
-
-    # TODO move to db.py
-    def existing_playlist_track(self, playlist_id, track_id):
-        values = {'pid': playlist_id, 'tid': track_id, 'profile_id': config.profile_id()}
-        query = "SELECT * FROM 'playlist_tracks' WHERE track_id = :tid AND playlist_id = :pid AND profile_id = :profile_id"
-        result = self.db.query(query, values).fetchone()
-        if result:
-            return True
 
     def append_new_release(self, release_date, artist, album, cover):
         for days in self.new_releases:

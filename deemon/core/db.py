@@ -264,6 +264,31 @@ class Database(object):
         self.query(query, vals)
         self.commit()
 
+    def get_artist_releases(self, artist_id):
+        sql_values = {'artist_id': artist_id, 'profile_id': config.profile_id()}
+        # TODO BUG - issue #25 - Artist treated as new artist until at least one release has been seen
+        query = "SELECT * FROM 'releases' WHERE artist_id = :artist_id AND profile_id = :profile_id"
+        artist_exists = self.query(query, sql_values).fetchone()
+        if not artist_exists:
+            logger.debug(f"** New artist detected {artist_id}")
+            return True
+
+    def get_playlist_tracks(self, playlist_id):
+        sql_values = {'playlist_id': playlist_id, 'profile_id': config.profile_id()}
+        # TODO BUG - issue #25 - Artist/playlist treated as new until at least one release has been seen
+        query = "SELECT * FROM 'playlist_tracks' WHERE playlist_id = :playlist_id AND profile_id = :profile_id"
+        playlist_exists = self.query(query, sql_values).fetchone()
+        if not playlist_exists:
+            logger.debug(f"** New playlist detected {playlist_id}")
+            return True
+
+    def get_track_from_playlist(self, playlist_id, track_id):
+        values = {'pid': playlist_id, 'tid': track_id, 'profile_id': config.profile_id()}
+        query = "SELECT * FROM 'playlist_tracks' WHERE track_id = :tid AND playlist_id = :pid AND profile_id = :profile_id"
+        result = self.query(query, values).fetchone()
+        if result:
+            return True
+
     def monitor_playlist(self, api_result):
         values = {'id': api_result['id'], 'title': api_result['title'], 'url': api_result['link'],
                   'bitrate': api_result['bitrate'], 'alerts': api_result['alerts'],
