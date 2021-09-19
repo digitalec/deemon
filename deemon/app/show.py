@@ -25,6 +25,12 @@ class ShowStats(Deemon):
             artist_data = [artist[1] for artist in monitored_artists]
 
         if csv:
+            for i, a in enumerate(artist_data):
+                if '"' in a:
+                    a = a.replace('"', "'")
+                if ',' in a:
+                    artist_data[i] = f'"{a}"'
+
             logger.info(','.join(artist_data))
         else:
             if len(artist_data) > 10:
