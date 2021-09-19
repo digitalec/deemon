@@ -13,7 +13,8 @@ logger = logging.getLogger(__name__)
 
 class Refresh:
 
-    def __init__(self, artist_name: list = None, artist_id: list = None, playlist_title:list = None, playlist_id: list = None, skip_download=False, time_machine=None, dl_obj=None):
+    def __init__(self, artist_name: list = None, artist_id: list = None, playlist_title:list = None,
+                 playlist_id: list = None, skip_download=False, time_machine=None, dl_obj=None, rollback: int = None):
         self.artist_id = artist_id or []
         self.artist_name = artist_name
         self.playlist_title = playlist_title
@@ -24,6 +25,8 @@ class Refresh:
         self.total_new_releases = 0
         self.new_releases = []
         self.refresh_date = self.set_refresh_date()
+        self.trans_id = None
+        self.rollback = rollback
         self.dz = deezer.Deezer()
         self.db = Database()
 
@@ -33,6 +36,9 @@ class Refresh:
         else:
             self.dl = dl_obj
             self.queue_list = self.dl.queue_list
+
+        if self.rollback:
+            self.db.rollback_refresh(self.rollback)
 
         self.run()
 
@@ -51,6 +57,7 @@ class Refresh:
 
     def run(self):
         logger.debug("Starting refresh...")
+        self.trans_id = self.db.new_transaction()['id']
         if not self.refresh_date:
             logger.error(f"Error while setting time machine to {self.time_machine}")
 
@@ -148,7 +155,7 @@ class Refresh:
                 if not self.db.get_track_from_playlist(playlist_api['id'], track['id']):
                     if not new_playlist:
                         logger.debug(f"New track {track['id']} detected on playlist {playlist_api['id']}")
-                    self.db.add_playlist_track(playlist_api, track)
+                    self.db.add_playlist_track(playlist_api, track, self.trans_id)
                     new_track_count += 1
 
             if new_track_count > 0 and not new_playlist:
@@ -215,7 +222,7 @@ class Refresh:
                         continue
                     logger.debug(f"Pre-release detected: {artist['artist_name']} - {album['title']} [{album['release_date']}]")
                 self.db.add_new_release(artist['artist_id'], artist['artist_name'], album['id'],
-                                        album['title'], album['release_date'], future_release=future)
+                                        album['title'], album['release_date'], future, self.trans_id)
 
                 if new_artist:
                     if len(artist_albums) == 0:

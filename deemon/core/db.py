@@ -338,15 +338,15 @@ class Database(object):
             return self.query("SELECT * FROM monitor WHERE artist_name = ':artist' "
                               "AND profile_id = :profile_id COLLATE NOCASE", values).fetchone()
 
-    def add_new_release(self, artist_id, artist_name, album_id, album_name, release_date, future_release):
+    def add_new_release(self, artist_id, artist_name, album_id, album_name, release_date, future_release, transaction):
         timestamp = int(time.time())
         values = {'artist_id': artist_id, 'artist_name': artist_name, 'album_id': album_id,
                   'album_name': album_name, 'release_date': release_date, 'future': future_release,
-                  'profile_id': config.profile_id()}
+                  'profile_id': config.profile_id(), 'trans_id': transaction}
         sql = (f"INSERT INTO releases ('artist_id', 'artist_name', 'album_id', "
-               f"'album_name', 'album_release', 'album_added', 'future_release', 'profile_id') "
+               f"'album_name', 'album_release', 'album_added', 'future_release', 'profile_id', 'trans_id') "
                f"VALUES (:artist_id, :artist_name, :album_id, :album_name, "
-               f":release_date, {timestamp}, :future, :profile_id)")
+               f":release_date, {timestamp}, :future, :profile_id, :trans_id)")
         self.query(sql, values)
 
     def show_new_releases(self, from_date_ts, now_ts):
@@ -374,12 +374,13 @@ class Database(object):
                    "download_path = :download_path WHERE artist_id = :artist_id AND profile_id = :profile_id", settings)
         self.commit()
 
-    def add_playlist_track(self, playlist, track):
+    def add_playlist_track(self, playlist, track, transaction):
         values = {'pid': playlist['id'], 'tid': track['id'], 'tname': track['title'], 'aid': track['artist']['id'],
-                  'aname': track['artist']['name'], 'time': int(time.time()), 'profile_id': config.profile_id()}
+                  'aname': track['artist']['name'], 'time': int(time.time()), 'profile_id': config.profile_id(),
+                  'trans_id': transaction}
         query = ("INSERT INTO 'playlist_tracks' "
-                 "('track_id', 'playlist_id', 'artist_id', 'artist_name', 'track_name', 'track_added', 'profile_id') "
-                 "VALUES (:tid, :pid, :aid, :aname, :tname, :time, :profile_id)")
+                 "('track_id', 'playlist_id', 'artist_id', 'artist_name', 'track_name', 'track_added', 'profile_id',"
+                 "'trans_id') VALUES (:tid, :pid, :aid, :aname, :tname, :time, :profile_id, :trans_id)")
         return self.db.query(query, values)
 
     def create_profile(self, settings: dict):
@@ -423,3 +424,11 @@ class Database(object):
         now = int(time.time())
         self.query(f"UPDATE deemon SET value = {now} WHERE property = 'last_update_check'")
         self.commit()
+
+    def new_transaction(self):
+        now = int(time.time())
+        self.query(f"INSERT INTO transactions ('timestamp') VALUES ({now})")
+        return self.query(f"SELECT id FROM transactions WHERE timestamp = {now}").fetchone()
+
+    def rollback_refresh(self, rollback):
+        
