@@ -122,6 +122,11 @@ class Show:
                     for column in column_names:
                         filtered_artists.append(str(artist[column]))
                     if len(filtered_artists):
+                        for i, a in enumerate(filtered_artists):
+                            if '"' in a:
+                                a = a.replace('"', "'")
+                            if ',' in a:
+                                filtered_artists[i] = f'"{a}"'
                         csv_output(",".join(filtered_artists))
 
                 if output_to_file:
