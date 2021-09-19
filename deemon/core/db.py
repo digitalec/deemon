@@ -86,7 +86,8 @@ class Database(object):
                    "'artist_name' TEXT,"
                    "'track_name' TEXT,"
                    "'profile_id' INTEGER DEFAULT 1,"
-                   "'track_added' TEXT)")
+                   "'track_added' TEXT,"
+                   "'trans_id' INTEGER)")
 
         self.query("CREATE TABLE releases ("
                    "'artist_id' INTEGER,"
@@ -97,7 +98,8 @@ class Database(object):
                    "'album_added' INTEGER,"
                    "'explicit' INTEGER,"
                    "'profile_id' INTEGER DEFAULT 1,"
-                   "'future_release' INTEGER DEFAULT 0)")
+                   "'future_release' INTEGER DEFAULT 0,"
+                   "'trans_id' INTEGER)")
 
         self.query("CREATE TABLE 'deemon' ("
                    "'property' TEXT,"
@@ -114,6 +116,11 @@ class Database(object):
                    "'plex_token' TEXT,"
                    "'plex_library' TEXT,"
                    "'download_path' TEXT,"
+                   "PRIMARY KEY('id' AUTOINCREMENT))")
+
+        self.query("CREATE TABLE transactions ("
+                   "'id' INTEGER,"
+                   "'timestamp' INTEGER,"
                    "PRIMARY KEY('id' AUTOINCREMENT))")
 
         self.query("CREATE UNIQUE INDEX 'idx_property' ON 'deemon' ('property')")
@@ -210,7 +217,19 @@ class Database(object):
             self.query("INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('latest_ver', '')")
             self.query("INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('version', '3.0')")
             self.commit()
-            logger.debug(f"Database upgraded to version 3.0")
+
+        if current_ver < parse_version("3.0"):
+            self.query("ALTER TABLE releases ADD COLUMN trans_id")
+            self.query("ALTER TABLE playlist_tracks ADD COLUMN trans_id")
+            self.query("CREATE TABLE transactions ("
+                       "'id' INTEGER,"
+                       "'timestamp' INTEGER,"
+                       "PRIMARY KEY('id' AUTOINCREMENT))")
+            self.query("UPDATE monitor SET bitrate = '128' WHERE bitrate = '1'")
+            self.query("UPDATE monitor SET bitrate = '320' WHERE bitrate = '3'")
+            self.query("UPDATE monitor SET bitrate = 'FLAC' WHERE bitrate = '9'")
+            self.commit()
+            logger.debug(f"Database upgraded to version 3.1")
 
     def query(self, query, values=None):
         if values is None:
