@@ -324,6 +324,10 @@ class Config(object):
                 return [k]
 
     @staticmethod
+    def get(property):
+        return Config._CONFIG.get(property)
+
+    @staticmethod
     def set(property, value, validate=True):
         if not validate:
             Config._CONFIG[property] = value

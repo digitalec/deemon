@@ -37,6 +37,10 @@ class Refresh:
             self.dl = dl_obj
             self.queue_list = self.dl.queue_list
 
+        if config.get('dry_run'):
+            self.skip_download = True
+
+        # TODO move this somewhere
         if self.rollback:
             self.db.rollback_refresh(self.rollback)
             exit()
