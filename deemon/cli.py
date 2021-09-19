@@ -47,9 +47,6 @@ def run(verbose, profile):
     config = Config()
     db = Database()
 
-    appdata = startup.get_appdata_dir()
-    startup.init_appdata_dir(appdata)
-
     db.do_upgrade()
     if profile:
         profile_config = db.get_profile(profile)

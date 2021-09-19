@@ -1,5 +1,6 @@
 from deemon import cli
 
+
 def main():
     cli.run()
 
