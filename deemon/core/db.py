@@ -430,5 +430,12 @@ class Database(object):
         self.query(f"INSERT INTO transactions ('timestamp') VALUES ({now})")
         return self.query(f"SELECT id FROM transactions WHERE timestamp = {now}").fetchone()
 
-    def rollback_refresh(self, rollback):
-        
+    def rollback_refresh(self, rollback: int):
+        vals = {'rollback': rollback}
+        t_ids = self.query("SELECT id FROM transactions ORDER BY id DESC LIMIT :rollback", vals).fetchall()
+        for transaction in t_ids:
+            i = transaction['id']
+            self.query(f"DELETE FROM releases WHERE trans_id = {i}")
+            self.query(f"DELETE FROM playlist_tracks WHERE trans_id = {i}")
+            self.query(f"DELETE FROM transactions WHERE id = {i}")
+        self.commit()

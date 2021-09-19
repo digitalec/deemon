@@ -245,7 +245,7 @@ def monitor_command(artist, im, playlist, no_refresh, bitrate, record_type, aler
 @click.option('-p', '--playlist', is_flag=True, help="Refresh a specific playlist by name")
 @click.option('-s', '--skip-download', is_flag=True, help="Skips downloading of new releases")
 @click.option('-t', '--time-machine', metavar='DATE', type=str, help='Refresh as if it were this date (YYYY-MM-DD)')
-@click.option('-r', '--rollback', metavar='N', type='int', help='Rollback last N refreshes')
+@click.option('-r', '--rollback', metavar='N', type=int, help='Rollback last N refreshes')
 def refresh_command(name, playlist, skip_download, time_machine, rollback):
     """Check artists for new releases"""
     list_of_names = []

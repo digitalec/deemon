@@ -39,6 +39,7 @@ class Refresh:
 
         if self.rollback:
             self.db.rollback_refresh(self.rollback)
+            exit()
 
         self.run()
 
@@ -57,7 +58,6 @@ class Refresh:
 
     def run(self):
         logger.debug("Starting refresh...")
-        self.trans_id = self.db.new_transaction()['id']
         if not self.refresh_date:
             logger.error(f"Error while setting time machine to {self.time_machine}")
 
@@ -221,6 +221,9 @@ class Refresh:
                     if self.time_machine:
                         continue
                     logger.debug(f"Pre-release detected: {artist['artist_name']} - {album['title']} [{album['release_date']}]")
+
+                if not self.trans_id:
+                    self.trans_id = self.db.new_transaction()['id']
                 self.db.add_new_release(artist['artist_id'], artist['artist_name'], album['id'],
                                         album['title'], album['release_date'], future, self.trans_id)
 
