@@ -8,7 +8,7 @@ from deemix import generateDownloadObject
 from deemix.types.DownloadObjects import Collection
 from deemix.downloader import Downloader
 from deemix.settings import load as LoadSettings
-from deemon.core.config import Config
+from deemon.core.config import Config as config
 from deemon.core.db import Database
 import deemix.utils.localpaths as localpaths
 import logging
@@ -21,18 +21,17 @@ class DeemixInterface:
         logger.debug("Initializing deemix library")
         self.db = Database()
         self.dz = Deezer()
-        self.config = Config()
 
-        if self.config.deemix_path() == "":
+        if config.deemix_path() == "":
             self.config_dir = localpaths.getConfigFolder()
         else:
-            self.config_dir = Path(self.config.deemix_path())
+            self.config_dir = Path(config.deemix_path())
 
         self.dx_settings = LoadSettings(self.config_dir)
 
-        if self.config.download_path() != "":
+        if config.download_path() != "":
             # TODO is this necessary?
-            self.download_path = Path(self.config.download_path())
+            self.download_path = Path(config.download_path())
             self.dx_settings['downloadLocation'] = str(self.download_path)
 
         logger.debug("deemix " + deemix.__version__)
@@ -57,9 +56,11 @@ class DeemixInterface:
             download_object = generateDownloadObject(self.dz, link, bitrate)
             if isinstance(download_object, list):
                 for obj in download_object:
-                    Downloader(self.dz, obj, self.dx_settings).start()
+                    if not config.get('dry_run'):
+                        Downloader(self.dz, obj, self.dx_settings).start()
             else:
-                Downloader(self.dz, download_object, self.dx_settings).start()
+                if not config.get('dry_run'):
+                    Downloader(self.dz, download_object, self.dx_settings).start()
 
     def verify_arl(self, arl):
         if not self.dz.login_via_arl(arl):
@@ -72,10 +73,10 @@ class DeemixInterface:
 
     def login(self):
         logger.debug("Looking for ARL...")
-        if self.config.arl():
+        if config.arl():
             logger.debug("ARL found in deemon config")
             print("Found ARL in deemon config, checking... ", end="")
-            if self.verify_arl(self.config.arl()):
+            if self.verify_arl(config.arl()):
                 return True
 
         if self.config_dir.is_dir():
