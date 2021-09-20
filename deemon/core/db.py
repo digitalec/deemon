@@ -219,7 +219,7 @@ class Database(object):
             self.query("INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('version', '3.0')")
             self.commit()
 
-        if current_ver < parse_version("3.0"):
+        if current_ver < parse_version("3.1"):
             self.query("ALTER TABLE monitor ADD COLUMN refreshed INTEGER DEFAULT 0")
             self.query("ALTER TABLE releases ADD COLUMN trans_id")
             self.query("ALTER TABLE playlist_tracks ADD COLUMN trans_id")
@@ -230,6 +230,7 @@ class Database(object):
             self.query("UPDATE monitor SET bitrate = '128' WHERE bitrate = '1'")
             self.query("UPDATE monitor SET bitrate = '320' WHERE bitrate = '3'")
             self.query("UPDATE monitor SET bitrate = 'FLAC' WHERE bitrate = '9'")
+            self.query("INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('version', '3.1')")
             self.commit()
             logger.debug(f"Database upgraded to version 3.1")
 
