@@ -119,6 +119,7 @@ class Download:
                 if q.artist_name:
                     if q.album_title:
                         logger.info(f"[{current}/{total}] {q.artist_name} - {q.album_title}... ")
+                        self.di.download_url([q.url], dx_bitrate, config.download_path())
                     else:
                         logger.info(f"[{current}/{total}] {q.artist_name} - {q.track_title}... ")
                         self.di.download_url([q.url], dx_bitrate, config.download_path())
