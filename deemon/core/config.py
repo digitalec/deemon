@@ -11,11 +11,13 @@ logger = logging.getLogger(__name__)
 ALLOWED_VALUES = {
     'bitrate': {1: "128", 3: "320", 9: "FLAC"},
     'alerts': [True, False],
-    'record_type': ['all', 'album', 'ep', 'single']
+    'record_type': ['all', 'album', 'ep', 'single'],
+    'release_channel': ['stable', 'beta']
 }
 
 DEFAULT_CONFIG = {
     "check_update": 1,
+    "release_channel": "stable",
     "query_limit": 5,
     "prompt_duplicates": False,
     "prompt_no_matches": True,
@@ -106,7 +108,7 @@ class Config(object):
                 elif k == key:
                     return [k]
 
-        def migrate_old_config(user_config, reference_config):
+        def update_config_layout(user_config, reference_config):
             nonlocal modified
             migration_map = [
                 {'check_update': 'check_update'},
@@ -185,6 +187,12 @@ class Config(object):
                                 else:
                                     raise UnknownValue(
                                         f"Unknown value in config - '{key}': {value} (type: {type(value).__name__})")
+                            else:
+                                if value in ALLOWED_VALUES[key]:
+                                    continue
+                                else:
+                                    raise UnknownValue(
+                                        f"Unknown value in config - '{key}': {value} (type: {type(value).__name__})")
                         elif not isinstance(dict1[key], type(dict2[key])):
                             if isinstance(dict2[key], bool):
                                 if dict1[key] == 1:
@@ -199,8 +207,16 @@ class Config(object):
                         else:
                             pass
 
+        def add_new_options(dict1, dict2):
+            nonlocal modified
+            for key, value in dict1.items():
+                if key not in dict2.keys():
+                    dict2[key] = value
+                    modified += 1
+
         logger.debug("Loading configuration, please wait...")
-        migrated_config = migrate_old_config(Config._CONFIG, DEFAULT_CONFIG)
+        add_new_options(DEFAULT_CONFIG, Config._CONFIG)
+        migrated_config = update_config_layout(Config._CONFIG, DEFAULT_CONFIG)
         Config._CONFIG = process_config(migrated_config, DEFAULT_CONFIG)
         test_values(Config._CONFIG, DEFAULT_CONFIG)
         return modified
@@ -312,6 +328,10 @@ class Config(object):
     @staticmethod
     def allowed_values(prop):
         return ALLOWED_VALUES.get(prop)
+
+    @staticmethod
+    def release_channel() -> str:
+        return Config._CONFIG.get('release_channel')
 
     @staticmethod
     def find_position(d, property):
