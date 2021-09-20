@@ -1,12 +1,11 @@
 from deemon.cmd import download
 from deemon.core.db import Database
 from deemon.core.config import Config as config
-from deemon.utils import notifier, validate, dates, ui
-import time
+from deemon.utils import validate, dates, ui
+from deemon.core import notifier
 import tqdm
 import logging
 import deezer
-import os
 
 logger = logging.getLogger(__name__)
 
