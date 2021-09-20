@@ -5,7 +5,6 @@ import logging
 logger = logging.getLogger(__name__)
 db = Database()
 
-
 def print_header(message: str = None):
     from os import system, name
     if name == 'nt':

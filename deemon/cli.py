@@ -27,8 +27,8 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 @click.version_option(__version__, '-V', '--version', message='deemon %(version)s')
 @click.option('-v', '--verbose', is_flag=True, help="Show debug output")
 @click.option('-P', '--profile', help="Specify profile to run deemon as")
-@click.option('--dry-run', is_flag=True, help='Run without making any changes')
-def run(verbose, profile, dry_run):
+# @click.option('--dry-run', is_flag=True, help='Run without making any changes')
+def run(verbose, profile):
     """Monitoring and alerting tool for new music releases using the Deezer API.
 
     deemon is a free and open source tool. To report issues or to contribute,
@@ -48,9 +48,9 @@ def run(verbose, profile, dry_run):
     config = Config()
     db = Database()
 
-    if dry_run:
-        config.set('dry_run', value=True, validate=False)
-        logger.debug("*** DRY RUN *** Downloads are disabled and no changes will be made to database")
+    # if dry_run:
+    #     config.set('dry_run', value=True, validate=False)
+    #     logger.debug("*** DRY RUN *** Downloads are disabled and no changes will be made to database")
 
     db.do_upgrade()
     if profile:

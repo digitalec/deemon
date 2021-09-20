@@ -51,8 +51,7 @@ class Database(object):
             self.conn.close()
 
     def commit(self):
-        if not config.get('dry_run'):
-            self.conn.commit()
+        self.conn.commit()
 
     def commit_and_close(self):
         logger.debug("Saving changes to DB")

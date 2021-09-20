@@ -56,11 +56,9 @@ class DeemixInterface:
             download_object = generateDownloadObject(self.dz, link, bitrate)
             if isinstance(download_object, list):
                 for obj in download_object:
-                    if not config.get('dry_run'):
-                        Downloader(self.dz, obj, self.dx_settings).start()
+                    Downloader(self.dz, obj, self.dx_settings).start()
             else:
-                if not config.get('dry_run'):
-                    Downloader(self.dz, download_object, self.dx_settings).start()
+                Downloader(self.dz, download_object, self.dx_settings).start()
 
     def verify_arl(self, arl):
         if not self.dz.login_via_arl(arl):
