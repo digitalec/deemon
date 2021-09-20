@@ -37,9 +37,6 @@ class Refresh:
             self.dl = dl_obj
             self.queue_list = self.dl.queue_list
 
-        if config.get('dry_run'):
-            self.skip_download = True
-
         # TODO move this somewhere
         if self.rollback:
             self.db.rollback_refresh(self.rollback)
@@ -122,6 +119,10 @@ class Refresh:
             notification.send()
 
         self.db.commit()
+
+        if self.time_machine:
+            self.time_machine = None
+            self.run()
 
     def refresh_playlists(self):
         monitored = []
