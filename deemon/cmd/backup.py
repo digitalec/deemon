@@ -94,8 +94,11 @@ def restore():
 
         selected_backup = int
         while selected_backup not in range(len(available_backups)):
-            selected_backup = int(input("\nSelect a backup to restore: "))
-            selected_backup -= 1
+            try:
+                selected_backup = int(input("\nSelect a backup to restore: "))
+                selected_backup -= 1
+            except ValueError:
+                logger.warning("Invalid entry. Enter a number corresponding to the backup you wish to restore.")
         print("")
         restore_tarfile(available_backups[selected_backup])
 
