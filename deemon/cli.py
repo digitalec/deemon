@@ -74,7 +74,7 @@ def run(verbose, profile):
         config.set('update_available', 0, False)
         latest_ver = startup.get_latest_version()
         if latest_ver:
-            db.query(f"INSERT OR REPLACE INTO deemon (property, value) VALUES ('latest_ver', {latest_ver})")
+            db.set_latest_version(latest_ver)
         db.set_last_update_check()
 
     new_version = db.get_latest_ver()

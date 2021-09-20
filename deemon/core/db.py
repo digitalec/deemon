@@ -68,7 +68,8 @@ class Database(object):
                    "'record_type' TEXT,"
                    "'alerts' INTEGER,"
                    "'profile_id' INTEGER DEFAULT 1,"
-                   "'download_path' TEXT)")
+                   "'download_path' TEXT,"
+                   "'refreshed' INTEGER DEFAULT 0)")
 
         self.query("CREATE TABLE playlists ("
                    "'id' INTEGER UNIQUE,"
@@ -219,6 +220,7 @@ class Database(object):
             self.commit()
 
         if current_ver < parse_version("3.0"):
+            self.query("ALTER TABLE monitor ADD COLUMN refreshed INTEGER DEFAULT 0")
             self.query("ALTER TABLE releases ADD COLUMN trans_id")
             self.query("ALTER TABLE playlist_tracks ADD COLUMN trans_id")
             self.query("CREATE TABLE transactions ("
@@ -317,14 +319,14 @@ class Database(object):
         self.query(query, values)
         self.commit()
 
-    def remove_monitored_artist(self, id: int = None, name: str = None):
-        values = {'id': id, 'name': name, 'profile_id': config.profile_id()}
+    def remove_monitored_artist(self, id: int = None):
+        values = {'id': id, 'profile_id': config.profile_id()}
         self.query("DELETE FROM monitor WHERE artist_id = :id AND profile_id = :profile_id", values)
         self.query("DELETE FROM releases WHERE artist_id = :id AND profile_id = :profile_id", values)
         self.commit()
 
-    def remove_monitored_playlists(self, id: int = None, title: str = None):
-        values = {'id': id, 'title': title, 'profile_id': config.profile_id()}
+    def remove_monitored_playlists(self, id: int = None):
+        values = {'id': id, 'profile_id': config.profile_id()}
         self.query("DELETE FROM playlists WHERE id = :id AND profile_id = :profile_id", values)
         self.query("DELETE FROM playlist_tracks WHERE playlist_id = :id AND profile_id = :profile_id", values)
         self.commit()
@@ -439,3 +441,11 @@ class Database(object):
             self.query(f"DELETE FROM playlist_tracks WHERE trans_id = {i}")
             self.query(f"DELETE FROM transactions WHERE id = {i}")
         self.commit()
+
+    def set_artist_refreshed(self, id):
+        vals = {'id': id}
+        return self.query("UPDATE monitor SET refreshed = 1 WHERE artist_id = :id", vals)
+
+    def set_latest_version(self, version):
+        vals = {'version': version}
+        return self.query("INSERT OR REPLACE INTO deemon (property, value) VALUES ('latest_ver', :version)", vals)

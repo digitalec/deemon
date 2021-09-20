@@ -37,12 +37,10 @@ class Refresh:
             self.dl = dl_obj
             self.queue_list = self.dl.queue_list
 
-        # TODO move this somewhere
         if self.rollback:
-            self.db.rollback_refresh(self.rollback)
-            exit()
-
-        self.run()
+            self.rollback_transaction()
+        else:
+            self.run()
 
     def set_refresh_date(self):
         if self.time_machine:
@@ -56,6 +54,10 @@ class Refresh:
     def store_message(self, message):
         if message:
             self.message_queue.append(message)
+
+    def rollback_transaction(self):
+        self.db.rollback_refresh(self.rollback)
+        return logger.info(f"Rolled back the last {self.rollback} refresh(es)")
 
     def run(self):
         logger.debug("Starting refresh...")
@@ -123,6 +125,28 @@ class Refresh:
         if self.time_machine:
             self.time_machine = None
             self.run()
+
+    def queue_new_releases(self, artist, album):
+        is_new_release = 0
+        if (artist['record_type'] == album['record_type']) or artist['record_type'] == "all":
+            if config.release_by_date():
+                max_release_date = dates.get_max_release_date(config.release_max_days())
+                if album['release_date'] < max_release_date:
+                    logger.debug(f"Release {album['id']} outside of max_release_date, skipping...")
+                    return
+            self.total_new_releases += 1
+            is_new_release = 1
+
+            self.queue_list.append(download.QueueItem(artist=artist, album=album, bitrate=artist['bitrate'],
+                                                      download_path=artist['download_path']))
+            logger.debug(f"Release {album['id']} added to queue")
+            if artist["alerts"]:
+                self.append_new_release(album['release_date'], artist['artist_name'],
+                                        album['title'], album['cover_medium'])
+        else:
+            logger.debug(f"Release {album['id']} does not meet album_type "
+                         f"requirement of '{config.record_type()}'")
+        return is_new_release
 
     def refresh_playlists(self):
         monitored = []
@@ -208,7 +232,6 @@ class Refresh:
             artist['download_path'] = artist['download_path'] or config.download_path()
 
             artist_new_release_count = 0
-            new_artist = self.db.get_artist_releases(artist['artist_id'])
             artist_albums = self.dz.api.get_artist_albums(artist['artist_id'])['data']
 
             for album in artist_albums:
@@ -232,36 +255,17 @@ class Refresh:
                 self.db.add_new_release(artist['artist_id'], artist['artist_name'], album['id'],
                                         album['title'], album['release_date'], future, self.trans_id)
 
-                if new_artist:
-                    if len(artist_albums) == 0:
-                        self.store_message(f"Artist '{artist['artist_name']}' setup for monitoring "
-                                            f"but no releases were found.")
+                if artist['refreshed'] == 0:
                     continue
-                    
-                if (artist['record_type'] == album['record_type']) or artist['record_type'] == "all":
-                    if config.release_by_date():
-                        max_release_date = dates.get_max_release_date(config.release_max_days())
-                        if album['release_date'] < max_release_date:
-                            logger.debug(f"Release {album['id']} outside of max_release_date, skipping...")
-                            continue
-                    self.total_new_releases += 1
-                    artist_new_release_count += 1
 
-                    self.queue_list.append(download.QueueItem(artist=artist, album=album, bitrate=artist['bitrate'],
-                                                              download_path=artist['download_path']))
-                    logger.debug(f"Release {album['id']} added to queue")
-                    if artist["alerts"]:
-                        self.append_new_release(album['release_date'], artist['artist_name'],
-                                                album['title'], album['cover_medium'])
-                else:
-                    logger.debug(f"Release {album['id']} does not meet album_type "
-                                 f"requirement of '{config.record_type()}'")
+                artist_new_release_count += self.queue_new_releases(artist, album)
 
             if artist_new_release_count > 0:
                 logger.info(f"{artist['artist_name']}: {artist_new_release_count} new release(s)")
             else:
-                if not new_artist:
-                    logger.debug(f"No new releases found for artist {artist['artist_name']} ({artist['artist_id']})")
+                logger.debug(f"No new releases found for artist {artist['artist_name']} ({artist['artist_id']})")
+
+            self.db.set_artist_refreshed(artist['artist_id'])
 
             if artist == monitored[-1]:
                 progress.set_description_str("Refresh complete")
