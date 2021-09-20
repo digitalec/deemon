@@ -128,6 +128,7 @@ class Database(object):
         self.query(f"INSERT INTO 'deemon' ('property', 'value') VALUES ('version', '{__dbversion__}')")
         self.query("INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('latest_ver', '')")
         self.query("INSERT INTO 'deemon' ('property', 'value') VALUES ('last_update_check', 0)")
+        self.query("INSERT INTO 'deemon' ('property', 'value') VALUES ('release_channel', 'stable')")
         self.query("INSERT INTO 'profiles' ('name') VALUES ('default')")
         self.commit()
 
@@ -231,6 +232,7 @@ class Database(object):
             self.query("UPDATE monitor SET bitrate = '320' WHERE bitrate = '3'")
             self.query("UPDATE monitor SET bitrate = 'FLAC' WHERE bitrate = '9'")
             self.query("INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('version', '3.1')")
+            self.query("INSERT INTO 'deemon' ('property', 'value') VALUES ('release_channel', 'stable')")
             self.commit()
             logger.debug(f"Database upgraded to version 3.1")
 
@@ -450,3 +452,10 @@ class Database(object):
     def set_latest_version(self, version):
         vals = {'version': version}
         return self.query("INSERT OR REPLACE INTO deemon (property, value) VALUES ('latest_ver', :version)", vals)
+
+    def get_release_channel(self):
+        return self.query("SELECT value FROM deemon WHERE property = 'release_channel'").fetchone()
+
+    def set_release_channel(self):
+        return self.query(f"INSERT OR REPLACE INTO deemon (property, value) "
+                          f"VALUES ('release_channel', '{config.release_channel()}')")

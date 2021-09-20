@@ -50,16 +50,18 @@ def get_log_file():
     return Path(get_appdata_dir() / 'logs' / 'deemon.log')
 
 
-def get_latest_version():
-    logger.debug("Checking for update...")
-    latest_ver = "https://api.github.com/repos/digitalec/deemon/releases/latest"
+def get_latest_version(release_type):
+    latest_ver = "https://pypi.org/pypi/deemon/json"
+
     try:
         response = requests.get(latest_ver)
     except requests.exceptions.ConnectionError:
         return
-    try:
-        remote_version = response.json()["name"]
-    except KeyError as e:
-        logger.debug(f"Invalid data returned from version check; too many requests? {e}")
-        return
-    return remote_version
+
+    if release_type == "beta":
+        sorted_releases = sorted(response.json()['releases'], reverse=True)
+        for release in sorted_releases:
+            if "b" in release or "rc" in release:
+                return release
+    else:
+        return response.json()['info']['version']

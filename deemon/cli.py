@@ -49,6 +49,7 @@ def run(verbose, profile):
     db = Database()
 
     db.do_upgrade()
+
     if profile:
         profile_config = db.get_profile(profile)
         if profile_config:
@@ -65,10 +66,15 @@ def run(verbose, profile):
 
     check_interval: int = config.check_update() - 3600
 
-    # TODO add beta notifications
+    if config.release_channel() != db.get_release_channel()['value']:
+        # If release_channel has changed, check for latest release
+        logger.info(f"Release channel changed to '{config.release_channel()}', checking for updates...")
+        db.set_release_channel()
+        last_checked = 0
+
     if last_checked < check_interval or last_checked == 0:
         config.set('update_available', 0, False)
-        latest_ver = startup.get_latest_version()
+        latest_ver = startup.get_latest_version(config.release_channel())
         if latest_ver:
             db.set_latest_version(latest_ver)
         db.set_last_update_check()
@@ -78,8 +84,12 @@ def run(verbose, profile):
         config.set('update_available', 1, False)
         print("*" * 50)
         logger.info(f"* New version is available: v{__version__} -> v{new_version}")
-        logger.info("* To upgrade, run `pip install --upgrade deemon`")
+        if config.release_channel() == "beta":
+            logger.info("* To upgrade, run `pip install --upgrade --pre deemon`")
+        else:
+            logger.info("* To upgrade, run `pip install --upgrade deemon`")
         print("*" * 50)
+        print("")
 
 
 @run.command(name='test')
