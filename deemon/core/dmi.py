@@ -10,6 +10,7 @@ from deemix.downloader import Downloader
 from deemix.settings import load as LoadSettings
 from deemon.core.config import Config as config
 from deemon.core.db import Database
+from deemon.core import notifier
 import deemix.utils.localpaths as localpaths
 import logging
 
@@ -70,12 +71,15 @@ class DeemixInterface:
         return True
 
     def login(self):
+        failed_logins = 0
         logger.debug("Looking for ARL...")
         if config.arl():
             logger.debug("ARL found in deemon config")
             print("Found ARL in deemon config, checking... ", end="")
             if self.verify_arl(config.arl()):
                 return True
+            else:
+                failed_logins += 1
 
         if self.config_dir.is_dir():
             if Path(self.config_dir / '.arl').is_file():
@@ -85,6 +89,8 @@ class DeemixInterface:
                     print("Found ARL in deemix .arl file, checking... ", end="")
                     if self.verify_arl(arl_from_file):
                         return True
+                    else:
+                        failed_logins += 1
             else:
                 logger.error(f"ARL not found in {self.config_dir}")
                 return False
@@ -92,7 +98,10 @@ class DeemixInterface:
             logger.error(f"ARL directory {self.config_dir} was not found")
             return False
 
-        # TODO send alert on expired ARL
+        if failed_logins > 1:
+            notification = notifier.Notify()
+            notification.expired_arl()
+
 
     def generatePlaylistItem(self, dz, link_id, bitrate, playlistAPI=None, playlistTracksAPI=None):
         if not playlistAPI:

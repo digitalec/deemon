@@ -16,7 +16,6 @@ from deemon import __version__
 
 logger = logging.getLogger(__name__)
 
-# TODO send email when ARL expires
 
 class Notify:
 
@@ -26,7 +25,7 @@ class Notify:
         self.subject = "New releases detected!"
         self.releases = new_releases
 
-    def send(self, body=None, test=False):
+    def send(self, body=None, test=False, expired=False):
         """
         Send email notification message
         """
@@ -42,7 +41,7 @@ class Notify:
 
         context = ssl.create_default_context()
 
-        logger.debug("Sending new release notification email")
+        logger.debug("Sending notification email")
         logger.debug(f"Using server: {config.smtp_server()}:{config.smtp_port()}")
 
         with smtplib.SMTP_SSL(config.smtp_server(), config.smtp_port(), context=context) as server:
@@ -65,7 +64,7 @@ class Notify:
         msg['From'] = formataddr(('deemon', config.smtp_sender()))
         msg['Subject'] = self.subject
         # part1 = MIMEText(self.plaintext(), 'plain')
-        part2 = MIMEText(self.html(), 'html')
+        part2 = MIMEText(self.html_new_releases(), 'html')
         # msg.attach(part1)
         msg.attach(part2)
 
@@ -109,6 +108,19 @@ class Notify:
         msg.set_content(message)
         self.send(msg, test=True)
 
+    def expired_arl(self):
+        """
+        Verify SMTP settings by sending test email
+        """
+        self.subject = "deemon Notification"
+        message = "Your ARL has expired"
+        msg = EmailMessage()
+        msg['To'] = config.smtp_recipient()
+        msg['From'] = formataddr(('deemon', config.smtp_sender()))
+        msg['Subject'] = self.subject
+        msg.set_content(message)
+        self.send(msg, test=True)
+
     def plaintext(self) -> str:
         """
         Plaintext version of email to send
@@ -122,7 +134,7 @@ class Notify:
                 message += f"+ {album['artist']} - {album['album']}\n"
         return message
 
-    def html(self):
+    def html_new_releases(self):
 
         app_version = f"deemon {__version__}"
         py_version = f"python {platform.python_version()}"
