@@ -13,7 +13,8 @@ logger = logging.getLogger(__name__)
 class Refresh:
 
     def __init__(self, artist_name: list = None, artist_id: list = None, playlist_title:list = None,
-                 playlist_id: list = None, skip_download=False, time_machine=None, dl_obj=None, rollback: int = None):
+                 playlist_id: list = None, skip_download=False, time_machine=None, dl_obj=None,
+                 rollback: int = None, dry_run: bool = False):
         self.artist_id = artist_id or []
         self.artist_name = artist_name
         self.playlist_title = playlist_title
@@ -26,8 +27,12 @@ class Refresh:
         self.refresh_date = self.set_refresh_date()
         self.trans_id = None
         self.rollback = rollback
+        self.dry_run = dry_run
         self.dz = deezer.Deezer()
         self.db = Database()
+
+        if self.dry_run:
+            self.skip_download = True
 
         if not dl_obj:
             self.dl = None
@@ -119,7 +124,8 @@ class Refresh:
             notification = notifier.Notify(self.new_releases)
             notification.send()
 
-        self.db.commit()
+        if not self.dry_run:
+            self.db.commit()
 
         if self.time_machine:
             self.time_machine = None
