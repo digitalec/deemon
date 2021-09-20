@@ -2,7 +2,8 @@ import platform
 import logging
 import sys
 from deemon.core.logger import setup_logger
-from deemon.utils import notifier, startup, dataprocessor
+from deemon.utils import startup, dataprocessor
+from deemon.core import notifier
 from deemon import __version__
 from packaging.version import parse as parse_version
 from deemon.cmd import monitor, download
@@ -24,9 +25,9 @@ db = None
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
 @click.group(context_settings=CONTEXT_SETTINGS)
+@click.option('-P', '--profile', help="Specify profile to run deemon as")
 @click.version_option(__version__, '-V', '--version', message='deemon %(version)s')
 @click.option('-v', '--verbose', is_flag=True, help="Show debug output")
-@click.option('-P', '--profile', help="Specify profile to run deemon as")
 def run(verbose, profile):
     """Monitoring and alerting tool for new music releases using the Deezer API.
 
@@ -90,14 +91,14 @@ def test():
 
 @run.command(name='download')
 @click.argument('artist', nargs=-1)
-@click.option('-i', '--artist-id', multiple=True, metavar='ID', type=int, help='Download by artist ID')
 @click.option('-A', '--album-id', multiple=True, metavar='ID', type=int, help='Download by album ID')
-@click.option('-u', '--url', metavar='URL', multiple=True, help='Download by URL of artist/album/track/playlist')
+@click.option('-b', '--bitrate', metavar="BITRATE", help='Set custom bitrate for this operation')
+@click.option('-F', '--from-date', metavar="YYYY-MM-DD", type=str, help='Grab releases from this date forward')
 @click.option('-f', '--file', metavar='FILE', help='Download batch of artists and/or artist IDs from file')
-@click.option('-b', '--bitrate', help='Set custom bitrate for this operation')
-@click.option('-o', '--download-path', type=str, metavar="PATH", help='Specify custom download directory')
-@click.option('-t', '--record-type', type=str, help='Specify record types to download')
-@click.option('-F', '--from-date', type=str, help='Grab releases from this date forward (YYYY-MM-DD)')
+@click.option('-i', '--artist-id', multiple=True, metavar='ID', type=int, help='Download by artist ID')
+@click.option('-o', '--download-path', metavar="PATH", type=str, help='Specify custom download directory')
+@click.option('-t', '--record-type', metavar="TYPE", type=str, help='Specify record types to download')
+@click.option('-u', '--url', metavar='URL', multiple=True, help='Download by URL of artist/album/track/playlist')
 def download_command(artist, artist_id, album_id, url, file, bitrate, record_type, download_path, from_date):
     """
     Download specific artist, album ID or by URL
@@ -132,18 +133,18 @@ def download_command(artist, artist_id, album_id, url, file, bitrate, record_typ
 
 @run.command(name='monitor', context_settings={"ignore_unknown_options": False})
 @click.argument('artist', nargs=-1)
-@click.option('-i', '--artist-id', multiple=True, type=int, metavar="ID", help="Monitor artist by ID")
-@click.option('-I', '--import', 'im', metavar="PATH", help="Monitor artists/IDs from file or directory")
-@click.option('-u', '--url', multiple=True, metavar="URL", help='Monitor artist by URL')
-@click.option('-p', '--playlist', multiple=True, metavar="URL", help='Monitor Deezer playlist by URL')
-@click.option('-s', '--search', 'search_flag', is_flag=True, help='Show similar artist results to choose from')
-@click.option('-b', '--bitrate', help="Specify bitrate")
-@click.option('-t', '--record-type', type=str, help='Specify record types to download')
-@click.option('-a', '--alerts', type=str, help="Enable or disable alerts")
-@click.option('-n', '--no-refresh', is_flag=True, help='Skip refresh after adding or removing artist')
+@click.option('-a', '--alerts', metavar="BOOL", type=str, help="Enable or disable alerts")
+@click.option('-b', '--bitrate', metavar="BITRATE", help="Specify bitrate")
 @click.option('-D', '--download', 'dl', is_flag=True, help='Download all releases matching record type')
 @click.option('-d', '--download-path', type=str, metavar="PATH", help='Specify custom download directory')
+@click.option('-I', '--import', 'im', metavar="PATH", help="Monitor artists/IDs from file or directory")
+@click.option('-i', '--artist-id', multiple=True, type=int, metavar="ID", help="Monitor artist by ID")
+@click.option('-n', '--no-refresh', is_flag=True, help='Skip refresh after adding or removing artist')
+@click.option('-p', '--playlist', multiple=True, metavar="URL", help='Monitor Deezer playlist by URL')
+@click.option('-u', '--url', multiple=True, metavar="URL", help='Monitor artist by URL')
 @click.option('-R', '--remove', is_flag=True, help='Stop monitoring an artist')
+@click.option('-s', '--search', 'search_flag', is_flag=True, help='Show similar artist results to choose from')
+@click.option('-t', '--record-type', metavar="TYPE", type=str, help='Specify record types to download')
 def monitor_command(artist, im, playlist, no_refresh, bitrate, record_type, alerts, artist_id, remove,
                     url, dl, download_path, search_flag):
     """
@@ -244,9 +245,9 @@ def monitor_command(artist, im, playlist, no_refresh, bitrate, record_type, aler
 @run.command(name='refresh')
 @click.argument('NAME', nargs=-1, type=str, required=False)
 @click.option('-p', '--playlist', is_flag=True, help="Refresh a specific playlist by name")
+@click.option('-r', '--rollback', metavar='N', type=int, help='Rollback last N refreshes')
 @click.option('-s', '--skip-download', is_flag=True, help="Skips downloading of new releases")
 @click.option('-t', '--time-machine', metavar='DATE', type=str, help='Refresh as if it were this date (YYYY-MM-DD)')
-@click.option('-r', '--rollback', metavar='N', type=int, help='Rollback last N refreshes')
 def refresh_command(name, playlist, skip_download, time_machine, rollback):
     """Check artists for new releases"""
     list_of_names = []
@@ -274,11 +275,11 @@ def show_command():
 
 @show_command.command(name="artists")
 @click.argument('artist', nargs=-1, required=False)
-@click.option('-i', '--artist-id', is_flag=True, help='Show artist info by artist ID')
 @click.option('-c', '--csv', is_flag=True, help='Output artists as CSV')
 @click.option('-e', '--export', type=Path, help='Export CSV data to file; same as -ce')
-@click.option('-H', '--hide-header', is_flag=True, help='Hide header on CSV output')
 @click.option('-f', '--filter', type=str, help='Specify filter for CSV output')
+@click.option('-H', '--hide-header', is_flag=True, help='Hide header on CSV output')
+@click.option('-i', '--artist-id', is_flag=True, help='Show artist info by artist ID')
 def show_artists(artist, artist_id, csv, export, filter, hide_header):
     """Show artist info monitored by profile"""
     if artist:
@@ -290,10 +291,10 @@ def show_artists(artist, artist_id, csv, export, filter, hide_header):
 
 @show_command.command(name="playlists")
 @click.argument('title', nargs=-1, required=False)
-@click.option('-i', '--playlist-id', is_flag=True, help='Show playlist info by playlist ID')
 @click.option('-c', '--csv', is_flag=True, help='Output artists as CSV')
-@click.option('-H', '--hide-header', is_flag=True, help='Hide header on CSV output')
 @click.option('-f', '--filter', type=str, help='Specify filter for CSV output')
+@click.option('-H', '--hide-header', is_flag=True, help='Hide header on CSV output')
+@click.option('-i', '--playlist-id', is_flag=True, help='Show playlist info by playlist ID')
 def show_artists(title, playlist_id, csv, filter, hide_header):
     """Show playlist info monitored by profile"""
     if title:
@@ -317,8 +318,8 @@ run.add_command(show_command)
 
 
 @run.command(name="backup")
-@click.option('-r', '--restore', is_flag=True, help='Restore from existing backup')
 @click.option('-i', '--include-logs', is_flag=True, help='include log files in backup')
+@click.option('-r', '--restore', is_flag=True, help='Restore from existing backup')
 def backup_command(restore, include_logs):
     """Backup configuration and database to a tar file"""
 
@@ -330,12 +331,12 @@ def backup_command(restore, include_logs):
 
 # TODO @click.option does not support nargs=-1; unable to use spaces without quotations
 @run.command(name="api", help="View raw API data for artist, artist ID or playlist ID", hidden=True)
-@click.option('--artist', type=str, help='Get artist result via API')
-@click.option('--artist-id', type=int, help='Get artist ID result via API')
-@click.option('--album-id', type=int, help='Get album ID result via API')
-@click.option('--playlist-id', type=int, help='Get playlist ID result via API')
-@click.option('--limit', type=int, help='Set max number of artist results; default=1', default=1)
-@click.option('--raw', is_flag=True, help='Dump as raw data returned from API')
+@click.option('-A', '--album-id', type=int, help='Get album ID result via API')
+@click.option('-a', '--artist', type=str, help='Get artist result via API')
+@click.option('-i', '--artist-id', type=int, help='Get artist ID result via API')
+@click.option('-l', '--limit', type=int, help='Set max number of artist results; default=1', default=1)
+@click.option('-p', '--playlist-id', type=int, help='Get playlist ID result via API')
+@click.option('-r', '--raw', is_flag=True, help='Dump as raw data returned from API')
 def api_test(artist, artist_id, album_id, playlist_id, limit, raw):
     """View API result - for testing purposes"""
     import deezer
@@ -416,11 +417,13 @@ def profile_command(profile, add, clear, delete, edit):
     else:
         pc.show()
 
+
 @run.command(name="search")
 def search():
     """Interactively search and download/monitor artists"""
     client = Search()
     client.search_menu()
+
 
 @run.command(name="config")
 @click.argument('artist', nargs=-1)
