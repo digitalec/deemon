@@ -2,7 +2,7 @@ from pathlib import Path
 import plexapi.exceptions
 from plexapi.server import PlexServer
 from deemon.core import dmi
-from deemon.utils import dataprocessor
+from deemon.utils import dataprocessor, validate
 from deemon.core.config import Config as config
 from deemon import utils
 import logging
@@ -68,6 +68,7 @@ class Download:
         self.di = dmi.DeemixInterface()
         self.queue_list = []
         self.bitrate = None
+        self.from_release_date = None
         self.verbose = os.environ.get("VERBOSE")
         self.duplicate_id_count = 0
 
@@ -120,7 +121,7 @@ class Download:
                         logger.info(f"[{current}/{total}] {q.artist_name} - {q.album_title}... ")
                     else:
                         logger.info(f"[{current}/{total}] {q.artist_name} - {q.track_title}... ")
-                    self.di.download_url([q.url], dx_bitrate, config.download_path())
+                        self.di.download_url([q.url], dx_bitrate, config.download_path())
                 else:
                     logger.info(f"+ {q.playlist_title} (playlist)...")
                     self.di.download_url([q.url], dx_bitrate, q.download_path, override_deemix=False)
@@ -130,13 +131,15 @@ class Download:
             if plex and (config.plex_library() != ""):
                 self.refresh_plex(plex)
 
-    def download(self, artist, artist_id, album_id, url, input_file, auto=True):
+    def download(self, artist, artist_id, album_id, url, input_file, auto=True, from_date: str = None):
 
         def filter_artist_by_record_type(artist):
             album_api = self.dz.api.get_artist_albums(artist['id'])['data']
             filtered_albums = []
             for album in album_api:
                 if (album['record_type'] == config.record_type()) or config.record_type() == "all":
+                    if self.from_release_date and self.from_release_date < album['release_date']:
+                        return filtered_albums
                     filtered_albums.append(album)
                 else:
                     logger.debug(f"Filtered release '{album['title']} ({album['id']})' as it "
@@ -217,6 +220,13 @@ class Download:
                 except (IndexError, ValueError):
                     continue
             return False, False
+
+        if from_date:
+            logger.debug(f"Getting releases that were released on or after {from_date}")
+            if validate.validate_date(from_date):
+                self.from_release_date = from_date
+            else:
+                return logger.error(f"The date you entered is invalid: {from_date}")
 
         if artist:
             [process_artist_by_name(a) for a in artist]

@@ -50,7 +50,7 @@ def run(verbose, profile, dry_run):
 
     if dry_run:
         config.set('dry_run', value=True, validate=False)
-        logger.debug("This is a dry run. Downloads are disabled and no changes will be made to database")
+        logger.debug("*** DRY RUN *** Downloads are disabled and no changes will be made to database")
 
     db.do_upgrade()
     if profile:
@@ -102,7 +102,8 @@ def test():
 @click.option('-b', '--bitrate', help='Set custom bitrate for this operation')
 @click.option('-o', '--download-path', type=str, metavar="PATH", help='Specify custom download directory')
 @click.option('-t', '--record-type', type=str, help='Specify record types to download')
-def download_command(artist, artist_id, album_id, url, file, bitrate, record_type, download_path):
+@click.option('-F', '--from-date', type=str, help='Grab releases from this date forward (YYYY-MM-DD)')
+def download_command(artist, artist_id, album_id, url, file, bitrate, record_type, download_path, from_date):
     """
     Download specific artist, album ID or by URL
 
@@ -131,7 +132,7 @@ def download_command(artist, artist_id, album_id, url, file, bitrate, record_typ
             return logger.error(f"Invalid download path: {download_path}")
 
     dl = download.Download()
-    dl.download(artists, artist_ids, album_ids, urls, file)
+    dl.download(artists, artist_ids, album_ids, urls, file, from_date=from_date)
 
 
 @run.command(name='monitor', context_settings={"ignore_unknown_options": False})
