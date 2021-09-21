@@ -19,6 +19,7 @@ DEFAULT_CONFIG = {
     "check_update": 1,
     "release_channel": "stable",
     "query_limit": 5,
+    "rollback_view_limit": 10,
     "prompt_duplicates": False,
     "prompt_no_matches": True,
     "new_releases": {
@@ -332,6 +333,14 @@ class Config(object):
     @staticmethod
     def release_channel() -> str:
         return Config._CONFIG.get('release_channel')
+
+    @staticmethod
+    def rollback_view_limit() -> int:
+        return Config._CONFIG.get('rollback_view_limit')
+
+    @staticmethod
+    def transaction_id() -> int:
+        return Config._CONFIG.get('tid')
 
     @staticmethod
     def find_position(d, property):

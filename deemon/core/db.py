@@ -54,7 +54,6 @@ class Database(object):
         self.conn.commit()
 
     def commit_and_close(self):
-        logger.debug("Saving changes to DB")
         self.commit()
         self.close()
 
@@ -69,7 +68,8 @@ class Database(object):
                    "'alerts' INTEGER,"
                    "'profile_id' INTEGER DEFAULT 1,"
                    "'download_path' TEXT,"
-                   "'refreshed' INTEGER DEFAULT 0)")
+                   "'refreshed' INTEGER DEFAULT 0,"
+                   "'trans_id' INTEGER)")
 
         self.query("CREATE TABLE playlists ("
                    "'id' INTEGER UNIQUE,"
@@ -78,7 +78,9 @@ class Database(object):
                    "'bitrate' TEXT,"
                    "'alerts' INTEGER,"
                    "'profile_id' INTEGER DEFAULT 1,"
-                   "'download_path' TEXT)")
+                   "'download_path' TEXT,"
+                   "'refreshed' INTEGER DEFAULT 0,"
+                   "'trans_id' INTEGER)")
 
         self.query("CREATE TABLE playlist_tracks ("
                    "'track_id' INTEGER,"
@@ -122,6 +124,7 @@ class Database(object):
         self.query("CREATE TABLE transactions ("
                    "'id' INTEGER,"
                    "'timestamp' INTEGER,"
+                   "'profile_id' INTEGER DEFAULT 1,"
                    "PRIMARY KEY('id' AUTOINCREMENT))")
 
         self.query("CREATE UNIQUE INDEX 'idx_property' ON 'deemon' ('property')")
@@ -221,22 +224,30 @@ class Database(object):
             self.commit()
 
         if current_ver < parse_version("3.1"):
-            self.query("ALTER TABLE monitor ADD COLUMN refreshed INTEGER DEFAULT 0")
-            self.query("ALTER TABLE releases ADD COLUMN trans_id")
-            self.query("ALTER TABLE playlist_tracks ADD COLUMN trans_id")
             self.query("CREATE TABLE transactions ("
                        "'id' INTEGER,"
                        "'timestamp' INTEGER,"
+                       "'profile_id' INTEGER DEFAULT 1,"
                        "PRIMARY KEY('id' AUTOINCREMENT))")
+            self.query("ALTER TABLE monitor ADD COLUMN trans_id INTEGER")
+            self.query("ALTER TABLE monitor ADD COLUMN refreshed INTEGER DEFAULT 0")
+            self.query("ALTER TABLE playlists ADD COLUMN trans_id INTEGER")
+            self.query("ALTER TABLE playlists ADD COLUMN refreshed INTEGER DEFAULT 0")
+            self.query("ALTER TABLE releases ADD COLUMN trans_id")
+            self.query("ALTER TABLE playlist_tracks ADD COLUMN trans_id")
             self.query("UPDATE monitor SET bitrate = '128' WHERE bitrate = '1'")
             self.query("UPDATE monitor SET bitrate = '320' WHERE bitrate = '3'")
             self.query("UPDATE monitor SET bitrate = 'FLAC' WHERE bitrate = '9'")
+            self.query("UPDATE playlists SET bitrate = '128' WHERE bitrate = '1'")
+            self.query("UPDATE playlists SET bitrate = '320' WHERE bitrate = '3'")
+            self.query("UPDATE playlists SET bitrate = 'FLAC' WHERE bitrate = '9'")
             self.query("INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('version', '3.1')")
             self.query("INSERT INTO 'deemon' ('property', 'value') VALUES ('release_channel', 'stable')")
             self.commit()
             logger.debug(f"Database upgraded to version 3.1")
 
     def query(self, query, values=None):
+        logger.debug(query)
         if values is None:
             values = {}
         return self.conn.execute(query, values)
@@ -276,15 +287,17 @@ class Database(object):
                           "AND profile_id = :profile_id", values).fetchone()
 
     def monitor_artist(self, artist: dict, artist_config: dict):
+        self.new_transaction()
         vals = {
             'artist_id': artist['id'], 'artist_name': artist['name'], 'bitrate': artist_config['bitrate'],
             'record_type': artist_config['record_type'], 'alerts': artist_config['alerts'],
-            'download_path': artist_config['download_path'], 'profile_id': config.profile_id()
+            'download_path': artist_config['download_path'], 'profile_id': config.profile_id(),
+            'trans_id': config.transaction_id()
         }
         query = ("INSERT INTO monitor "
-                 "(artist_id, artist_name, bitrate, record_type, alerts, download_path, profile_id) "
+                 "(artist_id, artist_name, bitrate, record_type, alerts, download_path, profile_id, trans_id) "
                  "VALUES "
-                 "(:artist_id, :artist_name, :bitrate, :record_type, :alerts, :download_path, :profile_id)")
+                 "(:artist_id, :artist_name, :bitrate, :record_type, :alerts, :download_path, :profile_id, :trans_id)")
         self.query(query, vals)
         self.commit()
 
@@ -314,11 +327,14 @@ class Database(object):
             return True
 
     def monitor_playlist(self, api_result):
+        self.new_transaction()
         values = {'id': api_result['id'], 'title': api_result['title'], 'url': api_result['link'],
                   'bitrate': api_result['bitrate'], 'alerts': api_result['alerts'],
-                  'download_path': api_result['download_path'], 'profile_id': config.profile_id()}
-        query = ("INSERT INTO playlists ('id', 'title', 'url', 'bitrate', 'alerts', 'download_path', 'profile_id') "
-                 "VALUES (:id, :title, :url, :bitrate, :alerts, :download_path, :profile_id)")
+                  'download_path': api_result['download_path'], 'profile_id': config.profile_id(),
+                  'trans_id': config.transaction_id()}
+        query = ("INSERT INTO playlists ('id', 'title', 'url', 'bitrate', 'alerts', 'download_path',"
+                 "'profile_id', 'trans_id') "
+                 "VALUES (:id, :title, :url, :bitrate, :alerts, :download_path, :profile_id, :trans_id)")
         self.query(query, values)
         self.commit()
 
@@ -343,11 +359,12 @@ class Database(object):
             return self.query("SELECT * FROM monitor WHERE artist_name = ':artist' "
                               "AND profile_id = :profile_id COLLATE NOCASE", values).fetchone()
 
-    def add_new_release(self, artist_id, artist_name, album_id, album_name, release_date, future_release, transaction):
+    def add_new_release(self, artist_id, artist_name, album_id, album_name, release_date, future_release):
+        self.new_transaction()
         timestamp = int(time.time())
         values = {'artist_id': artist_id, 'artist_name': artist_name, 'album_id': album_id,
                   'album_name': album_name, 'release_date': release_date, 'future': future_release,
-                  'profile_id': config.profile_id(), 'trans_id': transaction}
+                  'profile_id': config.profile_id(), 'trans_id': config.transaction_id()}
         sql = (f"INSERT INTO releases ('artist_id', 'artist_name', 'album_id', "
                f"'album_name', 'album_release', 'album_added', 'future_release', 'profile_id', 'trans_id') "
                f"VALUES (:artist_id, :artist_name, :album_id, :album_name, "
@@ -371,6 +388,7 @@ class Database(object):
         self.query("DELETE FROM releases")
         self.query("DELETE FROM playlists")
         self.query("DELETE FROM playlist_tracks")
+        self.query("DELETE FROM transactions")
         self.commit()
         logger.info("Database has been reset")
 
@@ -379,14 +397,15 @@ class Database(object):
                    "download_path = :download_path WHERE artist_id = :artist_id AND profile_id = :profile_id", settings)
         self.commit()
 
-    def add_playlist_track(self, playlist, track, transaction):
+    def add_playlist_track(self, playlist, track):
+        self.new_transaction()
         values = {'pid': playlist['id'], 'tid': track['id'], 'tname': track['title'], 'aid': track['artist']['id'],
                   'aname': track['artist']['name'], 'time': int(time.time()), 'profile_id': config.profile_id(),
-                  'trans_id': transaction}
+                  'trans_id': config.transaction_id()}
         query = ("INSERT INTO 'playlist_tracks' "
                  "('track_id', 'playlist_id', 'artist_id', 'artist_name', 'track_name', 'track_added', 'profile_id',"
                  "'trans_id') VALUES (:tid, :pid, :aid, :aname, :tname, :time, :profile_id, :trans_id)")
-        return self.db.query(query, values)
+        return self.query(query, values)
 
     def create_profile(self, settings: dict):
         self.query("INSERT INTO profiles (name, email, alerts, bitrate, record_type, plex_baseurl, plex_token,"
@@ -430,32 +449,55 @@ class Database(object):
         self.query(f"UPDATE deemon SET value = {now} WHERE property = 'last_update_check'")
         self.commit()
 
+    def get_next_transaction_id(self):
+        tid = self.query(f"SELECT seq FROM sqlite_sequence WHERE name = 'transactions'").fetchone()
+        return tid['seq'] + 1
+
     def new_transaction(self):
-        now = int(time.time())
-        self.query(f"INSERT INTO transactions ('timestamp') VALUES ({now})")
-        return self.query(f"SELECT id FROM transactions WHERE timestamp = {now}").fetchone()
+        current_time = int(time.time())
+        vals = {'id': config.transaction_id(), 'timestamp': current_time, 'profile_id': config.profile_id()}
+        self.query(f"INSERT OR REPLACE INTO transactions ('id', 'timestamp', 'profile_id') "
+                   f"VALUES (:id, :timestamp, :profile_id)", vals)
+        self.commit()
 
     def rollback_refresh(self, rollback: int):
-        vals = {'rollback': rollback}
-        t_ids = self.query("SELECT id FROM transactions ORDER BY id DESC LIMIT :rollback", vals).fetchall()
-        for transaction in t_ids:
-            i = transaction['id']
-            self.query(f"DELETE FROM releases WHERE trans_id = {i}")
-            self.query(f"DELETE FROM playlist_tracks WHERE trans_id = {i}")
-            self.query(f"DELETE FROM transactions WHERE id = {i}")
+        vals = {'rollback': rollback, 'profile_id': config.profile_id()}
+        self.query(f"DELETE FROM monitor WHERE trans_id = {rollback} AND profile_id = :profile_id", vals)
+        self.query(f"DELETE FROM releases WHERE trans_id = {rollback} AND profile_id = :profile_id", vals)
+        self.query(f"DELETE FROM playlist_tracks WHERE trans_id = {rollback} AND profile_id = :profile_id", vals)
+        self.query(f"DELETE FROM transactions WHERE id = {rollback} AND profile_id = :profile_id", vals)
         self.commit()
 
     def set_artist_refreshed(self, id):
-        vals = {'id': id}
-        return self.query("UPDATE monitor SET refreshed = 1 WHERE artist_id = :id", vals)
+        vals = {'id': id, 'profile_id': config.profile_id()}
+        return self.query("UPDATE monitor SET refreshed = 1 WHERE artist_id = :id AND profile_id = :profile_id", vals)
 
     def set_latest_version(self, version):
         vals = {'version': version}
-        return self.query("INSERT OR REPLACE INTO deemon (property, value) VALUES ('latest_ver', :version)", vals)
+        self.query("INSERT OR REPLACE INTO deemon (property, value) VALUES ('latest_ver', :version)", vals)
+        return self.commit()
 
     def get_release_channel(self):
         return self.query("SELECT value FROM deemon WHERE property = 'release_channel'").fetchone()
 
     def set_release_channel(self):
-        return self.query(f"INSERT OR REPLACE INTO deemon (property, value) "
+        self.query(f"INSERT OR REPLACE INTO deemon (property, value) "
                           f"VALUES ('release_channel', '{config.release_channel()}')")
+        return self.commit()
+
+    def get_transactions(self):
+        vals = {'profile_id': config.profile_id(), 'trans_limit': config.rollback_view_limit()}
+        transaction_list = self.query("SELECT id, timestamp FROM transactions WHERE profile_id = :profile_id "
+                                      "ORDER BY id DESC LIMIT :trans_limit", vals).fetchall()
+        results = []
+        for tid in transaction_list:
+            vals = {'tid': tid['id'], 'profile_id': config.profile_id()}
+            r = self.query("SELECT t.id, t.timestamp, r.album_id, p.track_id, r.artist_id, m.artist_name "
+                           "FROM transactions AS t "
+                           "LEFT JOIN releases AS r on r.trans_id = t.id "
+                           "LEFT JOIN playlist_tracks as p on p.trans_id "
+                           "LEFT JOIN monitor as m on m.trans_id = t.id "
+                           "WHERE t.profile_id = :profile_id AND t.id = :tid "
+                           "ORDER BY t.id DESC ", vals).fetchall()
+            results.append(r)
+        return results

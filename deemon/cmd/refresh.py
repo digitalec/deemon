@@ -32,6 +32,7 @@ class Refresh:
         self.db = Database()
 
         if self.dry_run:
+            logger.debug("--DRY-RUN enabled")
             self.skip_download = True
 
         if not dl_obj:
@@ -176,10 +177,10 @@ class Refresh:
             descr = ui.set_progress_bar_text(f"Refreshing {playlist['title']}", max_title_length)
             progress.set_description_str(descr)
 
-            playlist['bitrate'] = playlist['bitrate'] or config.bitrate()
-            playlist['alerts'] = playlist['alerts'] or config.alerts()
-            playlist['record_type'] = playlist['record_type'] or config.record_type()
-            playlist['download_path'] = playlist['download_path'] or config.download_path()
+            playlist['bitrate'] = playlist.get('bitrate') or config.bitrate()
+            playlist['alerts'] = playlist.get('alerts') or config.alerts()
+            playlist['record_type'] = playlist.get('record_type') or config.record_type()
+            playlist['download_path'] = playlist.get('download_path') or config.download_path()
 
             new_track_count = 0
             new_playlist = self.db.get_playlist_tracks(playlist['id'])
@@ -189,7 +190,7 @@ class Refresh:
                 if not self.db.get_track_from_playlist(playlist_api['id'], track['id']):
                     if not new_playlist:
                         logger.debug(f"New track {track['id']} detected on playlist {playlist_api['id']}")
-                    self.db.add_playlist_track(playlist_api, track, self.trans_id)
+                    self.db.add_playlist_track(playlist_api, track)
                     new_track_count += 1
 
             if new_track_count > 0 and not new_playlist:
@@ -255,10 +256,8 @@ class Refresh:
                         continue
                     logger.debug(f"Pre-release detected: {artist['artist_name']} - {album['title']} [{album['release_date']}]")
 
-                if not self.trans_id:
-                    self.trans_id = self.db.new_transaction()['id']
                 self.db.add_new_release(artist['artist_id'], artist['artist_name'], album['id'],
-                                        album['title'], album['release_date'], future, self.trans_id)
+                                        album['title'], album['release_date'], future)
 
                 if artist['refreshed'] == 0:
                     continue

@@ -6,7 +6,7 @@ from deemon.utils import startup, dataprocessor
 from deemon.core import notifier
 from deemon import __version__
 from packaging.version import parse as parse_version
-from deemon.cmd import monitor, download
+from deemon.cmd import monitor, download, rollback
 from deemon.core.db import Database
 from deemon.core.config import Config, LoadProfile
 from deemon.cmd.profile import ProfileConfig
@@ -49,6 +49,9 @@ def run(verbose, profile):
     db = Database()
 
     db.do_upgrade()
+    tid = db.get_next_transaction_id()
+
+    config.set('tid', tid, validate=False)
 
     if profile:
         profile_config = db.get_profile(profile)
@@ -166,6 +169,9 @@ def monitor_command(artist, im, playlist, no_refresh, bitrate, record_type, aler
         monitor --artist-id 100
         monitor --url https://www.deezer.com/us/artist/000
     """
+    if not config.transaction_id():
+        tid = db.new_transaction()
+        config.set('tid', tid, validate=False)
 
     artist_id = list(artist_id)
     url = list(url)
@@ -261,6 +267,10 @@ def monitor_command(artist, im, playlist, no_refresh, bitrate, record_type, aler
 @click.option('-t', '--time-machine', metavar='DATE', type=str, help='Refresh as if it were this date (YYYY-MM-DD)')
 def refresh_command(name, playlist, skip_download, time_machine, rollback, dry_run):
     """Check artists for new releases"""
+    if not config.transaction_id():
+        tid = db.new_transaction()
+        config.set('tid', tid, validate=False)
+
     list_of_names = []
     if name:
         name = list(name)
@@ -442,3 +452,10 @@ def config_command(artist):
     """Configure per-artist settings by name or ID"""
     artist = ' '.join([x for x in artist])
     artist_lookup(artist)
+
+@run.command(name="rollback")
+@click.argument('num', type=int, required=False)
+@click.option('-v', '--view', is_flag=True, help="View recent refresh transactions")
+def rollback_command(num, view):
+    if view:
+        rollback.view_transactions()

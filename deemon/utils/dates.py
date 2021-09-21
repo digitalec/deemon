@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta, date
 import logging
 import time
 
@@ -22,5 +22,21 @@ def get_max_release_date(days):
     max_date = datetime.utcfromtimestamp(max_date_ts).strftime('%Y-%m-%d')
     return max_date
 
+
 def get_year(release_date: str):
     return datetime.strptime(release_date, '%Y-%m-%d').year
+
+
+def get_friendly_date(d: int):
+    input_date = datetime.fromtimestamp(d).date()
+    input_time = datetime.fromtimestamp(d).time()
+    today = date.today()
+    delta = today - input_date
+    if delta.days == 0:
+        return f"{input_time.strftime('%-I:%M %p')}"
+    elif delta.days == 1:
+        return f"Yesterday, {input_time.strftime('%-I:%M %p')}"
+    elif 1 < delta.days < 7:
+        return input_date.strftime("%A, ") + input_time.strftime("%-I:%M %p")
+    else:
+        return input_date.strftime("%Y-%m-%d - ") + input_time.strftime("%-I:%M %p")
