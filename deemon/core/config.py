@@ -165,6 +165,10 @@ class Config(object):
                     else:
                         if key in ALLOWED_VALUES:
                             if isinstance(ALLOWED_VALUES[key], dict):
+                                if key == "bitrate" and value in ["1", "3", "9"]:
+                                    if value == "1": value = "128"
+                                    if value == "3": value = "320"
+                                    if value == "9": value = "FLAC"
                                 if value in ALLOWED_VALUES[key].keys():
                                     dict1_tmp = dict1
                                     pos = find_position(dict1_tmp, key)
