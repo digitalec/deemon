@@ -60,25 +60,41 @@ docker run --name deemon \
 ```
 
 
-Default `config.json`:
+### Default Configuration:
 ```json
 {
-    "plex_baseurl": "",
-    "plex_token": "",
-    "plex_library": "",
-    "download_path": "/downloads",
-    "deemix_path": "",
-    "arl": "",
-    "release_by_date": 1,
-    "release_max_days": 90,
-    "bitrate": 3,
-    "alerts": 0,
-    "record_type": "all",
-    "smtp_server": "",
-    "smtp_port": 465,
-    "smtp_user": "",
-    "smtp_pass": "",
-    "smtp_sender": "",
-    "smtp_recipient": ""
+    "check_update": 1,
+    "release_channel": "stable",
+    "query_limit": 5,
+    "rollback_view_limit": 10,
+    "prompt_duplicates": false,
+    "prompt_no_matches": true,
+    "new_releases": {
+        "by_release_date": true,
+        "release_max_age": 90
+    },
+    "global": {
+        "bitrate": "320",
+        "alerts": false,
+        "record_type": "all",
+        "download_path": "",
+        "email": ""
+    },
+    "deemix": {
+        "path": "",
+        "arl": ""
+    },
+    "smtp_settings": {
+        "server": "",
+        "port": 465,
+        "username": "",
+        "password": "",
+        "from_addr": ""
+    },
+    "plex": {
+        "base_url": "",
+        "token": "",
+        "library": ""
+    }
 }
 ```
