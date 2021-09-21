@@ -451,6 +451,8 @@ class Database(object):
 
     def get_next_transaction_id(self):
         tid = self.query(f"SELECT seq FROM sqlite_sequence WHERE name = 'transactions'").fetchone()
+        if not tid:
+            return 0
         return tid['seq'] + 1
 
     def new_transaction(self):
@@ -508,13 +510,24 @@ class Database(object):
         results = []
         for tid in transaction_list:
             vals = {'tid': tid['id'], 'profile_id': config.profile_id()}
-            r = self.query("SELECT t.id, t.timestamp, r.album_id, pt.track_id, p.title, r.artist_id, m.artist_name "
-                           "FROM transactions AS t "
-                           "LEFT JOIN releases AS r on r.trans_id = t.id "
-                           "LEFT JOIN playlist_tracks as pt on pt.trans_id "
-                           "LEFT JOIN playlists as p on p.trans_id "
-                           "LEFT JOIN monitor as m on m.trans_id = t.id "
-                           "WHERE t.profile_id = :profile_id AND t.id = :tid "
-                           "ORDER BY t.id DESC ", vals).fetchall()
-            results.append(r)
+            transaction = {}
+            transaction['id'] = tid['id']
+            transaction['timestamp'] = tid['timestamp']
+            transaction['releases'] = self.query("SELECT album_id "
+                                                 "FROM releases "
+                                                 "WHERE trans_id = :tid "
+                                                 "AND profile_id = :profile_id", vals).fetchall()
+            transaction['playlist_tracks'] = self.query("SELECT track_id "
+                                                        "FROM playlist_tracks "
+                                                        "WHERE trans_id = :tid "
+                                                        "AND profile_id = :profile_id", vals).fetchall()
+            transaction['playlists'] = self.query("SELECT title "
+                                                  "FROM playlists "
+                                                  "WHERE trans_id = :tid "
+                                                  "AND profile_id = :profile_id", vals).fetchall()
+            transaction['monitor'] = self.query("SELECT artist_name "
+                                                "FROM monitor "
+                                                "WHERE trans_id = :tid "
+                                                "AND profile_id = :profile_id", vals).fetchall()
+            results.append(transaction)
         return results
