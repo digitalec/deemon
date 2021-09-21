@@ -16,17 +16,36 @@ parent: Commands
 ---
 Using the `show` command, you can currently view information pertaining to artists and new releases.
 
-## Monitored Artists
-Show all currently monitored artists or artist ID's
+## Show Artists
+**Options**: `-a, --artists`
+
+Show all currently monitored artists
 ```bash
 $ deemon show --artists
-$ deemon show --artist-ids
+ArtistA
+ArtistB
+```
+Show using `-c, --csv`:
+```bash
+$ deemon show -ac
+ArtistA, ArtistB
 ```
 
-Optionally, you can add `-c, --csv` to output the list into CSV format which can be piped to another application or file:
+## Show Artist IDs
+**Options**: `-i, --artist-ids`
+
+Show all currently monitored artist IDs:
 ```bash
-$ deemon monitor --remove $(deemon show -ac)
+$ deemon show --artist-ids
+1234
+4567
 ```
+Show using `-c, --csv`:
+```bash
+$ deemon show -ic
+1234, 4567
+```
+
 
 ## New Releases
 Show all new releases in last N days

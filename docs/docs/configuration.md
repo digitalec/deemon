@@ -51,9 +51,17 @@ Depending on your operating system, your config.json file will be located in one
 }
 ```
 
+### Windows Users - Please Read!
+When providing a path you **MUST** escape backslashes or use forward slashes.
+
+**Good**: `C:\\Music` - or - `C:/Music`
+
+**Bad**: `C:\Music`
+
+
 ## Plex
 
-deemon can initiate a refresh of a given Plex library to ensure Plex sees new music as soon as its available. Plex does have ways of monitoring folders for changes but sometimes this doesn't always work or may be delayed.
+deemon can initiate a refresh of a given Plex library to ensure Plex sees new music as soon as it's available. Plex does have ways of monitoring folders for changes but sometimes this doesn't always work or may be delayed.
 
 To use this feature, you'll need to provide the following configuration values in your config.json:
 
