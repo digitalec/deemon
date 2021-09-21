@@ -459,3 +459,5 @@ def config_command(artist):
 def rollback_command(num, view):
     if view:
         rollback.view_transactions()
+    elif num:
+        rollback.rollback_last(num)

@@ -460,6 +460,18 @@ class Database(object):
                    f"VALUES (:id, :timestamp, :profile_id)", vals)
         self.commit()
 
+    def rollback_last_refresh(self, rollback: int):
+        vals = {'rollback': rollback, 'profile_id': config.profile_id()}
+        transactions = self.query("SELECT id FROM transactions WHERE profile_id = :profile_id "
+                                  f"ORDER BY id DESC LIMIT {rollback}", vals).fetchall()
+        for t in transactions:
+            vals = {'id': t['id'], 'profile_id': config.profile_id()}
+            self.query(f"DELETE FROM monitor WHERE trans_id = :id AND profile_id = :profile_id", vals)
+            self.query(f"DELETE FROM releases WHERE trans_id = :id AND profile_id = :profile_id", vals)
+            self.query(f"DELETE FROM playlist_tracks WHERE trans_id = :id AND profile_id = :profile_id", vals)
+            self.query(f"DELETE FROM transactions WHERE id = :id AND profile_id = :profile_id", vals)
+            self.commit()
+
     def rollback_refresh(self, rollback: int):
         vals = {'rollback': rollback, 'profile_id': config.profile_id()}
         self.query(f"DELETE FROM monitor WHERE trans_id = {rollback} AND profile_id = :profile_id", vals)

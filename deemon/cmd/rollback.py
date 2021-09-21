@@ -45,12 +45,18 @@ def view_transactions():
 
     rollback = None
     while rollback not in range(len(tr)):
+        rollback = input("\nSelect specific refresh to rollback (or Enter to exit): ")
+        if rollback == "":
+            return
         try:
-            rollback = int(input("\nSelect specific refresh to rollback: "))
-            rollback -= 1
+            rollback = int(rollback) - 1
         except ValueError:
             logger.error("Invalid input")
 
     rollback = tr[rollback][0]['id']
     logger.debug(f"Rolling back transaction {rollback}")
     db.rollback_refresh(rollback)
+
+def rollback_last(i: int):
+    db.rollback_last_refresh(i)
+    logger.info(f"Rolled back the last {i} transaction(s).")
