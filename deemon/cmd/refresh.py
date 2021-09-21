@@ -202,6 +202,8 @@ class Refresh:
             else:
                 logger.debug(f"No new tracks have been added to playlist '{playlist_api['title']}'")
 
+            self.db.set_playlist_refreshed(playlist['id'])
+
             if playlist == monitored[-1]:
                 progress.set_description_str("Refresh complete")
 

@@ -484,6 +484,10 @@ class Database(object):
         vals = {'id': id, 'profile_id': config.profile_id()}
         return self.query("UPDATE monitor SET refreshed = 1 WHERE artist_id = :id AND profile_id = :profile_id", vals)
 
+    def set_playlist_refreshed(self, id):
+        vals = {'id': id, 'profile_id': config.profile_id()}
+        return self.query("UPDATE playlists SET refreshed = 1 WHERE id = :id AND profile_id = :profile_id", vals)
+
     def set_latest_version(self, version):
         vals = {'version': version}
         self.query("INSERT OR REPLACE INTO deemon (property, value) VALUES ('latest_ver', :version)", vals)
