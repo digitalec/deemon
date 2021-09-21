@@ -91,7 +91,7 @@ class Refresh:
         if self.playlist_id or self.artist_id:
             if self.playlist_id:
                 self.refresh_playlists()
-            else:
+            if self.artist_id:
                 self.refresh_artists()
         else:
 
