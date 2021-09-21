@@ -15,29 +15,43 @@ def view_transactions():
         return logger.info("No transactions are available to be rolled back.")
 
     for i, e in enumerate(tr, start=1):
-        releases = 0
-        artist_name = []
+        release_id = []
+        artist_names = []
+        playlist_titles = []
 
         for ld in e:
 
             for k, v in ld.items():
                 if (k == "album_id" or k == "track_id") and ld[k]:
-                    releases += 1
+                    if ld[k] not in release_id:
+                        release_id.append(ld[k])
                 if k == "artist_name" and ld[k]:
-                    if ld[k] not in artist_name:
-                        artist_name.append(ld[k])
+                    if ld[k] not in artist_names:
+                        artist_names.append(ld[k])
+                if k == "title" and ld[k]:
+                    if ld[k] not in playlist_titles:
+                        playlist_titles.append(ld[k])
 
-        if releases == 1:
-            release_text = f"and {releases} release"
-        elif releases > 1:
-            release_text = f"and {releases} releases"
+        release_id_len = len(release_id)
+
+        if release_id_len == 1:
+            release_text = f"and {release_id_len} release"
+        elif release_id_len > 1:
+            release_text = f"and {release_id_len} releases"
         else:
             release_text = ""
 
-        if len(artist_name) > 1:
-            artist_text = f"Added {artist_name[0]} + {len(artist_name) -1} artist(s) {release_text}"
-        elif len(artist_name) == 1:
-            artist_text = f"Added {artist_name[0]} {release_text}"
+        if len(playlist_titles) > 1:
+            playlist_text = f"{playlist_titles[0]} + {len(playlist_titles) - 1} playlists(s)"
+        elif len(playlist_titles) == 1:
+            playlist_text = f"{playlist_titles[0]}"
+        else:
+            playlist_text = ""
+
+        if len(artist_names) > 1:
+            artist_text = f"Added {artist_names[0]} + {len(artist_names) - 1} artist(s) {release_text}"
+        elif len(artist_names) == 1:
+            artist_text = f"Added {artist_names[0]} {release_text}"
         else:
             artist_text = f"Found {release_text[4:]}"
 

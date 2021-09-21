@@ -508,10 +508,11 @@ class Database(object):
         results = []
         for tid in transaction_list:
             vals = {'tid': tid['id'], 'profile_id': config.profile_id()}
-            r = self.query("SELECT t.id, t.timestamp, r.album_id, p.track_id, r.artist_id, m.artist_name "
+            r = self.query("SELECT t.id, t.timestamp, r.album_id, pt.track_id, p.title, r.artist_id, m.artist_name "
                            "FROM transactions AS t "
                            "LEFT JOIN releases AS r on r.trans_id = t.id "
-                           "LEFT JOIN playlist_tracks as p on p.trans_id "
+                           "LEFT JOIN playlist_tracks as pt on pt.trans_id "
+                           "LEFT JOIN playlists as p on p.trans_id "
                            "LEFT JOIN monitor as m on m.trans_id = t.id "
                            "WHERE t.profile_id = :profile_id AND t.id = :tid "
                            "ORDER BY t.id DESC ", vals).fetchall()
