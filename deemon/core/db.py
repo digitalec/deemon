@@ -247,7 +247,6 @@ class Database(object):
             logger.debug(f"Database upgraded to version 3.1")
 
     def query(self, query, values=None):
-        logger.debug(query)
         if values is None:
             values = {}
         return self.conn.execute(query, values)
