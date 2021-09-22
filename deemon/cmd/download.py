@@ -176,12 +176,9 @@ class Download:
             filtered_albums = []
             for album in album_api:
                 if (album['record_type'] == config.record_type()) or config.record_type() == "all":
-                    if self.from_release_date and self.from_release_date < album['release_date']:
-                        return filtered_albums
-                    filtered_albums.append(album)
-                else:
-                    logger.debug(f"Filtered release '{album['title']} ({album['id']})' as it "
-                                 f"does not match record type '{config.record_type()}'")
+                    album_date = datetime.strptime(album['release_date'], "%Y-%m-%d")
+                    if self.from_release_date and album_date >= self.from_release_date:
+                        filtered_albums.append(album)
             return filtered_albums
 
         def get_api_result(artist=None, artist_id=None, album_id=None):
@@ -262,7 +259,7 @@ class Download:
         if from_date:
             logger.debug(f"Getting releases that were released on or after {from_date}")
             if validate.validate_date(from_date):
-                self.from_release_date = from_date
+                self.from_release_date = datetime.strptime(from_date, "%Y-%m-%d")
             else:
                 return logger.error(f"The date you entered is invalid: {from_date}")
 
