@@ -113,6 +113,20 @@ class Download:
             current = 1
             failed_downloads = []
             total = len(self.queue_list)
+
+            with open(startup.get_appdata_dir() / "queue.csv", "w") as f:
+                f.writelines(','.join([str(x) for x in vars(self.queue_list[0]).keys()]) + "\n")
+                for q in self.queue_list:
+                    raw_values = [str(x) for x in vars(q).values()]
+                    # TODO move this to shared function
+                    for i, v in enumerate(raw_values):
+                        if '"' in v:
+                            raw_values[i] = v.replace('"', "'")
+                        if ',' in v:
+                            raw_values[i] = f'"{v}"'
+                    f.writelines(','.join(raw_values) + "\n")
+            logger.debug(f"Queue exported to {startup.get_appdata_dir()}/queue.csv")
+
             for q in self.queue_list:
                 dx_bitrate = self.get_deemix_bitrate(q.bitrate)
                 logger.debug(f"deemix bitrate set to {str(dx_bitrate)} ({q.bitrate.upper()})")
