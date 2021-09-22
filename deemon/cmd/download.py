@@ -1,8 +1,9 @@
 from pathlib import Path
+import deemix.errors
 import plexapi.exceptions
 from plexapi.server import PlexServer
 from deemon.core import dmi
-from deemon.utils import dataprocessor, validate
+from deemon.utils import dataprocessor, validate, startup
 from deemon.core.config import Config as config
 from deemon import utils
 import logging
@@ -110,25 +111,34 @@ class Download:
             logger.info("Sending " + str(len(self.queue_list)) + " release(s) to deemix for download:")
 
             current = 1
+            failed_downloads = []
             total = len(self.queue_list)
             for q in self.queue_list:
                 dx_bitrate = self.get_deemix_bitrate(q.bitrate)
                 logger.debug(f"deemix bitrate set to {str(dx_bitrate)} ({q.bitrate.upper()})")
                 if self.verbose == "true":
                     logger.debug(f"Processing queue item {vars(q)}")
-                if q.artist_name:
-                    if q.album_title:
-                        logger.info(f"[{current}/{total}] {q.artist_name} - {q.album_title}... ")
-                        self.di.download_url([q.url], dx_bitrate, config.download_path())
+                try:
+                    if q.artist_name:
+                        if q.album_title:
+                            logger.info(f"[{current}/{total}] {q.artist_name} - {q.album_title}... ")
+                            self.di.download_url([q.url], dx_bitrate, config.download_path())
+                        else:
+                            logger.info(f"[{current}/{total}] {q.artist_name} - {q.track_title}... ")
+                            self.di.download_url([q.url], dx_bitrate, config.download_path())
                     else:
-                        logger.info(f"[{current}/{total}] {q.artist_name} - {q.track_title}... ")
-                        self.di.download_url([q.url], dx_bitrate, config.download_path())
-                else:
-                    logger.info(f"+ {q.playlist_title} (playlist)...")
-                    self.di.download_url([q.url], dx_bitrate, q.download_path, override_deemix=False)
+                        logger.info(f"+ {q.playlist_title} (playlist)...")
+                        self.di.download_url([q.url], dx_bitrate, q.download_path, override_deemix=False)
+                except deemix.errors.GenerationError:
+                    failed_downloads.append((q, "Album listing contains no tracks"))
                 current += 1
             print("")
-            logger.info("Downloads complete!")
+            if len(failed_downloads):
+                logger.info(f"Downloads completed with {len(failed_downloads)} error(s):")
+                for failed in failed_downloads:
+                    print(f"+ {failed[0].artist_name} - {failed[0].album_title} --- Reason: {failed[1]}")
+            else:
+                logger.info("Downloads complete!")
             if plex and (config.plex_library() != ""):
                 self.refresh_plex(plex)
 
@@ -179,7 +189,6 @@ class Download:
             return False
 
         def process_artist_by_name(name):
-            logger.debug("Processing artists by name")
             artist_result = get_api_result(artist=name)
             if not artist_result:
                 return
@@ -188,7 +197,6 @@ class Download:
                 queue_filtered_releases(artist_result)
 
         def process_artist_by_id(i):
-            logger.debug("Processing artists by ID")
             artist_id_result = get_api_result(artist_id=i)
             if not artist_id_result:
                 return
@@ -221,6 +229,8 @@ class Download:
                 except (IndexError, ValueError):
                     continue
             return False, False
+
+        logger.info("Queueing releases, this might take awhile...")
 
         if from_date:
             logger.debug(f"Getting releases that were released on or after {from_date}")
