@@ -1,6 +1,7 @@
 from pathlib import Path
 import deemix.errors
 import plexapi.exceptions
+from datetime import datetime
 from plexapi.server import PlexServer
 from deemon.core import dmi
 from deemon.utils import dataprocessor, validate, startup
@@ -144,13 +145,25 @@ class Download:
                         logger.info(f"+ {q.playlist_title} (playlist)...")
                         self.di.download_url([q.url], dx_bitrate, q.download_path, override_deemix=False)
                 except deemix.errors.GenerationError:
-                    failed_downloads.append((q, "Album listing contains no tracks"))
+                    failed_downloads.append((q, "No tracks listed or unavailable in your country"))
                 current += 1
             print("")
             if len(failed_downloads):
                 logger.info(f"Downloads completed with {len(failed_downloads)} error(s):")
-                for failed in failed_downloads:
-                    print(f"+ {failed[0].artist_name} - {failed[0].album_title} --- Reason: {failed[1]}")
+                with open(startup.get_appdata_dir() / "failed.csv", "w") as f:
+                    f.writelines(','.join([str(x) for x in vars(self.queue_list[0]).keys()]) + "\n")
+                    for failed in failed_downloads:
+                        raw_values = [str(x) for x in vars(failed[0]).values()]
+                        # TODO move this to shared function
+                        for i, v in enumerate(raw_values):
+                            if '"' in v:
+                                raw_values[i] = v.replace('"', "'")
+                            if ',' in v:
+                                raw_values[i] = f'"{v}"'
+                        f.writelines(','.join(raw_values) + "\n")
+                        print(f"+ {failed[0].artist_name} - {failed[0].album_title} --- Reason: {failed[1]}")
+                print("")
+                logger.info(f":: Failed downloads exported to: {startup.get_appdata_dir()}/failed.csv")
             else:
                 logger.info("Downloads complete!")
             if plex and (config.plex_library() != ""):
