@@ -16,20 +16,20 @@ parent: Automations
 ---
 
 ## Create a New Task
-![task-scheduler-1]({{ site.url }}/docs/img/win-setup-1.png)
+![task-scheduler-1]({{ site.url }}/assets/win-setup-1.png)
 
 Inside Task Scheduler, select the **Action** menu button and click _Create Task..._
 
 
 ## Name the Task
-![task-scheduler-2]({{ site.url }}/docs/img/win-setup-2.png)
+![task-scheduler-2]({{ site.url }}/assets/win-setup-2.png)
 
 Give the task a name so you'll know what it's for. In this case, this task will be setup to run
 `deemon refresh` so that's what I've named it.
 
 
 ## Setup the Schedule
-![task-scheduler-3]({{ site.url }}/docs/img/win-setup-3.png)
+![task-scheduler-3]({{ site.url }}/assets/win-setup-3.png)
 
 This is where Task Scheduler becomes a little cumbersome. If you want to run a task every few minutes/hours, 
 you have to select _Daily_ (1) and under _Advanced settings_ check the box to repeat the task (2). The drop down 
@@ -40,7 +40,7 @@ With these settings, our task will run every 12 hours until we disable it.
 
 
 ## Set the Application and Arguments
-![task-scheduler-4]({{ site.url }}/docs/img/win-setup-4.png)
+![task-scheduler-4]({{ site.url }}/assets/img/win-setup-4.png)
 
 Under _Program/script_ (1) we need to set the **absolute path** to deemon:
 
@@ -52,7 +52,7 @@ the equivalent of typing `deemon refresh` at a command prompt.
 
 
 ## Configure Task Settings
-![task-scheduler-5]({{ site.url }}/docs/img/win-setup-5.png)
+![task-scheduler-5]({{ site.url }}/assets/img/win-setup-5.png)
 
 Here you can configure your various preferences with how to handle various situations/conditions. The most important 
 ones are:
