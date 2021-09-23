@@ -121,7 +121,7 @@ def restore():
         if tar_files:
             backups.append(tar_files)
     if backups:
-        backups = sorted(backups, key=lambda x: x['date'], reverse=True)
+        backups = sorted(backups, key=lambda x: x['filename'], reverse=True)
         display_backup_list(backups)
     else:
         logger.info("No backups available to restore")
