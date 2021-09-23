@@ -46,7 +46,11 @@ def restore():
                     return
                 backup_time = datetime.strptime(fn_name[-1], "%H%M%S")
                 backup_date = datetime.strptime(fn_name[-2], "%Y%m%d")
-                friendly_time = datetime.strftime(backup_time, "%-I:%M:%S %p")
+                try:
+                    friendly_time = datetime.strftime(backup_time, "%-I:%M:%S %p")
+                except ValueError:
+                    # Gotta keep Windows happy...
+                    friendly_time = datetime.strftime(backup_time, "%#I:%M:%S %p")
                 friendly_date = datetime.strftime(backup_date, "%b %-d, %Y")
                 backup_info = {
                     'version': backup_appversion,
