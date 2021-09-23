@@ -16,7 +16,7 @@ parent: Automations
 ---
 
 ## Create a New Task
-![task-scheduler-1]({{ site.url }}/assets/win-setup-1.png)
+![task-scheduler-1]({{ site.url }}/docs/assets/win-setup-1.png)
 
 Inside Task Scheduler, select the **Action** menu button and click _Create Task..._
 
