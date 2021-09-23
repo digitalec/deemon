@@ -139,7 +139,7 @@ class Refresh:
                 max_release_date = dates.get_max_release_date(config.release_max_days())
                 if album['release_date'] < max_release_date:
                     logger.debug(f"Release {album['id']} outside of max_release_date, skipping...")
-                    return
+                    return is_new_release
             self.total_new_releases += 1
             is_new_release = 1
 
