@@ -90,12 +90,15 @@ def restore():
     def display_backup_list(available_backups: list):
         print("deemon Backup Manager\n")
         for index, backup in enumerate(available_backups, start=1):
-            print(f"{index}. {backup['date']} @ {backup['time']} ({backup['version']})")
+            print(f"{index}. {backup['date']} @ {backup['time']} (ver {backup['version']})")
 
         selected_backup = int
         while selected_backup not in range(len(available_backups)):
+            selected_backup = input("\nSelect a backup to restore (or press Enter to exit): ")
+            if selected_backup == "":
+                return
             try:
-                selected_backup = int(input("\nSelect a backup to restore: "))
+                selected_backup = int(selected_backup)
                 selected_backup -= 1
             except ValueError:
                 logger.warning("Invalid entry. Enter a number corresponding to the backup you wish to restore.")
