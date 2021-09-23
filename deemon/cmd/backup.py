@@ -36,7 +36,7 @@ def restore():
     restore_file_list = ['deemon/config.json', 'deemon/deemon.db']
 
     def inspect_tar(fn: Path) -> dict:
-        fn_name = str(str(fn).split("/")[-1])
+        fn_name = fn.name
         fn_name = fn_name.replace('.tar', '').split('-')
         if fn_name[0] == "backup" and len(fn_name) > 3:
             if check_tar_contents(fn):
@@ -51,7 +51,11 @@ def restore():
                 except ValueError:
                     # Gotta keep Windows happy...
                     friendly_time = datetime.strftime(backup_time, "%#I:%M:%S %p")
-                friendly_date = datetime.strftime(backup_date, "%b %-d, %Y")
+                try:
+                    friendly_date = datetime.strftime(backup_date, "%b %-d, %Y")
+                except ValueError:
+                    # Gotta keep Windows happy...
+                    friendly_date = datetime.strftime(backup_date, "%b %#d, %Y")
                 backup_info = {
                     'version': backup_appversion,
                     'date': friendly_date,
