@@ -70,7 +70,7 @@ def view_transactions():
 
     rollback = None
     while rollback not in range(len(tr)):
-        rollback = input("\nSelect specific refresh to rollback (or Enter to exit): ")
+        rollback = input("\nSelect specific refresh to rollback (or press Enter to exit): ")
         if rollback == "":
             return
         try:
