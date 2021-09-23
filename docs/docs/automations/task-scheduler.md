@@ -40,7 +40,7 @@ With these settings, our task will run every 12 hours until we disable it.
 
 
 ## Set the Application and Arguments
-![task-scheduler-4](../assets/img/win-setup-4.png)
+![task-scheduler-4](../assets/win-setup-4.png)
 
 Under _Program/script_ (1) we need to set the **absolute path** to deemon:
 
@@ -52,7 +52,7 @@ the equivalent of typing `deemon refresh` at a command prompt.
 
 
 ## Configure Task Settings
-![task-scheduler-5](../assets/img/win-setup-5.png)
+![task-scheduler-5](../assets/win-setup-5.png)
 
 Here you can configure your various preferences with how to handle various situations/conditions. The most important 
 ones are:
