@@ -143,7 +143,7 @@ class Download:
                             self.di.download_url([q.url], dx_bitrate, config.download_path())
                     else:
                         logger.info(f"+ {q.playlist_title} (playlist)...")
-                        self.di.download_url([q.url], dx_bitrate, q.download_path, override_deemix=False)
+                        self.di.download_url([q.url], dx_bitrate, q.download_path, override_deemix=True)
                 except deemix.errors.GenerationError:
                     failed_downloads.append((q, "No tracks listed or unavailable in your country"))
                 current += 1
