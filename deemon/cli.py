@@ -447,7 +447,7 @@ def search():
 
 
 @run.command(name="config")
-@click.argument('artist', nargs=-1)
+@click.argument('artist', nargs=-1, required=True)
 def config_command(artist):
     """Configure per-artist settings by name or ID"""
     artist = ' '.join([x for x in artist])
