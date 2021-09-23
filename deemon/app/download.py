@@ -99,7 +99,7 @@ class Download:
                     self.di.download_url([q.url], q.bitrate)
                 else:
                     logger.info(f"+ {q.playlist_title} (playlist)...")
-                    self.di.download_url([q.url], q.bitrate, override_deemix=False)
+                    self.di.download_url([q.url], q.bitrate, override_deemix=True)
 
             print("")
             logger.info("Downloads complete!")
