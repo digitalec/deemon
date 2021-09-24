@@ -1,7 +1,5 @@
-import csv
 import logging
 from csv import reader
-import re
 
 logger = logging.getLogger(__name__)
 
