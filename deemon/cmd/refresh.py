@@ -111,9 +111,11 @@ class Refresh:
             if not self.dl:
                 self.dl = download.Download()
                 self.dl.queue_list = self.queue_list
-                self.dl.download_queue()
+                if not self.dl.download_queue():
+                    return
             else:
-                self.dl.download_queue()
+                if not self.dl.download_queue():
+                    return
 
         if len(self.new_releases) > 0:
             notification = notifier.Notify(self.new_releases)

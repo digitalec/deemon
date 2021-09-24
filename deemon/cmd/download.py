@@ -74,9 +74,6 @@ class Download:
         self.verbose = os.environ.get("VERBOSE")
         self.duplicate_id_count = 0
 
-        if not self.di.login():
-            sys.exit(1)
-
     def get_deemix_bitrate(self, bitrate: str):
         for bitrate_id, bitrate_name in config.allowed_values('bitrate').items():
             if bitrate_name.lower() == bitrate.lower():
@@ -106,6 +103,9 @@ class Download:
             logger.debug(f"Error during Plex refresh: {e}")
 
     def download_queue(self):
+        if not self.di.login():
+            return False
+
         if self.queue_list:
             plex = self.get_plex_server()
             print("----------------------------")
@@ -169,6 +169,7 @@ class Download:
                 logger.info("Downloads complete!")
             if plex and (config.plex_library() != ""):
                 self.refresh_plex(plex)
+        return True
 
     def download(self, artist, artist_id, album_id, url, input_file, auto=True, from_date: str = None):
 
