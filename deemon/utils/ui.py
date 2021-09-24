@@ -2,7 +2,11 @@ import os
 
 
 def get_progress_bar_size() -> int:
-    screen_size = int(os.get_terminal_size().columns)
+    try:
+        screen_size = int(os.get_terminal_size().columns)
+    except OSError:
+        screen_size = 80
+
     dynamic_size = int(screen_size / 4)
     if dynamic_size > 30:
         return 30
