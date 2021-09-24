@@ -262,7 +262,6 @@ def monitor_command(artist, im, playlist, no_refresh, bitrate, record_type, aler
 @click.argument('NAME', nargs=-1, type=str, required=False)
 @click.option('-d', '--dry-run', is_flag=True, help='Simulate refresh without making any changes')
 @click.option('-p', '--playlist', is_flag=True, help="Refresh a specific playlist by name")
-@click.option('-r', '--rollback', metavar='N', type=int, help='Rollback last N refreshes')
 @click.option('-s', '--skip-download', is_flag=True, help="Skips downloading of new releases")
 @click.option('-t', '--time-machine', metavar='DATE', type=str, help='Refresh as if it were this date (YYYY-MM-DD)')
 def refresh_command(name, playlist, skip_download, time_machine, rollback, dry_run):
@@ -284,7 +283,7 @@ def refresh_command(name, playlist, skip_download, time_machine, rollback, dry_r
         name = None
 
     Refresh(artist_name=name, playlist_title=playlist, skip_download=skip_download,
-            time_machine=time_machine, rollback=rollback, dry_run=dry_run)
+            time_machine=time_machine, dry_run=dry_run)
 
 
 @click.group(name="show")

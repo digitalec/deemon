@@ -14,7 +14,7 @@ class Refresh:
 
     def __init__(self, artist_name: list = None, artist_id: list = None, playlist_title:list = None,
                  playlist_id: list = None, skip_download=False, time_machine=None, dl_obj=None,
-                 rollback: int = None, dry_run: bool = False):
+                 dry_run: bool = False):
         self.artist_id = artist_id or []
         self.artist_name = artist_name
         self.playlist_title = playlist_title
@@ -26,7 +26,6 @@ class Refresh:
         self.new_releases = []
         self.refresh_date = self.set_refresh_date()
         self.trans_id = None
-        self.rollback = rollback
         self.dry_run = dry_run
         self.dz = deezer.Deezer()
         self.db = Database()
@@ -42,10 +41,7 @@ class Refresh:
             self.dl = dl_obj
             self.queue_list = self.dl.queue_list
 
-        if self.rollback:
-            self.rollback_transaction()
-        else:
-            self.run()
+        self.run()
 
     def set_refresh_date(self):
         if self.time_machine:
@@ -59,10 +55,6 @@ class Refresh:
     def store_message(self, message):
         if message:
             self.message_queue.append(message)
-
-    def rollback_transaction(self):
-        self.db.rollback_refresh(self.rollback)
-        return logger.info(f"Rolled back the last {self.rollback} refresh(es)")
 
     def run(self):
         logger.debug("Starting refresh...")
