@@ -264,7 +264,7 @@ def monitor_command(artist, im, playlist, no_refresh, bitrate, record_type, aler
 @click.option('-p', '--playlist', is_flag=True, help="Refresh a specific playlist by name")
 @click.option('-s', '--skip-download', is_flag=True, help="Skips downloading of new releases")
 @click.option('-t', '--time-machine', metavar='DATE', type=str, help='Refresh as if it were this date (YYYY-MM-DD)')
-def refresh_command(name, playlist, skip_download, time_machine, rollback, dry_run):
+def refresh_command(name, playlist, skip_download, time_machine, dry_run):
     """Check artists for new releases"""
     if not config.transaction_id():
         tid = db.new_transaction()
