@@ -115,8 +115,9 @@ class Download:
             failed_downloads = []
             total = len(self.queue_list)
 
-            with open(startup.get_appdata_dir() / "queue.csv", "w") as f:
+            with open(startup.get_appdata_dir() / "queue.csv", "w", encoding="utf-8") as f:
                 f.writelines(','.join([str(x) for x in vars(self.queue_list[0]).keys()]) + "\n")
+                logger.debug(f"Writing queue to CSV file - {len(self.queue_list)} items in queue")
                 for q in self.queue_list:
                     raw_values = [str(x) for x in vars(q).values()]
                     # TODO move this to shared function
@@ -150,7 +151,7 @@ class Download:
             print("")
             if len(failed_downloads):
                 logger.info(f"Downloads completed with {len(failed_downloads)} error(s):")
-                with open(startup.get_appdata_dir() / "failed.csv", "w") as f:
+                with open(startup.get_appdata_dir() / "failed.csv", "w", encoding="utf-8") as f:
                     f.writelines(','.join([str(x) for x in vars(self.queue_list[0]).keys()]) + "\n")
                     for failed in failed_downloads:
                         raw_values = [str(x) for x in vars(failed[0]).values()]
