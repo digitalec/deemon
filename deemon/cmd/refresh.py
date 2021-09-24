@@ -46,6 +46,8 @@ class Refresh:
     def set_refresh_date(self):
         if self.time_machine:
             if validate.validate_date(self.time_machine):
+                logger.debug("Time machine has been activated. Disabling by_release_date if it's set...")
+                config.set('by_release_date', False)
                 return self.time_machine
             else:
                 return False
