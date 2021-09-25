@@ -249,7 +249,11 @@ class Database(object):
     def query(self, query, values=None):
         if values is None:
             values = {}
-        return self.conn.execute(query, values)
+
+        print(f"Query: {query}")
+        print(f"Values: {values}")
+
+        return self.cursor.execute(query, values)
 
     def reset_future(self, album_id):
         logger.debug("Clearing future_release flag from " + str(album_id))
@@ -530,3 +534,13 @@ class Database(object):
                                                 "AND profile_id = :profile_id", vals).fetchall()
             results.append(transaction)
         return results
+
+    def insert_multiple(self, table, values):
+        self.cursor.executemany(f"INSERT INTO {table} (artist_id, artist_name, album_id, album_name, album_release, album_added, profile_id, future_release, trans_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", values)
+
+    def remove_artists(self, values):
+        self.cursor.executemany("DELETE FROM monitor WHERE artist_name = ?", values)
+        self.cursor.executemany("DELETE FROM releases WHERE artist_name = ?", values)
+
+    def select_artists(self, values):
+        return self.query('SELECT EXISTS(SELECT 1 FROM monitor WHERE artist_name COLLATE NOCASE in ({0}))'.format(', '.join('?' for _ in values)), values).fetchall()

@@ -1,7 +1,9 @@
+import time
+
 from deemon.cmd import download
 from deemon.core.db import Database
 from deemon.core.config import Config as config
-from deemon.utils import validate, dates, ui
+from deemon.utils import validate, dates, ui, performance
 from deemon.core import notifier
 import tqdm
 import logging
@@ -58,6 +60,7 @@ class Refresh:
         if message:
             self.message_queue.append(message)
 
+    @performance.timeit
     def run(self):
         logger.debug("Starting refresh...")
         if not self.refresh_date:
@@ -222,6 +225,7 @@ class Refresh:
         progress = tqdm.tqdm(monitored, ascii=" #",
                              bar_format='{desc}  {n_fmt}/{total_fmt} [{bar}] {percentage:3.0f}%')
 
+        new_artist_releases = []
         for artist in progress:
             descr = ui.set_progress_bar_text(f"Refreshing {artist['artist_name']}", max_title_length)
             progress.set_description_str(descr)
@@ -254,6 +258,7 @@ class Refresh:
                         continue
                     logger.debug(f"Pre-release detected: {artist['artist_name']} - {album['title']} [{album['release_date']}]")
 
+                # new_artist_releases.append((artist['artist_id'], artist['artist_name'], album['id'], album['title'], album['release_date'], int(time.time()), config.profile_id(), future, config.transaction_id()))
                 self.db.add_new_release(artist['artist_id'], artist['artist_name'], album['id'],
                                         album['title'], album['release_date'], future)
 
@@ -261,6 +266,9 @@ class Refresh:
                     continue
 
                 artist_new_release_count += self.queue_new_releases(artist, album)
+
+            # if len(new_artist_releases):
+            #     self.db.insert_multiple("releases", new_artist_releases)
 
             if artist_new_release_count > 0:
                 logger.info(f"{artist['artist_name']}: {artist_new_release_count} new release(s)")

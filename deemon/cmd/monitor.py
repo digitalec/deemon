@@ -1,4 +1,4 @@
-import sys
+from deemon.utils import performance
 from sqlite3 import OperationalError
 from pathlib import Path
 from deemon.core.db import Database
@@ -9,7 +9,7 @@ import deezer
 
 logger = logging.getLogger(__name__)
 
-
+@performance.timeit
 def monitor(profile, value, artist_config: dict = None, remove=False, dl_obj=None, is_search=False):
 
     artist_config = artist_config or {}
