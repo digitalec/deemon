@@ -27,6 +27,11 @@ def get_year(release_date: str):
     return datetime.strptime(release_date, '%Y-%m-%d').year
 
 
+def str_to_datetime(d: str):
+    date_string = datetime.strptime(d, "%Y-%m-%d")
+    return datetime.strftime(date_string, "%Y-%m-%d")
+
+
 def get_friendly_date(d: int):
     input_date = datetime.fromtimestamp(d).date()
     input_time = datetime.fromtimestamp(d).time()

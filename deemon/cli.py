@@ -105,7 +105,7 @@ def test():
     notification.test()
 
 
-@run.command(name='download')
+@run.command(name='download', no_args_is_help=True)
 @click.argument('artist', nargs=-1)
 @click.option('-A', '--album-id', multiple=True, metavar='ID', type=int, help='Download by album ID')
 @click.option('-b', '--bitrate', metavar="BITRATE", help='Set custom bitrate for this operation')
@@ -147,7 +147,7 @@ def download_command(artist, artist_id, album_id, url, file, bitrate, record_typ
     dl.download(artists, artist_ids, album_ids, urls, file, from_date=from_date)
 
 
-@run.command(name='monitor', context_settings={"ignore_unknown_options": False})
+@run.command(name='monitor', context_settings={"ignore_unknown_options": False}, no_args_is_help=True)
 @click.argument('artist', nargs=-1)
 @click.option('-a', '--alerts', metavar="BOOL", type=str, help="Enable or disable alerts")
 @click.option('-b', '--bitrate', metavar="BITRATE", help="Specify bitrate")
@@ -455,7 +455,7 @@ def config_command(artist):
     artist = ' '.join([x for x in artist])
     artist_lookup(artist)
 
-@run.command(name="rollback")
+@run.command(name="rollback", no_args_is_help=True)
 @click.argument('num', type=int, required=False)
 @click.option('-v', '--view', is_flag=True, help="View recent refresh transactions")
 def rollback_command(num, view):
