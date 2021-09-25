@@ -4,7 +4,7 @@ import plexapi.exceptions
 from datetime import datetime
 from plexapi.server import PlexServer
 from deemon.core import dmi
-from deemon.utils import dataprocessor, validate, startup
+from deemon.utils import dataprocessor, validate, startup, dates
 from deemon.core.config import Config as config
 from deemon import utils
 import logging
@@ -178,8 +178,11 @@ class Download:
             filtered_albums = []
             for album in album_api:
                 if (album['record_type'] == config.record_type()) or config.record_type() == "all":
-                    album_date = datetime.strptime(album['release_date'], "%Y-%m-%d")
-                    if self.from_release_date and album_date >= self.from_release_date:
+                    album_date = dates.str_to_datetime(album['release_date'])
+                    if self.from_release_date:
+                        if album_date >= self.from_release_date:
+                            filtered_albums.append(album)
+                    else:
                         filtered_albums.append(album)
             return filtered_albums
 
@@ -261,7 +264,7 @@ class Download:
         if from_date:
             logger.debug(f"Getting releases that were released on or after {from_date}")
             if validate.validate_date(from_date):
-                self.from_release_date = datetime.strptime(from_date, "%Y-%m-%d")
+                self.from_release_date = dates.str_to_datetime(from_date)
             else:
                 return logger.error(f"The date you entered is invalid: {from_date}")
 
@@ -305,4 +308,7 @@ class Download:
             logger.info(f"Cleaned up {self.duplicate_id_count} duplicate release(s). See log for additional info.")
 
         if auto:
-            self.download_queue()
+            if len(self.queue_list):
+                self.download_queue()
+            else:
+                logger.info("No releases found matching applied filters.")
