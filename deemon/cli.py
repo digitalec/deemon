@@ -1,6 +1,8 @@
 import platform
 import logging
 import sys
+import time
+
 from deemon.core.logger import setup_logger
 from deemon.utils import startup, dataprocessor
 from deemon.core import notifier
@@ -67,17 +69,18 @@ def run(verbose, profile):
 
     last_checked: int = int(db.last_update_check())
 
-    check_interval: int = config.check_update() - 3600
+    next_check: int = last_checked + (config.check_update() * 86400)
 
     if config.release_channel() != db.get_release_channel()['value']:
         # If release_channel has changed, check for latest release
-        logger.info(f"Release channel changed to '{config.release_channel()}', checking for updates...")
+        logger.debug(f"Release channel changed to '{config.release_channel()}'")
         db.set_release_channel()
-        last_checked = 0
+        last_checked = 1
 
-    if last_checked < check_interval or last_checked == 0:
+    if time.time() >= next_check or last_checked == 0:
+        logger.debug(f"Checking for updates ({config.release_channel()})...")
         config.set('update_available', 0, False)
-        latest_ver = startup.get_latest_version(config.release_channel())
+        latest_ver = str(startup.get_latest_version(config.release_channel()))
         if latest_ver:
             db.set_latest_version(latest_ver)
         db.set_last_update_check()
