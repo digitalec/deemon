@@ -1,4 +1,4 @@
-
+from packaging.version import parse as parse_version
 from pathlib import Path
 import requests
 import logging
@@ -58,10 +58,16 @@ def get_latest_version(release_type):
     except requests.exceptions.ConnectionError:
         return
 
+    latest_stable = parse_version(response.json()['info']['version'])
+
     if release_type == "beta":
-        sorted_releases = sorted(response.json()['releases'], reverse=True)
+        all_releases = [parse_version(x) for x in response.json()['releases']]
+        sorted_releases = sorted(all_releases, reverse=True)
         for release in sorted_releases:
-            if "b" in release or "rc" in release:
-                return release
+            if "b" in str(release) or "rc" in str(release):
+                if release > latest_stable:
+                    return release
+                else:
+                    return latest_stable
     else:
-        return response.json()['info']['version']
+        return latest_stable
