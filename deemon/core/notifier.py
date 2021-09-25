@@ -11,33 +11,26 @@ from email.message import EmailMessage
 
 import pkg_resources
 
-from deemon.app import Deemon, utils
+from deemon.core.config import Config as config
 from deemon import __version__
 
 logger = logging.getLogger(__name__)
 
 
-class Notify(Deemon):
+class Notify:
 
     def __init__(self, new_releases: list = None):
-        super().__init__()
         logger.debug("notify initialized")
         logger.debug(f"releases to notify on: {new_releases}")
-        self.server = self.config["smtp_server"]
-        self.port = self.config["smtp_port"]
-        self.user = self.config["smtp_user"]
-        self.passwd = self.config["smtp_pass"]
-        self.sender = self.config["smtp_sender"]
-        self.recipient = self.config["smtp_recipient"]
-        self.update = utils.check_version()
         self.subject = "New releases detected!"
         self.releases = new_releases
 
-    def send(self, body=None, test=False):
+    def send(self, body=None, test=False, expired=False):
         """
         Send email notification message
         """
-        if not all([self.server, self.port, self.user, self.passwd, self.sender, self.recipient]):
+        if not all([config.smtp_server(), config.smtp_port(), config.smtp_user(),
+                    config.smtp_pass(), config.smtp_sender(), config.smtp_recipient()]):
             if test:
                 logger.info("Unable to send test notification, email is not configured")
             logger.debug("Email not configured, no notifications will be sent")
@@ -48,13 +41,13 @@ class Notify(Deemon):
 
         context = ssl.create_default_context()
 
-        logger.debug("Sending new release notification email")
-        logger.debug(f"Using server: {self.server}:{self.port}")
+        logger.debug("Sending notification email")
+        logger.debug(f"Using server: {config.smtp_server()}:{config.smtp_port()}")
 
-        with smtplib.SMTP_SSL(self.server, self.port, context=context) as server:
+        with smtplib.SMTP_SSL(config.smtp_server(), config.smtp_port(), context=context) as server:
             try:
-                server.login(self.user, self.passwd)
-                server.sendmail(self.sender, self.recipient, body.as_string())
+                server.login(config.smtp_user(), config.smtp_pass())
+                server.sendmail(config.smtp_sender(), config.smtp_recipient(), body.as_string())
                 logger.debug("Email notification has been sent")
             except Exception as e:
                 logger.error("Error while sending mail: " + str(e))
@@ -67,18 +60,18 @@ class Notify(Deemon):
         Builds message by combining plaintext and HTML messages for sending
         """
         msg = MIMEMultipart('mixed')
-        msg['To'] = self.recipient
-        msg['From'] = formataddr(('deemon', self.sender))
+        msg['To'] = config.smtp_recipient()
+        msg['From'] = formataddr(('deemon', config.smtp_sender()))
         msg['Subject'] = self.subject
         # part1 = MIMEText(self.plaintext(), 'plain')
-        part2 = MIMEText(self.html(), 'html')
+        part2 = MIMEText(self.html_new_releases(), 'html')
         # msg.attach(part1)
         msg.attach(part2)
 
         logo = pkg_resources.resource_filename('deemon', 'assets/images/logo.png')
-        github =  pkg_resources.resource_filename('deemon', 'assets/images/github.png')
-        reddit =  pkg_resources.resource_filename('deemon', 'assets/images/reddit.png')
-        discord =  pkg_resources.resource_filename('deemon', 'assets/images/discord.png')
+        github = pkg_resources.resource_filename('deemon', 'assets/images/github.png')
+        reddit = pkg_resources.resource_filename('deemon', 'assets/images/reddit.png')
+        discord = pkg_resources.resource_filename('deemon', 'assets/images/discord.png')
 
         with open(logo, 'rb') as f:
             image = MIMEImage(f.read())
@@ -109,8 +102,21 @@ class Notify(Deemon):
         self.subject = "deemon Test Notification"
         message = "Congrats! You'll now receive new release notifications."
         msg = EmailMessage()
-        msg['To'] = self.recipient
-        msg['From'] = formataddr(('deemon', self.sender))
+        msg['To'] = config.smtp_recipient()
+        msg['From'] = formataddr(('deemon', config.smtp_sender()))
+        msg['Subject'] = self.subject
+        msg.set_content(message)
+        self.send(msg, test=True)
+
+    def expired_arl(self):
+        """
+        Verify SMTP settings by sending test email
+        """
+        self.subject = "deemon Notification"
+        message = "Your ARL has expired"
+        msg = EmailMessage()
+        msg['To'] = config.smtp_recipient()
+        msg['From'] = formataddr(('deemon', config.smtp_sender()))
         msg['Subject'] = self.subject
         msg.set_content(message)
         self.send(msg, test=True)
@@ -128,7 +134,7 @@ class Notify(Deemon):
                 message += f"+ {album['artist']} - {album['album']}\n"
         return message
 
-    def html(self):
+    def html_new_releases(self):
 
         app_version = f"deemon {__version__}"
         py_version = f"python {platform.python_version()}"
@@ -171,11 +177,11 @@ class Notify(Deemon):
 
             all_new_releases += new_release_list_header + new_release_list_item
 
-        index =  pkg_resources.resource_filename('deemon', 'assets/index.html')
+        index = pkg_resources.resource_filename('deemon', 'assets/index.html')
         with open(index, 'r') as f:
             html_output = f.read()
 
-            if self.update:
+            if config.update_available():
                 html_output = html_output.replace("{UPDATE_MESSAGE}", "A new update is available!")
             else:
                 html_output = html_output.replace("{UPDATE_MESSAGE}", "")

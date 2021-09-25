@@ -5,41 +5,47 @@ from deezer.api import APIError
 from deezer.utils import map_user_playlist
 from deezer.gw import GWAPIError, LyricsStatus
 from deemix import generateDownloadObject
-from deemix.types.DownloadObjects import Single, Collection
+from deemix.types.DownloadObjects import Collection
 from deemix.downloader import Downloader
-from deemix.settings import load as loadSettings
-from deemon.app import Deemon
+from deemix.settings import load as LoadSettings
+from deemon.core.config import Config as config
+from deemon.core.db import Database
+from deemon.core import notifier
 import deemix.utils.localpaths as localpaths
 import logging
 
 logger = logging.getLogger(__name__)
 
 
-class DeemixInterface(Deemon):
+class DeemixInterface:
     def __init__(self):
-        super().__init__()
         logger.debug("Initializing deemix library")
-
+        self.db = Database()
         self.dz = Deezer()
 
-        if self.config["deemix_path"] == "":
+        if config.deemix_path() == "":
             self.config_dir = localpaths.getConfigFolder()
         else:
-            self.config_dir = Path(self.config["deemix_path"])
+            self.config_dir = Path(config.deemix_path())
 
-        self.dx_settings = loadSettings(self.config_dir)
+        self.dx_settings = LoadSettings(self.config_dir)
 
-        if self.config["download_path"] != "":
+        if config.download_path() != "":
             # TODO is this necessary?
-            self.download_path = Path(self.config["download_path"])
+            self.download_path = Path(config.download_path())
             self.dx_settings['downloadLocation'] = str(self.download_path)
 
+        logger.debug("deemix " + deemix.__version__)
         logger.debug(f"deemix Config Path: {self.config_dir}")
         logger.debug(f"deemix Download Path: {self.dx_settings['downloadLocation']}")
 
-    def download_url(self, url, bitrate, override_deemix=True):
+    def download_url(self, url, bitrate, download_path, override_deemix=True):
         if override_deemix:
             deemix.generatePlaylistItem = self.generatePlaylistItem
+
+        if download_path and download_path != "":
+            self.dx_settings['downloadLocation'] = download_path
+
         links = []
         for link in url:
             if ';' in link:
@@ -65,12 +71,15 @@ class DeemixInterface(Deemon):
         return True
 
     def login(self):
+        failed_logins = 0
         logger.debug("Looking for ARL...")
-        if self.config["arl"]:
+        if config.arl():
             logger.debug("ARL found in deemon config")
             print("Found ARL in deemon config, checking... ", end="")
-            if self.verify_arl(self.config["arl"]):
+            if self.verify_arl(config.arl()):
                 return True
+            else:
+                failed_logins += 1
 
         if self.config_dir.is_dir():
             if Path(self.config_dir / '.arl').is_file():
@@ -80,6 +89,8 @@ class DeemixInterface(Deemon):
                     print("Found ARL in deemix .arl file, checking... ", end="")
                     if self.verify_arl(arl_from_file):
                         return True
+                    else:
+                        failed_logins += 1
             else:
                 logger.error(f"ARL not found in {self.config_dir}")
                 return False
@@ -87,7 +98,10 @@ class DeemixInterface(Deemon):
             logger.error(f"ARL directory {self.config_dir} was not found")
             return False
 
-        # TODO send alert on expired ARL
+        if failed_logins > 1:
+            notification = notifier.Notify()
+            notification.expired_arl()
+
 
     def generatePlaylistItem(self, dz, link_id, bitrate, playlistAPI=None, playlistTracksAPI=None):
         if not playlistAPI:
@@ -118,12 +132,11 @@ class DeemixInterface(Deemon):
         totalSize = len(playlistTracksAPI)
         playlistAPI['nb_tracks'] = totalSize
         collection = []
-        dn = Deemon()
         for pos, trackAPI in enumerate(playlistTracksAPI, start=1):
             # Check if release has been seen already and skip it
             vals = {'track_id': trackAPI['SNG_ID'], 'playlist_id': playlistAPI['id']}
             sql = "SELECT * FROM 'playlist_tracks' WHERE track_id = :track_id AND playlist_id = :playlist_id"
-            result = dn.db.query(sql, vals).fetchone()
+            result = self.db.query(sql, vals).fetchone()
             if result:
                 continue
             if trackAPI.get('EXPLICIT_TRACK_CONTENT', {}).get('EXPLICIT_LYRICS_STATUS', LyricsStatus.UNKNOWN) in [
@@ -133,7 +146,8 @@ class DeemixInterface(Deemon):
             trackAPI['SIZE'] = totalSize
             collection.append(trackAPI)
 
-        if 'explicit' not in playlistAPI: playlistAPI['explicit'] = False
+        if 'explicit' not in playlistAPI:
+            playlistAPI['explicit'] = False
 
         return Collection({
             'type': 'playlist',
