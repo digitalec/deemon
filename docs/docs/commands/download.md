@@ -14,67 +14,28 @@ parent: Commands
 {:toc}
 
 ---
-deemon includes a command line interface to the deemix library allowing you to download by artist, artist ID, album ID or URL.
+deemon includes a command line interface to the deemix library allowing you to download directly by artist name, 
+artist ID, album ID or URL.
 
+## Usage
+To view help info and usage information:
 
-
-## By Artist
-Artist names can be entered one at a time or in CSV format as shown below:
 ```bash
-$ deemon download ArtistA, ArtistB, ArtistC
+$ deemon download -h
 ```
 
-## By Artist ID
-**Options**: `-i, --artist-id`
+## Example Usage
+
+### Artist Name
+In the below example, you can download all _album_ releases, released on or after January 1, 2021 from artist 'Artist'. 
 
 ```bash
-$ deemon download --artist-id 1234
+user@localhost:~$ deemon download Artist -f 2021-01-01 -t album
 ```
 
-You can download multiple artist IDs at once:
-```bash
-$ deemon download -i 1234 -i 4567
-```
-
-## By Album ID
-**Options**: `-A, --album-id`
-```bash
-$ deemon download --album-id 1234
-```
-
-You can download multiple album IDs at once:
-```bash
-$ deemon download -A 1234 -A 4567
-```
-
-## By URL
-**Options**: `-u, --url`
-
-Downloading by URL was implemented with the intention of using it for integration with automation tools like Siri Shortcuts.
+### URL
+In the below example, you can download a specific URL (artist, album, track or playlist):
 
 ```bash
-$ deemon download --url https://www.deezer.com/us/artist/1234
-```
-
-You can download multiple URLs at once:
-```bash
-$ deemon download -u https://www.deezer.com/us/artist/1234 -u https://www.deezer.com/us/artist/4567
-```
-
-## By File
-**Options**: `-f, --file`
-
-You can queue up a batch of artists from CSV or by adding one artist per line to a text file:
-
-```bash
-$ deemon download --file artists.txt
-```
-
-## Specify custom bitrate and record type
-You can override the config.json and specify one-off settings for downloads such as bitrate and record type:
-
-```bash
-## Download all album releases in FLAC format by My Band
-
-$ deemon download "My Band" --bitrate 9 --record-type album
+user@localhost:~$ deemon download -u https://...
 ```

@@ -14,9 +14,22 @@ parent: Commands
 {:toc}
 
 ---
-The `config` command allows you to view and modify various configuration parameters
+The `config` command allows you to specify a per-artist configuration that overrides _global_ and _profile_ 
+configurations for one specific artist.
 
-## Users
+If you wish to clear a particular setting for an artist, type 'none'. Providing no input leaves the setting unchanged.
+
 ```bash
-$ deemon config users [add|delete|edit|show]
+user@localhost:~$ deemon config ARTIST
+deemon Artist Configurator
+:: Configuring 'ARTIST' (Artist ID: ...)
+
+Bitrate [None]: 320
+Record Type [None]: album
+Alerts [None]: true
+Download Path [None]:
+
+:: Save these settings? [y|N] y
+
+Artist 'ARTIST' has been updated!
 ```

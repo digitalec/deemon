@@ -19,6 +19,8 @@ def monitor(profile, value, artist_config: dict = None, remove=False, dl_obj=Non
     record_type = artist_config.get('record_type')
     download_path = artist_config.get('download_path')
 
+    value = str(value)
+
     dz = deezer.Deezer()
     db = Database()
 
