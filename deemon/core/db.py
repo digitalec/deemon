@@ -249,10 +249,6 @@ class Database(object):
     def query(self, query, values=None):
         if values is None:
             values = {}
-
-        print(f"Query: {query}")
-        print(f"Values: {values}")
-
         return self.cursor.execute(query, values)
 
     def reset_future(self, album_id):
@@ -534,6 +530,14 @@ class Database(object):
                                                 "AND profile_id = :profile_id", vals).fetchall()
             results.append(transaction)
         return results
+
+    def get_all_monitored_artist_ids(self):
+        values = {"profile_id": config.profile_id()}
+        query = self.query("SELECT artist_id FROM monitor WHERE profile_id = :profile_id", values).fetchall()
+        return [v for x in query for v in x.values()]
+
+    def fast_monitor(self, values):
+        self.cursor.executemany("INSERT OR REPLACE INTO monitor (artist_id, artist_name, bitrate, record_type, alerts, profile_id, download_path, trans_id) VALUES (:id, :name, :bitrate, :record_type, :alerts, :profile_id, :download_path, :trans_id)", values)
 
     def insert_multiple(self, table, values):
         self.cursor.executemany(f"INSERT INTO {table} (artist_id, artist_name, album_id, album_name, album_release, album_added, profile_id, future_release, trans_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", values)

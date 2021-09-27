@@ -102,7 +102,7 @@ def monitor(profile, value, artist_config: dict = None, remove=False, dl_obj=Non
             except deezer.api.DataException:
                 logger.error(f"Artist ID {value} not found.")
                 return
-
+        # TODO speed this up by pulling ALL and storing in class var
         if db.get_monitored_artist_by_id(api_result['id']):
             logger.warning(f"Artist '{api_result['name']}' is already being monitored")
             return
