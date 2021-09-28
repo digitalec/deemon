@@ -1,7 +1,9 @@
 import logging
 
+import deezer.errors
 from deezer import Deezer
 from deemon.core.config import Config as config
+from deemon.utils import performance
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +19,7 @@ class PlatformAPI:
         if self.platform == "deezer-gw":
             dz = Deezer()
             if dz.login_via_arl(config.arl()):
-                self.max_threads = 100
+                self.max_threads = 50
                 logger.debug(f"Login OK, max_threads set to {self.max_threads}")
                 api_obj = dz.gw
             else:
@@ -44,18 +46,44 @@ class PlatformAPI:
         else:
             return self.api.search_artist(query=query, limit=limit)['data']
 
+    def get_artist_by_id(self, query: int, limit: int = 1) -> dict:
+        """
+        Return a dictionary from API containing {'id': int, 'name': str}
+        """
+        if self.platform == "deezer-gw":
+            try:
+                result = self.api.get_artist(query)
+            except deezer.errors.GWAPIError as e:
+                logger.debug(f"API error: {e}")
+                return {}
+            return {'id': int(result['ART_ID']), 'name': result['ART_NAME']}
+        else:
+            try:
+                self.api.get_artist(query)
+            except deezer.errors.DataException as e:
+                logger.debug(f"API error: {e}")
+                return {}
+
     def get_artist_albums(self, query: int, limit: int = -1):
         """
-        Return a list of dictionaries from API containing {'id
+        Return a list of dictionaries from API containing
         """
         if self.platform == "deezer-gw":
             result = self.api.get_artist_discography(art_id=query, limit=limit)['data']
             api_result = []
             for r in result:
                 if r['ART_ID'] == str(query):
+                    # TYPE 0 - single, TYPE 1 - album, TYPE 2 - compilation, TYPE 3 - ep
+                    if r['TYPE'] == '0':
+                        rtype = "single"
+                    elif r['TYPE'] == '3':
+                        rtype = "ep"
+                    else:
+                        rtype = "album"
                     api_result.append({'id': int(r['ALB_ID']), 'title': r['ALB_TITLE'],
-                                       'release_date': r['DIGITAL_RELEASE_DATE'], 'record_type': r['__TYPE__'],
-                                       'explicit_lyrics': r['EXPLICIT_ALBUM_CONTENT']['EXPLICIT_LYRICS_STATUS']})
+                                       'release_date': r['DIGITAL_RELEASE_DATE'], 'record_type': rtype,
+                                       'explicit_lyrics': r['EXPLICIT_ALBUM_CONTENT']['EXPLICIT_LYRICS_STATUS'],
+                                       'artist_id': int(r['ART_ID']), 'artist_name': r['ART_NAME'], 'future': 0})
             return api_result
         else:
             return self.api.get_artist_albums(query=query, limit=limit)

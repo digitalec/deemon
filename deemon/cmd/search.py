@@ -114,6 +114,8 @@ class Search:
                 if self.has_duplicate_artists(option['name'], results):
                     print(self.get_latest_release(option['id']))
                     print("       - Artist ID: " + str(option['id']))
+                    if not option.get('nb_album'):
+                        option['nb_album'] = self.dz.api.get_artist(option['id'])['nb_album']
                     print("       - Total releases: " + str(option['nb_album']))
                     self.status_message = "Duplicate artists found"
             # TODO make options smarter/modular

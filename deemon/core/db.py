@@ -1,6 +1,6 @@
 from deemon import __dbversion__
 from deemon.core.config import Config as config
-from deemon.utils import startup
+from deemon.utils import startup, performance
 from packaging.version import parse as parse_version
 from datetime import datetime
 from pathlib import Path
@@ -302,12 +302,8 @@ class Database(object):
 
     def get_artist_releases(self, artist_id):
         sql_values = {'artist_id': artist_id, 'profile_id': config.profile_id()}
-        # TODO BUG - issue #25 - Artist treated as new artist until at least one release has been seen
-        query = "SELECT * FROM 'releases' WHERE artist_id = :artist_id AND profile_id = :profile_id"
-        artist_exists = self.query(query, sql_values).fetchone()
-        if not artist_exists:
-            logger.debug(f"** New artist detected {artist_id}")
-            return True
+        query = "SELECT album_id FROM 'releases' WHERE artist_id = :artist_id AND profile_id = :profile_id"
+        return self.query(query, sql_values).fetchall()
 
     def get_playlist_tracks(self, playlist_id):
         sql_values = {'playlist_id': playlist_id, 'profile_id': config.profile_id()}
@@ -358,17 +354,11 @@ class Database(object):
             return self.query("SELECT * FROM monitor WHERE artist_name = ':artist' "
                               "AND profile_id = :profile_id COLLATE NOCASE", values).fetchone()
 
-    def add_new_release(self, artist_id, artist_name, album_id, album_name, release_date, future_release):
+    def add_new_release(self, values):
         self.new_transaction()
-        timestamp = int(time.time())
-        values = {'artist_id': artist_id, 'artist_name': artist_name, 'album_id': album_id,
-                  'album_name': album_name, 'release_date': release_date, 'future': future_release,
-                  'profile_id': config.profile_id(), 'trans_id': config.transaction_id()}
-        sql = (f"INSERT INTO releases ('artist_id', 'artist_name', 'album_id', "
-               f"'album_name', 'album_release', 'album_added', 'future_release', 'profile_id', 'trans_id') "
-               f"VALUES (:artist_id, :artist_name, :album_id, :album_name, "
-               f":release_date, {timestamp}, :future, :profile_id, :trans_id)")
-        self.query(sql, values)
+        sql = (f"INSERT INTO releases ('artist_id', 'artist_name', 'album_id', 'album_name', 'album_release', 'album_added', 'future_release', 'profile_id', 'trans_id') "
+               f"VALUES (:artist_id, :artist_name, :id, :title, :release_date, {int(time.time())}, :future, {config.profile_id()}, {config.transaction_id()})")
+        self.cursor.executemany(sql, values)
 
     def show_new_releases(self, from_date_ts, now_ts):
         today_date = datetime.utcfromtimestamp(now_ts).strftime('%Y-%m-%d')
@@ -536,15 +526,29 @@ class Database(object):
         query = self.query("SELECT artist_id FROM monitor WHERE profile_id = :profile_id", values).fetchall()
         return [v for x in query for v in x.values()]
 
+    @performance.timeit
+    def get_monitored(self):
+        values = {"profile_id": config.profile_id()}
+        query = self.query("SELECT artist_id, artist_name FROM monitor WHERE profile_id = :profile_id", values).fetchall()
+        return [v for x in query for v in x.values()]
+
+    def get_unrefreshed_artists(self):
+        values = {"profile_id": config.profile_id()}
+        return self.query("SELECT artist_id, artist_name FROM monitor WHERE profile_id = :profile_id AND refreshed = 0", values).fetchall()
+
     def fast_monitor(self, values):
         self.cursor.executemany("INSERT OR REPLACE INTO monitor (artist_id, artist_name, bitrate, record_type, alerts, profile_id, download_path, trans_id) VALUES (:id, :name, :bitrate, :record_type, :alerts, :profile_id, :download_path, :trans_id)", values)
 
     def insert_multiple(self, table, values):
         self.cursor.executemany(f"INSERT INTO {table} (artist_id, artist_name, album_id, album_name, album_release, album_added, profile_id, future_release, trans_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", values)
 
-    def remove_artists(self, values):
-        self.cursor.executemany("DELETE FROM monitor WHERE artist_name = ?", values)
-        self.cursor.executemany("DELETE FROM releases WHERE artist_name = ?", values)
+    def remove_by_name(self, values):
+        self.cursor.executemany(f"DELETE FROM monitor WHERE profile_id = {config.profile_id()} AND artist_name = ?", values)
+        self.cursor.executemany(f"DELETE FROM releases WHERE profile_id = {config.profile_id()} AND artist_name = ?", values)
 
-    def select_artists(self, values):
-        return self.query('SELECT EXISTS(SELECT 1 FROM monitor WHERE artist_name COLLATE NOCASE in ({0}))'.format(', '.join('?' for _ in values)), values).fetchall()
+    def remove_by_id(self, values):
+        self.cursor.executemany(f"DELETE FROM monitor WHERE profile_id = {config.profile_id()} AND artist_id = ?", values)
+        self.cursor.executemany(f"DELETE FROM releases WHERE profile_id = {config.profile_id()} AND artist_id = ?", values)
+
+    # def select_artists(self, values):
+    #     return self.query('SELECT EXISTS(SELECT artist_name FROM monitor WHERE artist_name COLLATE NOCASE in ({0}))'.format(', '.join('?' for _ in values)), values).fetchall()

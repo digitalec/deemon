@@ -32,7 +32,7 @@ def setup_logger(log_level='DEBUG', log_file=None):
     deemix_logger.setLevel(logging.DEBUG)
 
     urllib3_logger = logging.getLogger("urllib3")
-    urllib3_logger.setLevel(logging.INFO)
+    urllib3_logger.setLevel(logging.ERROR)
 
     spotipy_logger = logging.getLogger("spotipy")
     spotipy_logger.setLevel(logging.INFO)

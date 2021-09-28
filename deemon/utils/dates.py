@@ -32,6 +32,14 @@ def str_to_datetime(d: str):
     return datetime.strftime(date_string, "%Y-%m-%d")
 
 
+def str_to_datetime_obj(d: str):
+    try:
+        result = datetime.strptime(d, "%Y-%m-%d")
+    except ValueError:
+        result = datetime.strptime("2000-01-01", "%Y-%m-%d")
+    return result
+
+
 def get_friendly_date(d: int):
     input_date = datetime.fromtimestamp(d).date()
     input_time = datetime.fromtimestamp(d).time()
