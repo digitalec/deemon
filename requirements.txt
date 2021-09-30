@@ -1,7 +1,7 @@
 deemix>=3.5.1
-packaging~=20.9
-requests~=2.25.1
+packaging~=21.0
+requests~=2.26.0
 click~=8.0.1
-setuptools~=56.2.0
+setuptools~=58.1.0
 PlexAPI~=4.5.2
 tqdm~=4.61.0

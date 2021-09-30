@@ -28,7 +28,7 @@ def view_transactions():
                                 release_id.append(item[key])
             if k == "monitor" and ld[k]:
                 if ld[k] not in artist_names:
-                    artist_names.append(ld[k][0]['artist_name'])
+                    artist_names = [x['artist_name'] for x in ld[k]]
             if k == "playlists" and ld[k]:
                 if ld[k] not in playlist_titles:
                     playlist_titles.append(ld[k][0]['title'])
@@ -49,7 +49,7 @@ def view_transactions():
                 playlist_text = f", {len(playlist_titles)} playlist"
             else:
                 playlist_text = ""
-            output_text = f"Added {artist_names[0]} + {len(artist_names) - 1}{playlist_text}{release_text}"
+            output_text = f"Added {artist_names[0]} + {len(artist_names) - 1} artist(s){playlist_text}{release_text}"
         elif len(artist_names) == 1:
             if len(playlist_titles) > 1:
                 playlist_text = f", {len(playlist_titles)} playlists"

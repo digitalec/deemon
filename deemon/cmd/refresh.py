@@ -259,8 +259,8 @@ class Refresh:
                     logger.debug(f"Pre-release detected: {artist['artist_name']} - {album['title']} [{album['release_date']}]")
 
                 # new_artist_releases.append((artist['artist_id'], artist['artist_name'], album['id'], album['title'], album['release_date'], int(time.time()), config.profile_id(), future, config.transaction_id()))
-                self.db.add_new_release(artist['artist_id'], artist['artist_name'], album['id'],
-                                        album['title'], album['release_date'], future)
+                self.db.add_new_releases(artist['artist_id'], artist['artist_name'], album['id'],
+                                         album['title'], album['release_date'], future)
 
                 if artist['refreshed'] == 0:
                     continue

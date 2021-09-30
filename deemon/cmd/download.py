@@ -1,10 +1,13 @@
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 import deemix.errors
 import plexapi.exceptions
 from datetime import datetime
 from plexapi.server import PlexServer
+from tqdm import tqdm
+
 from deemon.core import dmi
-from deemon.utils import dataprocessor, validate, startup, dates
+from deemon.utils import dataprocessor, validate, startup, dates, performance
 from deemon.core.config import Config as config
 from deemon import utils
 import logging
@@ -43,7 +46,10 @@ class QueueItem:
                 self.artist_name = album["artist"]["name"]
             self.album_id = album["id"]
             self.album_title = album["title"]
-            self.url = album["link"]
+            try:
+                self.url = album["link"]
+            except KeyError:
+                self.url = f"https://www.deezer.com/album/{album['id']}"
 
         if track:
             self.artist_name = track["artist"]
@@ -102,7 +108,11 @@ class Download:
             logger.error("Error: Plex library not found. See logs for additional info.")
             logger.debug(f"Error during Plex refresh: {e}")
 
-    def download_queue(self):
+    @performance.timeit
+    def download_queue(self, queue_list: list = None):
+        if queue_list:
+            self.queue_list = queue_list
+
         if not self.di.login():
             return False
 
@@ -110,10 +120,6 @@ class Download:
             plex = self.get_plex_server()
             print("----------------------------")
             logger.info("Sending " + str(len(self.queue_list)) + " release(s) to deemix for download:")
-
-            current = 1
-            failed_downloads = []
-            total = len(self.queue_list)
 
             with open(startup.get_appdata_dir() / "queue.csv", "w", encoding="utf-8") as f:
                 f.writelines(','.join([str(x) for x in vars(self.queue_list[0]).keys()]) + "\n")
@@ -129,31 +135,37 @@ class Download:
                     f.writelines(','.join(raw_values) + "\n")
             logger.debug(f"Queue exported to {startup.get_appdata_dir()}/queue.csv")
 
-            for q in self.queue_list:
-                dx_bitrate = self.get_deemix_bitrate(q.bitrate)
-                logger.debug(f"deemix bitrate set to {str(dx_bitrate)} ({q.bitrate.upper()})")
-                if self.verbose == "true":
-                    logger.debug(f"Processing queue item {vars(q)}")
-                try:
-                    if q.artist_name:
-                        if q.album_title:
-                            logger.info(f"[{current}/{total}] {q.artist_name} - {q.album_title}... ")
-                            self.di.download_url([q.url], dx_bitrate, config.download_path())
+            def send_queue_to_deemix(queue) -> list:
+                    dx_bitrate = self.get_deemix_bitrate(queue.bitrate)
+                    if self.verbose == "true":
+                        logger.debug(f"Processing queue item {vars(queue)}")
+                    try:
+                        if queue.artist_name:
+                            if queue.album_title:
+                                logger.info(f"{queue.artist_name} - {queue.album_title}... ")
+                                self.di.download_url([queue.url], dx_bitrate, config.download_path())
+                            else:
+                                logger.info(f"{queue.artist_name} - {queue.track_title}... ")
+                                self.di.download_url([queue.url], dx_bitrate, config.download_path())
                         else:
-                            logger.info(f"[{current}/{total}] {q.artist_name} - {q.track_title}... ")
-                            self.di.download_url([q.url], dx_bitrate, config.download_path())
-                    else:
-                        logger.info(f"+ {q.playlist_title} (playlist)...")
-                        self.di.download_url([q.url], dx_bitrate, q.download_path, override_deemix=True)
-                except deemix.errors.GenerationError:
-                    failed_downloads.append((q, "No tracks listed or unavailable in your country"))
-                current += 1
+                            logger.info(f"{queue.playlist_title} (playlist)...")
+                            self.di.download_url([queue.url], dx_bitrate, queue.download_path, override_deemix=True)
+                    except deemix.errors.GenerationError:
+                        return [(queue, "No tracks listed or unavailable in your country")]
+
+            with ThreadPoolExecutor(max_workers=5) as ex:
+                failed_count = list(tqdm(ex.map(send_queue_to_deemix, self.queue_list),
+                                         total=len(self.queue_list), desc="Downloading        ...", ascii=" #",
+                                         bar_format='[{n_fmt}/{total_fmt}] {desc} [{bar}] {percentage:3.0f}%'))
+
+            failed_count = [x for x in failed_count if x]
+
             print("")
-            if len(failed_downloads):
-                logger.info(f"Downloads completed with {len(failed_downloads)} error(s):")
+            if len(failed_count):
+                logger.info(f"Downloads completed with {len(failed_count)} error(s):")
                 with open(startup.get_appdata_dir() / "failed.csv", "w", encoding="utf-8") as f:
                     f.writelines(','.join([str(x) for x in vars(self.queue_list[0]).keys()]) + "\n")
-                    for failed in failed_downloads:
+                    for failed in failed_count:
                         raw_values = [str(x) for x in vars(failed[0]).values()]
                         # TODO move this to shared function
                         for i, v in enumerate(raw_values):
@@ -263,8 +275,9 @@ class Download:
 
         if from_date:
             logger.debug(f"Getting releases that were released on or after {from_date}")
-            if validate.validate_date(from_date):
-                self.from_release_date = dates.str_to_datetime(from_date)
+            from_date_datetime = validate.validate_date(from_date)
+            if from_date_datetime:
+                self.from_release_date = from_date_datetime
             else:
                 return logger.error(f"The date you entered is invalid: {from_date}")
 

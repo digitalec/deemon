@@ -354,11 +354,17 @@ class Database(object):
             return self.query("SELECT * FROM monitor WHERE artist_name = ':artist' "
                               "AND profile_id = :profile_id COLLATE NOCASE", values).fetchone()
 
-    def add_new_release(self, values):
+    def set_all_refreshed(self):
+        self.query("UPDATE monitor SET refreshed = 1 WHERE refreshed = 0")
+
+    def add_new_releases(self, values):
         self.new_transaction()
-        sql = (f"INSERT INTO releases ('artist_id', 'artist_name', 'album_id', 'album_name', 'album_release', 'album_added', 'future_release', 'profile_id', 'trans_id') "
-               f"VALUES (:artist_id, :artist_name, :id, :title, :release_date, {int(time.time())}, :future, {config.profile_id()}, {config.transaction_id()})")
+        sql = (f"INSERT INTO releases ('artist_id', 'artist_name', 'album_id', 'album_name', 'album_release', "
+               f"'album_added', 'future_release', 'profile_id', 'trans_id') "
+               f"VALUES (:artist_id, :artist_name, :id, :title, :release_date, {int(time.time())}, :future, "
+               f"{config.profile_id()}, {config.transaction_id()})")
         self.cursor.executemany(sql, values)
+        self.set_all_refreshed()
 
     def show_new_releases(self, from_date_ts, now_ts):
         today_date = datetime.utcfromtimestamp(now_ts).strftime('%Y-%m-%d')
@@ -445,11 +451,13 @@ class Database(object):
         return tid['seq'] + 1
 
     def new_transaction(self):
-        current_time = int(time.time())
-        vals = {'id': config.transaction_id(), 'timestamp': current_time, 'profile_id': config.profile_id()}
-        self.query(f"INSERT OR REPLACE INTO transactions ('id', 'timestamp', 'profile_id') "
-                   f"VALUES (:id, :timestamp, :profile_id)", vals)
-        self.commit()
+        check_exists = self.query(f"SELECT * FROM transactions WHERE id = {config.transaction_id()}").fetchone()
+        if not check_exists:
+            current_time = int(time.time())
+            vals = {'timestamp': current_time, 'profile_id': config.profile_id()}
+            self.query(f"INSERT INTO transactions ('timestamp', 'profile_id') "
+                       f"VALUES (:timestamp, :profile_id)", vals)
+            self.commit()
 
     def rollback_last_refresh(self, rollback: int):
         vals = {'rollback': rollback, 'profile_id': config.profile_id()}
@@ -530,11 +538,11 @@ class Database(object):
     def get_monitored(self):
         values = {"profile_id": config.profile_id()}
         query = self.query("SELECT artist_id, artist_name FROM monitor WHERE profile_id = :profile_id", values).fetchall()
-        return [v for x in query for v in x.values()]
+        return query
 
     def get_unrefreshed_artists(self):
         values = {"profile_id": config.profile_id()}
-        return self.query("SELECT artist_id, artist_name FROM monitor WHERE profile_id = :profile_id AND refreshed = 0", values).fetchall()
+        return self.query("SELECT * FROM monitor WHERE profile_id = :profile_id AND refreshed = 0", values).fetchall()
 
     def fast_monitor(self, values):
         self.cursor.executemany("INSERT OR REPLACE INTO monitor (artist_id, artist_name, bitrate, record_type, alerts, profile_id, download_path, trans_id) VALUES (:id, :name, :bitrate, :record_type, :alerts, :profile_id, :download_path, :trans_id)", values)
@@ -545,10 +553,14 @@ class Database(object):
     def remove_by_name(self, values):
         self.cursor.executemany(f"DELETE FROM monitor WHERE profile_id = {config.profile_id()} AND artist_name = ?", values)
         self.cursor.executemany(f"DELETE FROM releases WHERE profile_id = {config.profile_id()} AND artist_name = ?", values)
+        self.commit()
 
     def remove_by_id(self, values):
         self.cursor.executemany(f"DELETE FROM monitor WHERE profile_id = {config.profile_id()} AND artist_id = ?", values)
         self.cursor.executemany(f"DELETE FROM releases WHERE profile_id = {config.profile_id()} AND artist_id = ?", values)
+        self.commit()
 
-    # def select_artists(self, values):
-    #     return self.query('SELECT EXISTS(SELECT artist_name FROM monitor WHERE artist_name COLLATE NOCASE in ({0}))'.format(', '.join('?' for _ in values)), values).fetchall()
+    @performance.timeit
+    def remove_specific_releases(self, values):
+        self.cursor.executemany(f"DELETE FROM releases WHERE artist_id = :id AND profile_id = {config.profile_id()}", values)
+        self.commit()

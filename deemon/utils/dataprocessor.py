@@ -14,18 +14,14 @@ def read_file_as_csv(file):
 
 def process_input_file(artist_list):
     logger.debug("Processing file contents")
-    int_artists = []
-    str_artists = []
-    for i in range(len(artist_list)):
-        try:
-            int_artists.append(int(artist_list[i]))
-        except ValueError:
-            str_artists.append(artist_list[i])
-    logger.debug(f"Detected {len(int_artists)} artist ID(s) and {len(str_artists)} artist name(s)")
-    return int_artists, str_artists
+    try:
+        artists = [int(x) for x in artist_list]
+    except ValueError:
+        artists = [x for x in artist_list]
+    return artists
 
 
-def artists_to_csv(all_artists) -> list:
+def csv_to_list(all_artists) -> list:
     """
     Separate artists and replace delimiter to find artists containing commas in their name
     """

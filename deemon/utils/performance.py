@@ -1,4 +1,8 @@
 import time
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 def timeit(method):
     def timed(*args, **kwargs):
@@ -6,6 +10,6 @@ def timeit(method):
         result = method(*args, **kwargs)
         te = time.time()
 
-        print(f"{method.__name__} finished in ({str((te - ts))})")
+        logger.debug(f"{method.__name__} finished in ({str((te - ts))})")
         return result
     return timed

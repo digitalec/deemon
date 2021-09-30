@@ -87,3 +87,10 @@ class PlatformAPI:
             return api_result
         else:
             return self.api.get_artist_albums(query=query, limit=limit)
+
+    def get_playlist(self, query: int, limit: int = -1):
+        if self.platform == "deezer-gw":
+            result = self.api.get_playlist(query=query)
+            print(result)
+        else:
+            return self.api.get_playlist(query=query)

@@ -4,19 +4,19 @@ import sys
 import time
 
 from deemon.core.logger import setup_logger
-from deemon.utils import startup, dataprocessor
+from deemon.utils import startup, dataprocessor, validate
 from deemon.core import notifier
 from deemon import __version__
 from packaging.version import parse as parse_version
-from deemon.cmd import monitor, download, rollback
+from deemon.cmd import download, rollback, backup
 from deemon.core.db import Database
 from deemon.core.config import Config, LoadProfile
 from deemon.cmd.profile import ProfileConfig
 from deemon.cmd.search import Search
-from deemon.cmd.refresh import Refresh
+from deemon.cmd.refresh2 import Refresh
 from deemon.cmd.show import Show
 from deemon.cmd.artistconfig import artist_lookup
-from deemon.cmd import backup
+from deemon.cmd.monitor2 import Monitor
 from pathlib import Path
 import click
 
@@ -52,7 +52,6 @@ def run(verbose, profile):
 
     db.do_upgrade()
     tid = db.get_next_transaction_id()
-
     config.set('tid', tid, validate=False)
 
     if profile:
@@ -131,7 +130,7 @@ def download_command(artist, artist_id, album_id, url, file, bitrate, record_typ
     if record_type:
         config.set('record_type', record_type)
 
-    artists = dataprocessor.artists_to_csv(artist) if artist else None
+    artists = dataprocessor.csv_to_list(artist) if artist else None
     artist_ids = [x for x in artist_id] if artist_id else None
     album_ids = [x for x in album_id] if album_id else None
     urls = [x for x in url] if url else None
@@ -149,20 +148,20 @@ def download_command(artist, artist_id, album_id, url, file, bitrate, record_typ
 
 @run.command(name='monitor', context_settings={"ignore_unknown_options": False}, no_args_is_help=True)
 @click.argument('artist', nargs=-1)
-@click.option('-a', '--alerts', metavar="BOOL", type=str, help="Enable or disable alerts")
+@click.option('-a', '--alerts', is_flag=True, help="Enable or disable alerts")
 @click.option('-b', '--bitrate', metavar="BITRATE", help="Specify bitrate")
 @click.option('-D', '--download', 'dl', is_flag=True, help='Download all releases matching record type')
 @click.option('-d', '--download-path', type=str, metavar="PATH", help='Specify custom download directory')
 @click.option('-I', '--import', 'im', metavar="PATH", help="Monitor artists/IDs from file or directory")
-@click.option('-i', '--artist-id', multiple=True, type=int, metavar="ID", help="Monitor artist by ID")
-@click.option('-n', '--no-refresh', is_flag=True, help='Skip refresh after adding or removing artist')
-@click.option('-p', '--playlist', multiple=True, metavar="URL", help='Monitor Deezer playlist by URL')
-@click.option('-u', '--url', multiple=True, metavar="URL", help='Monitor artist by URL')
+@click.option('-i', '--artist-id', is_flag=True, help="Monitor artist by ID")
+@click.option('-p', '--playlist',  is_flag=True, help='Monitor Deezer playlist by URL')
+@click.option('-u', '--url', is_flag=True, help='Monitor artist by URL')
 @click.option('-R', '--remove', is_flag=True, help='Stop monitoring an artist')
 @click.option('-s', '--search', 'search_flag', is_flag=True, help='Show similar artist results to choose from')
+@click.option('-T', '--time-machine', type=str, metavar="YYYY-MM-DD", help="Refresh newly added artists on this date")
 @click.option('-t', '--record-type', metavar="TYPE", type=str, help='Specify record types to download')
-def monitor_command(artist, im, playlist, no_refresh, bitrate, record_type, alerts, artist_id, remove,
-                    url, dl, download_path, search_flag):
+def monitor_command(artist, im, playlist, bitrate, record_type, alerts, artist_id,
+                    dl, remove, url, download_path, search_flag, time_machine):
     """
     Monitor artist for new releases by ID, URL or name.
 
@@ -172,121 +171,83 @@ def monitor_command(artist, im, playlist, no_refresh, bitrate, record_type, aler
         monitor --artist-id 100
         monitor --url https://www.deezer.com/us/artist/000
     """
-    if not config.transaction_id():
-        tid = db.new_transaction()
-        config.set('tid', tid, validate=False)
-
-    artist_id = list(artist_id)
-    url = list(url)
-    playlists = list(playlist)
-
-    new_artists = []
-    new_playlists = []
-    cfg = {}
-
-    if bitrate:
-        cfg['bitrate'] = bitrate
+    monitor = Monitor()
     if download_path:
-        cfg['download_path'] = download_path
-    if record_type:
-        cfg['record_type'] = record_type
-    if alerts:
-        cfg['alerts'] = alerts
-
-    if download_path and download_path != "":
-        if Path(download_path).exists:
-            config.set('download_path', download_path)
-            logger.debug(f"Download path has changed: {config.download_path()}")
+        if Path(download_path).exists():
+            download_path = Path(download_path)
         else:
-            return logger.error(f"Invalid download path: {download_path}")
+            return logger.error("Invalid download path provided")
 
-    if dl:
-        dl = download.Download()
-
-    # TODO moved import to subcommand, add option to skip line 1 for CSV header (--header)
-    if im:
-        if Path(im).is_file():
-            imported_file = dataprocessor.read_file_as_csv(im)
-            artist_int_list, artist_str_list = dataprocessor.process_input_file(imported_file)
-            if artist_str_list:
-                for a in artist_str_list:
-                    result = monitor.monitor("artist", a, artist_config=cfg, remove=remove, dl_obj=dl, is_search=search_flag)
-                    if type(result) == int:
-                        new_artists.append(result)
-            if artist_int_list:
-                for aid in artist_int_list:
-                    result = monitor.monitor("artist_id", aid, artist_config=cfg, remove=remove, dl_obj=dl, is_search=search_flag)
-                    if type(result) == int:
-                        new_artists.append(result)
-        elif Path(im).is_dir():
-            import_list = [x.relative_to(im) for x in sorted(Path(im).iterdir()) if x.is_dir()]
-            for a in import_list:
-                result = monitor.monitor("artist", a, artist_config=cfg, remove=remove, dl_obj=dl, is_search=search_flag)
-                if type(result) == int:
-                    new_artists.append(result)
+    if time_machine:
+        time_machine = validate.validate_date(time_machine)
+        if time_machine:
+            monitor.time_machine = time_machine
         else:
-            logger.error(f"File or directory not found: {im}")
-            return
+            return logger.error("Date for time machine is invalid")
 
-    if artist:
-        for a in dataprocessor.artists_to_csv(artist):
-            result = monitor.monitor("artist", a, artist_config=cfg, remove=remove, dl_obj=dl, is_search=search_flag)
-            if isinstance(result, int):
-                new_artists.append(result)
+    monitor.set_options(remove, dl, search_flag)
+    monitor.set_config(bitrate, alerts, record_type, download_path)
 
     if url:
-        for u in url:
+        artist_id = True
+        urls = artist.copy()
+        artist = []
+        for u in urls:
             id_from_url = u.split('/artist/')
             try:
                 aid = int(id_from_url[1])
             except (IndexError, ValueError):
                 logger.error(f"Invalid URL -- {url}")
-                sys.exit(1)
-            artist_id.append(aid)
+                return
+            artist.append(aid)
 
-    if artist_id:
-        for aid in artist_id:
-            result = monitor.monitor("artist_id", aid, artist_config=cfg, remove=remove, dl_obj=dl, is_search=search_flag)
-            if isinstance(result, int):
-                new_artists.append(result)
+    if playlist:
+        urls = artist.copy()
+        artist = []
+        for u in urls:
+            id_from_url = u.split('/playlist/')
+            try:
+                aid = int(id_from_url[1])
+            except (IndexError, ValueError):
+                logger.error(f"Invalid playlist URL -- {url}")
+                return
+            artist.append(aid)
 
-    if playlists:
-        for p in playlists:
-            result = monitor.monitor("playlist", p, artist_config=cfg, remove=remove, dl_obj=dl, is_search=search_flag)
-            if isinstance(result, int):
-                new_playlists.append(result)
-
-    if (len(new_artists) > 0 or len(new_playlists) > 0) and not no_refresh:
-        logger.debug("Requesting refresh, standby...")
-        Refresh(artist_id=new_artists, playlist_id=new_playlists, dl_obj=dl)
-
+    if im:
+        monitor.importer(im)
+    elif playlist:
+        monitor.playlists(dataprocessor.csv_to_list(artist))
+    elif artist_id:
+        monitor.artist_ids(dataprocessor.csv_to_list(artist))
+    elif artist:
+        monitor.artists(dataprocessor.csv_to_list(artist))
 
 @run.command(name='refresh')
 @click.argument('NAME', nargs=-1, type=str, required=False)
 @click.option('-d', '--dry-run', is_flag=True, help='Simulate refresh without making any changes')
 @click.option('-p', '--playlist', is_flag=True, help="Refresh a specific playlist by name")
 @click.option('-s', '--skip-download', is_flag=True, help="Skips downloading of new releases")
-@click.option('-t', '--time-machine', metavar='DATE', type=str, help='Refresh as if it were this date (YYYY-MM-DD)')
+@click.option('-T', '--time-machine', metavar='DATE', type=str, help='Refresh as if it were this date (YYYY-MM-DD)')
 def refresh_command(name, playlist, skip_download, time_machine, dry_run):
     """Check artists for new releases"""
-    if not config.transaction_id():
-        tid = db.new_transaction()
-        config.set('tid', tid, validate=False)
 
-    list_of_names = []
+    if time_machine:
+        time_machine = validate.validate_date(time_machine)
+        if not time_machine:
+            return logger.error("Date for time machine is invalid")
+
+    refresh = Refresh(time_machine)
     if name:
-        name = list(name)
+        refresh.run(dataprocessor.csv_to_list(name))
+    else:
+        refresh.run()
 
-        for n in dataprocessor.artists_to_csv(name):
-            list_of_names.append(n)
-        name = list_of_names
-
-    if name and playlist:
-        playlist = list_of_names
-        name = None
-
-    Refresh(artist_name=name, playlist_title=playlist, skip_download=skip_download,
-            time_machine=time_machine, dry_run=dry_run)
+    # if name and playlist:
+    #     playlist = list_of_names
+    #     name = None
+    #
+    # Refresh(artist_name=name, playlist_title=playlist, skip_download=skip_download,
+    #         time_machine=time_machine, dry_run=dry_run)
 
 
 @click.group(name="show")
