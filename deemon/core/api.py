@@ -81,7 +81,7 @@ class PlatformAPI:
                     else:
                         r['TYPE'] = "album"
                     api_result.append({'id': int(r['ALB_ID']), 'title': r['ALB_TITLE'],
-                                       'release_date': r['DIGITAL_RELEASE_DATE'],
+                                       'release_date': r['ORIGINAL_RELEASE_DATE'],
                                        'explicit_lyrics': r['EXPLICIT_ALBUM_CONTENT']['EXPLICIT_LYRICS_STATUS'],
                                        'record_type': r['TYPE'], 'future': 0, })
         else:
