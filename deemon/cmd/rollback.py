@@ -1,13 +1,11 @@
 import logging
 
-from deemon.core.config import Config as config
-from deemon.utils import dates
 from deemon.core.db import Database
-import operator
-import itertools
+from deemon.utils import dates
 
 logger = logging.getLogger(__name__)
 db = Database()
+
 
 def view_transactions():
     tr = db.get_transactions()
@@ -81,6 +79,7 @@ def view_transactions():
     rollback = tr[rollback][0]['id']
     logger.debug(f"Rolling back transaction {rollback}")
     db.rollback_refresh(rollback)
+
 
 def rollback_last(i: int):
     db.rollback_last_refresh(i)

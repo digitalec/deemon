@@ -1,17 +1,16 @@
-from concurrent.futures import ThreadPoolExecutor
+import logging
+import os
 from pathlib import Path
+
 import deemix.errors
+import deezer
 import plexapi.exceptions
 from plexapi.server import PlexServer
-from tqdm import tqdm
 
-from deemon.core import dmi
-from deemon.utils import dataprocessor, validate, startup, dates, performance
-from deemon.core.config import Config as config
 from deemon import utils
-import logging
-import deezer
-import os
+from deemon.core import dmi
+from deemon.core.config import Config as config
+from deemon.utils import dataprocessor, validate, startup, dates, performance
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +58,37 @@ class QueueItem:
             self.playlist_title = playlist["title"]
 
 
+def get_deemix_bitrate(bitrate: str):
+    for bitrate_id, bitrate_name in config.allowed_values('bitrate').items():
+        if bitrate_name.lower() == bitrate.lower():
+            return bitrate_id
+
+
+def get_plex_server():
+    if (config.plex_baseurl() != "") and (config.plex_token() != ""):
+        try:
+            print("Plex settings found, trying to connect (10s)... ", end="")
+            plex_server = PlexServer(config.plex_baseurl(), config.plex_token(), timeout=10)
+            print(" OK")
+            return plex_server
+        except Exception:
+            print(" FAILED")
+            logger.error("Error: Unable to reach Plex server, please refresh manually.")
+            return False
+
+
+def refresh_plex(plexobj):
+    try:
+        plexobj.library.section(config.plex_library()).update()
+        logger.debug("Plex library refreshed successfully")
+    except plexapi.exceptions.BadRequest as e:
+        logger.error("Error occurred while refreshing your library. See logs for additional info.")
+        logger.debug(f"Error during Plex refresh: {e}")
+    except plexapi.exceptions.NotFound as e:
+        logger.error("Error: Plex library not found. See logs for additional info.")
+        logger.debug(f"Error during Plex refresh: {e}")
+
+
 class Download:
 
     def __init__(self):
@@ -71,34 +101,6 @@ class Download:
         self.verbose = os.environ.get("VERBOSE")
         self.duplicate_id_count = 0
 
-    def get_deemix_bitrate(self, bitrate: str):
-        for bitrate_id, bitrate_name in config.allowed_values('bitrate').items():
-            if bitrate_name.lower() == bitrate.lower():
-                return bitrate_id
-
-    def get_plex_server(self):
-        if (config.plex_baseurl() != "") and (config.plex_token() != ""):
-            try:
-                print("Plex settings found, trying to connect (10s)... ", end="")
-                plex_server = PlexServer(config.plex_baseurl(), config.plex_token(), timeout=10)
-                print(" OK")
-                return plex_server
-            except Exception:
-                print(" FAILED")
-                logger.error("Error: Unable to reach Plex server, please refresh manually.")
-                return False
-
-    def refresh_plex(self, plexobj):
-        try:
-            plexobj.library.section(config.plex_library()).update()
-            logger.debug("Plex library refreshed successfully")
-        except plexapi.exceptions.BadRequest as e:
-            logger.error("Error occurred while refreshing your library. See logs for additional info.")
-            logger.debug(f"Error during Plex refresh: {e}")
-        except plexapi.exceptions.NotFound as e:
-            logger.error("Error: Plex library not found. See logs for additional info.")
-            logger.debug(f"Error during Plex refresh: {e}")
-
     @performance.timeit
     def download_queue(self, queue_list: list = None):
         if queue_list:
@@ -108,7 +110,7 @@ class Download:
             return False
 
         if self.queue_list:
-            plex = self.get_plex_server()
+            plex = get_plex_server()
             print("----------------------------")
             logger.info("Sending " + str(len(self.queue_list)) + " release(s) to deemix for download:")
 
@@ -127,22 +129,22 @@ class Download:
             logger.debug(f"Queue exported to {startup.get_appdata_dir()}/queue.csv")
 
             def send_queue_to_deemix(queue) -> list:
-                    dx_bitrate = self.get_deemix_bitrate(queue.bitrate)
-                    if self.verbose == "true":
-                        logger.debug(f"Processing queue item {vars(queue)}")
-                    try:
-                        if queue.artist_name:
-                            if queue.album_title:
-                                logger.info(f"{queue.artist_name} - {queue.album_title}... ")
-                                self.di.download_url([queue.url], dx_bitrate, config.download_path())
-                            else:
-                                logger.info(f"{queue.artist_name} - {queue.track_title}... ")
-                                self.di.download_url([queue.url], dx_bitrate, config.download_path())
+                dx_bitrate = get_deemix_bitrate(queue.bitrate)
+                if self.verbose == "true":
+                    logger.debug(f"Processing queue item {vars(queue)}")
+                try:
+                    if queue.artist_name:
+                        if queue.album_title:
+                            logger.info(f"{queue.artist_name} - {queue.album_title}... ")
+                            self.di.download_url([queue.url], dx_bitrate, config.download_path())
                         else:
-                            logger.info(f"{queue.playlist_title} (playlist)...")
-                            self.di.download_url([queue.url], dx_bitrate, queue.download_path, override_deemix=True)
-                    except deemix.errors.GenerationError:
-                        return [(queue, "No tracks listed or unavailable in your country")]
+                            logger.info(f"{queue.artist_name} - {queue.track_title}... ")
+                            self.di.download_url([queue.url], dx_bitrate, config.download_path())
+                    else:
+                        logger.info(f"{queue.playlist_title} (playlist)...")
+                        self.di.download_url([queue.url], dx_bitrate, queue.download_path, override_deemix=True)
+                except deemix.errors.GenerationError:
+                    return [(queue, "No tracks listed or unavailable in your country")]
 
             failed_count = []
             for q in self.queue_list:
@@ -174,7 +176,7 @@ class Download:
             else:
                 logger.info("Downloads complete!")
             if plex and (config.plex_library() != ""):
-                self.refresh_plex(plex)
+                refresh_plex(plex)
         return True
 
     def download(self, artist, artist_id, album_id, url, input_file, auto=True, from_date: str = None):

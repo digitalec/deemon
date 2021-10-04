@@ -1,30 +1,32 @@
-import platform
 import logging
+import platform
 import sys
 import time
+from pathlib import Path
 
-from deemon.core.logger import setup_logger
-from deemon.utils import startup, dataprocessor, validate
-from deemon.core import notifier
-from deemon import __version__
+import click
 from packaging.version import parse as parse_version
+
+from deemon import __version__
 from deemon.cmd import download, rollback, backup
-from deemon.core.db import Database
-from deemon.core.config import Config, LoadProfile
-from deemon.cmd.profile import ProfileConfig
-from deemon.cmd.search import Search
-from deemon.cmd.refresh import Refresh
-from deemon.cmd.show import Show
 from deemon.cmd.artistconfig import artist_lookup
 from deemon.cmd.monitor import Monitor
-from pathlib import Path
-import click
+from deemon.cmd.profile import ProfileConfig
+from deemon.cmd.refresh import Refresh
+from deemon.cmd.search import Search
+from deemon.cmd.show import Show
+from deemon.core import notifier
+from deemon.core.config import Config, LoadProfile
+from deemon.core.db import Database
+from deemon.core.logger import setup_logger
+from deemon.utils import startup, dataprocessor, validate
 
 logger = None
 config = None
 db = None
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
+
 
 @click.group(context_settings=CONTEXT_SETTINGS)
 @click.option('-P', '--profile', help="Specify profile to run deemon as")
@@ -154,7 +156,7 @@ def download_command(artist, artist_id, album_id, url, file, bitrate, record_typ
 @click.option('-d', '--download-path', type=str, metavar="PATH", help='Specify custom download directory')
 @click.option('-I', '--import', 'im', metavar="PATH", help="Monitor artists/IDs from file or directory")
 @click.option('-i', '--artist-id', is_flag=True, help="Monitor artist by ID")
-@click.option('-p', '--playlist',  is_flag=True, help='Monitor Deezer playlist by URL')
+@click.option('-p', '--playlist', is_flag=True, help='Monitor Deezer playlist by URL')
 @click.option('-u', '--url', is_flag=True, help='Monitor artist by URL')
 @click.option('-R', '--remove', is_flag=True, help='Stop monitoring an artist')
 @click.option('-s', '--search', 'search_flag', is_flag=True, help='Show similar artist results to choose from')
@@ -222,6 +224,7 @@ def monitor_command(artist, im, playlist, bitrate, record_type, alerts, artist_i
     elif artist:
         monitor.artists(dataprocessor.csv_to_list(artist))
 
+
 @run.command(name='refresh')
 @click.argument('NAME', nargs=-1, type=str, required=False)
 @click.option('-p', '--playlist', is_flag=True, help="Refresh a specific playlist by name")
@@ -271,7 +274,8 @@ def show_artists(artist, artist_id, csv, export, filter, hide_header):
         artist = ' '.join([x for x in artist])
 
     show = Show()
-    show.monitoring(artist=True, query=artist, csv=csv, save_path=export, filter=filter, hide_header=hide_header, is_id=artist_id)
+    show.monitoring(artist=True, query=artist, csv=csv, save_path=export, filter=filter, hide_header=hide_header,
+                    is_id=artist_id)
 
 
 @show_command.command(name="playlists")
@@ -298,6 +302,7 @@ def show_releases(n):
     show = Show()
     show.releases(n)
     # TODO add ability to download from this list
+
 
 run.add_command(show_command)
 
@@ -378,6 +383,7 @@ def reset_db():
         logger.info("Reset aborted. Database has NOT been modified.")
     return
 
+
 @run.command(name='profile')
 @click.argument('profile', required=False)
 @click.option('-a', '--add', is_flag=True, help="Add new profile")
@@ -416,6 +422,7 @@ def config_command(artist):
     """Configure per-artist settings by name or ID"""
     artist = ' '.join([x for x in artist])
     artist_lookup(artist)
+
 
 @run.command(name="rollback", no_args_is_help=True)
 @click.argument('num', type=int, required=False)

@@ -1,6 +1,7 @@
+import logging
+
 from deemon.core.config import Config as config
 from deemon.core.db import Database
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -79,8 +80,10 @@ class ProfileConfig:
         menu = [
             {'setting': 'email', 'type': str, 'text': 'Email address', 'allowed': []},
             {'setting': 'alerts', 'type': bool, 'text': 'Alerts', 'allowed': config.allowed_values('alerts')},
-            {'setting': 'bitrate', 'type': str, 'text': 'Bitrate', 'allowed': config.allowed_values('bitrate').values()},
-            {'setting': 'record_type', 'type': str, 'text': 'Record Type', 'allowed': config.allowed_values('record_type')},
+            {'setting': 'bitrate', 'type': str, 'text': 'Bitrate',
+             'allowed': config.allowed_values('bitrate').values()},
+            {'setting': 'record_type', 'type': str, 'text': 'Record Type',
+             'allowed': config.allowed_values('record_type')},
             {'setting': 'plex_baseurl', 'type': str, 'text': 'Plex Base URL', 'allowed': []},
             {'setting': 'plex_token', 'type': str, 'text': 'Plex Token', 'allowed': []},
             {'setting': 'plex_library', 'type': str, 'text': 'Plex Library', 'allowed': []},

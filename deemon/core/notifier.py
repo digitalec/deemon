@@ -1,18 +1,18 @@
-import smtplib
-import platform
-import ssl
 import logging
+import platform
+import smtplib
+import ssl
 from datetime import datetime
-from email.utils import formataddr
-from email.mime.multipart import MIMEMultipart
-from email.mime.image import MIMEImage
-from email.mime.text import MIMEText
 from email.message import EmailMessage
+from email.mime.image import MIMEImage
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.utils import formataddr
 
 import pkg_resources
 
-from deemon.core.config import Config as config
 from deemon import __version__
+from deemon.core.config import Config as config
 
 logger = logging.getLogger(__name__)
 

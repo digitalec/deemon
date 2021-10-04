@@ -1,9 +1,11 @@
-from deemon.core.db import Database
-from deemon.core.config import Config as config
 import logging
+
+from deemon.core.config import Config as config
+from deemon.core.db import Database
 
 logger = logging.getLogger(__name__)
 db = Database()
+
 
 def print_header(message: str = None):
     from os import system, name

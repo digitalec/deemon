@@ -1,6 +1,7 @@
+from pathlib import Path
+
 import tqdm as tqdm
 from deezer import Deezer
-from pathlib import Path
 
 
 def read_album_ids_from_file(filename):
@@ -91,10 +92,10 @@ def get_api_results(album_list, artist_name: str = None):
         # TODO make this add albums to id and break out
         if found_artist is False:
             for artist in api_artist:
-                    get_albums = dz.api.get_artist_albums(artist['id'])['data']
-                    if album_from_file in [x['title'] for x in get_albums]:
-                        api_artist = artist
-                        break
+                get_albums = dz.api.get_artist_albums(artist['id'])['data']
+                if album_from_file in [x['title'] for x in get_albums]:
+                    api_artist = artist
+                    break
             #
             # print("Searched all albums, nothing matches!")
             # exit()
@@ -121,7 +122,6 @@ def get_api_results(album_list, artist_name: str = None):
                 break
         else:
             fail_list.append(f"{x[0]} - {x[1]}")
-
 
 
 id_list = []

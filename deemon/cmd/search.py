@@ -1,11 +1,12 @@
 import sys
 
 from deezer import Deezer
-from deemon.utils import dates
-from deemon.core.config import Config as config
-from deemon.core import db
+
 from deemon.cmd import monitor, download
 from deemon.cmd.refresh import Refresh
+from deemon.core import db
+from deemon.core.config import Config as config
+from deemon.utils import dates
 
 
 class Search:

@@ -40,4 +40,4 @@ def csv_to_list(all_artists) -> list:
     for line in csv_artists:
         combined_line = ([x.lstrip() for x in line])
         result.append(','.join(combined_line))
-    return(result)
+    return (result)

@@ -1,9 +1,10 @@
-from packaging.version import parse as parse_version
-from pathlib import Path
-import requests
 import logging
-import sys
 import os
+import sys
+from pathlib import Path
+
+import requests
+from packaging.version import parse as parse_version
 
 logger = logging.getLogger(__name__)
 

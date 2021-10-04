@@ -1,21 +1,19 @@
 import logging
 import os
+import tarfile
 from datetime import datetime
 from pathlib import Path
 
+from packaging.version import parse as parse_version
 from tqdm import tqdm
 
-from deemon.utils import startup, dates
-from packaging.version import parse as parse_version
-import tarfile
 from deemon import __version__
-
+from deemon.utils import startup, dates
 
 logger = logging.getLogger(__name__)
 
 
 def run(include_logs: bool = False):
-
     def filter_func(item):
         exclusions = ['deemon/backups']
         if not include_logs:
@@ -32,7 +30,6 @@ def run(include_logs: bool = False):
 
 
 def restore():
-
     restore_file_list = ['deemon/config.json', 'deemon/deemon.db']
 
     def inspect_tar(fn: Path) -> dict:
@@ -79,7 +76,7 @@ def restore():
         extract_dir = startup.get_appdata_dir()
         tar = tarfile.open(archive['filename'])
         progress = tqdm(tar.getmembers(), ascii=" #",
-                             bar_format='{desc}  [{bar}] {percentage:3.0f}%')
+                        bar_format='{desc}  [{bar}] {percentage:3.0f}%')
         for member in progress:
             if member.isreg():
                 if member.name in restore_file_list:

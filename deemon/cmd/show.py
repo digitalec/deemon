@@ -1,11 +1,11 @@
+import logging
 import os
+import time
 from pathlib import Path
 from typing import Union
 
 from deemon.core.db import Database
 from deemon.utils.dates import generate_date_filename
-import logging
-import time
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +15,7 @@ class Show:
     def __init__(self):
         self.db = Database()
 
-    def monitoring(self, artist: bool = True, query:str = None, csv: bool = False,
+    def monitoring(self, artist: bool = True, query: str = None, csv: bool = False,
                    save_path: Union[str, Path] = None, filter: str = None, hide_header: bool = False,
                    is_id: bool = False):
 
@@ -70,11 +70,14 @@ class Show:
                     db_result[key] = "-"
 
             print("{:<10} {:<35} {:<10} {:<10} {:<10} {:<25}".format('ID', 'Artist', 'Alerts',
-                                                           'Bitrate', 'Type', 'Download Path'))
+                                                                     'Bitrate', 'Type', 'Download Path'))
 
-            print("{!s:<10} {!s:<35} {!s:<10} {!s:<10} {!s:<10} {!s:<25}".format(db_result['artist_id'], db_result['artist_name'],
-                                                                     db_result['alerts'], db_result['bitrate'],
-                                                                     db_result['record_type'], db_result['download_path']))
+            print("{!s:<10} {!s:<35} {!s:<10} {!s:<10} {!s:<10} {!s:<25}".format(db_result['artist_id'],
+                                                                                 db_result['artist_name'],
+                                                                                 db_result['alerts'],
+                                                                                 db_result['bitrate'],
+                                                                                 db_result['record_type'],
+                                                                                 db_result['download_path']))
             print("")
         elif not artist and query:
             for key, val in db_result.items():
@@ -82,12 +85,12 @@ class Show:
                     db_result[key] = "-"
 
             print("{:<15} {:<30} {:<50} {:<10} {:<10} {:<25}".format('ID', 'Title', 'URL', 'Alerts',
-                                                              'Bitrate', 'Download Path'))
+                                                                     'Bitrate', 'Download Path'))
 
             print("{!s:<15} {!s:<30} {!s:<50}  {!s:<10} {!s:<10} {!s:<25}".format(db_result['id'], db_result['title'],
-                                                                        db_result['url'], db_result['alerts'],
-                                                                        db_result['bitrate'],
-                                                                        db_result['download_path']))
+                                                                                  db_result['url'], db_result['alerts'],
+                                                                                  db_result['bitrate'],
+                                                                                  db_result['download_path']))
             print("")
         else:
             if csv or save_path:
@@ -161,7 +164,8 @@ class Show:
                     db_result.append(" ")
 
                 if max_cols >= 5:
-                    for a, b, c, d, e in zip(db_result[0::5], db_result[1::5], db_result[2::5], db_result[3::5], db_result[4::5]):
+                    for a, b, c, d, e in zip(db_result[0::5], db_result[1::5], db_result[2::5], db_result[3::5],
+                                             db_result[4::5]):
                         print('{:<30}{:<30}{:<30}{:<30}{:<30}'.format(a, b, c, d, e))
                 elif max_cols >= 4:
                     for a, b, c, d in zip(db_result[0::4], db_result[1::4], db_result[2::4], db_result[3::4]):
@@ -204,4 +208,3 @@ class Show:
                 print('+ [%-10s] %s - %s' % (release['album_release'], release['artist_name'], release['album_name']))
         else:
             logger.info(f"No releases found in the last {days} day(s)")
-

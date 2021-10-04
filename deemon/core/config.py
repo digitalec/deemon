@@ -1,10 +1,11 @@
-from copy import deepcopy
-from typing import Optional
-from deemon.utils import startup
-from deemon.core.exceptions import ValueNotAllowed, UnknownValue, PropertyTypeMismatch
-import logging
-from pathlib import Path
 import json
+import logging
+from copy import deepcopy
+from pathlib import Path
+from typing import Optional
+
+from deemon.core.exceptions import ValueNotAllowed, UnknownValue, PropertyTypeMismatch
+from deemon.utils import startup
 
 logger = logging.getLogger(__name__)
 
@@ -150,7 +151,8 @@ class Config(object):
                         user_config_copy = user_config_copy.setdefault(i, {})
 
                     if user_config_tmp != user_config_copy:
-                        logger.debug("Migrating " + ':'.join([str(x) for x in old_position]) + " -> " + ':'.join([str(x) for x in new_position]))
+                        logger.debug("Migrating " + ':'.join([str(x) for x in old_position]) + " -> " + ':'.join(
+                            [str(x) for x in new_position]))
                         user_config_copy[new_position[-1]] = user_config_tmp[old_position[-1]]
                         modified += 1
 
@@ -413,7 +415,7 @@ class Config(object):
 
 class LoadProfile(object):
     def __init__(self, profile: dict):
-        logger.debug(f"Loaded config for profile {str(profile['id'])} ({str(profile['name'] )})")
+        logger.debug(f"Loaded config for profile {str(profile['id'])} ({str(profile['name'])})")
         # Rename keys to match config
         profile["profile_id"] = profile.pop("id")
         profile["base_url"] = profile.pop("plex_baseurl")

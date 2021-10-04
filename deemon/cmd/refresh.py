@@ -1,10 +1,12 @@
 import logging
 from concurrent.futures import ThreadPoolExecutor
-from tqdm import tqdm
 from datetime import datetime
+
+from tqdm import tqdm
+
 from deemon.cmd.download import QueueItem, Download
-from deemon.core.config import Config as config
 from deemon.core import db, api
+from deemon.core.config import Config as config
 from deemon.utils import dates
 
 logger = logging.getLogger(__name__)
@@ -40,7 +42,8 @@ class Refresh:
             seen_releases = self.db.get_artist_releases(artist_id)
             if seen_releases:
                 seen_releases = [v for x in seen_releases for k, v in x.items()]
-                new_releases = [x for x in payload['releases'] if type(x) == dict for k, v in x.items() if k == "id" and v not in seen_releases]
+                new_releases = [x for x in payload['releases'] if type(x) == dict for k, v in x.items() if
+                                k == "id" and v not in seen_releases]
                 return new_releases
             return [x for x in payload['releases']]
 
@@ -49,7 +52,8 @@ class Refresh:
             seen_releases = self.db.get_playlist_tracks(playlist_id)
             if seen_releases:
                 seen_releases = [v for x in seen_releases for k, v in x.items()]
-                new_releases = [x for x in payload['tracks'] if type(x) == dict for k, v in x.items() if k == "id" and v not in seen_releases]
+                new_releases = [x for x in payload['tracks'] if type(x) == dict for k, v in x.items() if
+                                k == "id" and v not in seen_releases]
                 return new_releases
 
         return new_releases
@@ -151,8 +155,8 @@ class Refresh:
             with ThreadPoolExecutor(max_workers=self.api.max_threads) as ex:
                 api_result['playlists'] = list(
                     tqdm(ex.map(self.api.get_playlist, to_refresh['playlists']),
-                        total=len(to_refresh['playlists']), desc="Refreshing playlists ...", ascii=" #",
-                        bar_format='[{n_fmt}/{total_fmt}] {desc} [{bar}] {percentage:3.0f}%')
+                         total=len(to_refresh['playlists']), desc="Refreshing playlists ...", ascii=" #",
+                         bar_format='[{n_fmt}/{total_fmt}] {desc} [{bar}] {percentage:3.0f}%')
                 )
 
         if len(to_refresh['artists']):
@@ -176,7 +180,7 @@ class Refresh:
             is_new_release = 1
 
             self.queue_list.append(QueueItem(artist=artist, album=album, bitrate=artist['bitrate'],
-                                                      download_path=artist['download_path']))
+                                             download_path=artist['download_path']))
             logger.debug(f"Release {album['id']} added to queue")
             if artist["alerts"]:
                 self.append_new_release(album['release_date'], artist['artist_name'],

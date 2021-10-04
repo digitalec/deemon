@@ -1,18 +1,20 @@
+import logging
 from pathlib import Path
+
 import deemix
-from deezer import Deezer
-from deezer.api import APIError
-from deezer.utils import map_user_playlist
-from deezer.gw import GWAPIError, LyricsStatus
+import deemix.utils.localpaths as localpaths
 from deemix import generateDownloadObject
-from deemix.types.DownloadObjects import Collection
 from deemix.downloader import Downloader
 from deemix.settings import load as LoadSettings
+from deemix.types.DownloadObjects import Collection
+from deezer import Deezer
+from deezer.api import APIError
+from deezer.gw import GWAPIError, LyricsStatus
+from deezer.utils import map_user_playlist
+
+from deemon.core import notifier
 from deemon.core.config import Config as config
 from deemon.core.db import Database
-from deemon.core import notifier
-import deemix.utils.localpaths as localpaths
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -101,7 +103,6 @@ class DeemixInterface:
         if failed_logins > 1:
             notification = notifier.Notify()
             notification.expired_arl()
-
 
     def generatePlaylistItem(self, dz, link_id, bitrate, playlistAPI=None, playlistTracksAPI=None):
         if not playlistAPI:

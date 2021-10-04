@@ -1,5 +1,5 @@
-import time
 import logging
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -12,4 +12,5 @@ def timeit(method):
 
         logger.debug(f"{method.__name__} finished in ({str((te - ts))})")
         return result
+
     return timed

@@ -1,12 +1,14 @@
-from deemon import __dbversion__
-from deemon.core.config import Config as config
-from deemon.utils import startup, performance
-from packaging.version import parse as parse_version
-from datetime import datetime
-from pathlib import Path
 import logging
 import sqlite3
 import time
+from datetime import datetime
+from pathlib import Path
+
+from packaging.version import parse as parse_version
+
+from deemon import __dbversion__
+from deemon.core.config import Config as config
+from deemon.utils import startup, performance
 
 logger = logging.getLogger(__name__)
 
@@ -264,7 +266,8 @@ class Database(object):
 
     def get_monitored_artist_by_id(self, artist_id: int):
         values = {'id': artist_id, 'profile_id': config.profile_id()}
-        return self.query(f"SELECT * FROM monitor WHERE artist_id = :id AND profile_id = :profile_id", values).fetchone()
+        return self.query(f"SELECT * FROM monitor WHERE artist_id = :id AND profile_id = :profile_id",
+                          values).fetchone()
 
     def get_monitored_artist_by_name(self, name: str):
         values = {'name': name, 'profile_id': config.profile_id()}
@@ -505,7 +508,7 @@ class Database(object):
 
     def set_release_channel(self):
         self.query(f"INSERT OR REPLACE INTO deemon (property, value) "
-                          f"VALUES ('release_channel', '{config.release_channel()}')")
+                   f"VALUES ('release_channel', '{config.release_channel()}')")
         return self.commit()
 
     def get_transactions(self):
@@ -545,7 +548,8 @@ class Database(object):
     @performance.timeit
     def get_monitored(self):
         values = {"profile_id": config.profile_id()}
-        query = self.query("SELECT artist_id, artist_name FROM monitor WHERE profile_id = :profile_id", values).fetchall()
+        query = self.query("SELECT artist_id, artist_name FROM monitor WHERE profile_id = :profile_id",
+                           values).fetchall()
         return query
 
     def get_unrefreshed_artists(self):
@@ -557,30 +561,42 @@ class Database(object):
         return self.query("SELECT * FROM playlists WHERE profile_id = :profile_id AND refreshed = 0", values).fetchall()
 
     def fast_monitor(self, values):
-        self.cursor.executemany("INSERT OR REPLACE INTO monitor (artist_id, artist_name, bitrate, record_type, alerts, profile_id, download_path, trans_id) VALUES (:id, :name, :bitrate, :record_type, :alerts, :profile_id, :download_path, :trans_id)", values)
+        self.cursor.executemany(
+            "INSERT OR REPLACE INTO monitor (artist_id, artist_name, bitrate, record_type, alerts, profile_id, download_path, trans_id) VALUES (:id, :name, :bitrate, :record_type, :alerts, :profile_id, :download_path, :trans_id)",
+            values)
 
     def fast_monitor_playlist(self, values):
-        self.cursor.executemany("INSERT OR REPLACE INTO playlists (id, title, url, bitrate, alerts, profile_id, download_path, trans_id) VALUES (:id, :title, :link, :bitrate, :alerts, :profile_id, :download_path, :trans_id)", values)
+        self.cursor.executemany(
+            "INSERT OR REPLACE INTO playlists (id, title, url, bitrate, alerts, profile_id, download_path, trans_id) VALUES (:id, :title, :link, :bitrate, :alerts, :profile_id, :download_path, :trans_id)",
+            values)
 
     def insert_multiple(self, table, values):
-        self.cursor.executemany(f"INSERT INTO {table} (artist_id, artist_name, album_id, album_name, album_release, album_added, profile_id, future_release, trans_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", values)
+        self.cursor.executemany(
+            f"INSERT INTO {table} (artist_id, artist_name, album_id, album_name, album_release, album_added, profile_id, future_release, trans_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            values)
 
     def remove_by_name(self, values):
-        self.cursor.executemany(f"DELETE FROM monitor WHERE profile_id = {config.profile_id()} AND artist_name = ?", values)
-        self.cursor.executemany(f"DELETE FROM releases WHERE profile_id = {config.profile_id()} AND artist_name = ?", values)
+        self.cursor.executemany(f"DELETE FROM monitor WHERE profile_id = {config.profile_id()} AND artist_name = ?",
+                                values)
+        self.cursor.executemany(f"DELETE FROM releases WHERE profile_id = {config.profile_id()} AND artist_name = ?",
+                                values)
         self.commit()
 
     def remove_by_id(self, values):
-        self.cursor.executemany(f"DELETE FROM monitor WHERE profile_id = {config.profile_id()} AND artist_id = ?", values)
-        self.cursor.executemany(f"DELETE FROM releases WHERE profile_id = {config.profile_id()} AND artist_id = ?", values)
+        self.cursor.executemany(f"DELETE FROM monitor WHERE profile_id = {config.profile_id()} AND artist_id = ?",
+                                values)
+        self.cursor.executemany(f"DELETE FROM releases WHERE profile_id = {config.profile_id()} AND artist_id = ?",
+                                values)
         self.commit()
 
     # @performance.timeit
     def remove_specific_releases(self, values):
-        self.cursor.executemany(f"DELETE FROM releases WHERE artist_id = :id AND profile_id = {config.profile_id()}", values)
+        self.cursor.executemany(f"DELETE FROM releases WHERE artist_id = :id AND profile_id = {config.profile_id()}",
+                                values)
         self.commit()
 
     # @performance.timeit
     def remove_specific_playlist_tracks(self, values):
-        self.cursor.executemany(f"DELETE FROM playlist_tracks WHERE playlist_id = :id AND profile_id = {config.profile_id()}", values)
+        self.cursor.executemany(
+            f"DELETE FROM playlist_tracks WHERE playlist_id = :id AND profile_id = {config.profile_id()}", values)
         self.commit()

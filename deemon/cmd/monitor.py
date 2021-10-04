@@ -1,13 +1,15 @@
 import logging
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+
+from tqdm import tqdm
+
 from deemon.cmd import search
 from deemon.cmd.refresh import Refresh
-from deemon.utils import performance, dataprocessor
-from tqdm import tqdm
-from deemon.core.db import Database
-from concurrent.futures import ThreadPoolExecutor
-from deemon.core.config import Config as config
 from deemon.core.api import PlatformAPI
+from deemon.core.config import Config as config
+from deemon.core.db import Database
+from deemon.utils import performance, dataprocessor
 
 logger = logging.getLogger(__name__)
 
@@ -72,17 +74,18 @@ class Monitor:
                 return []
 
     def prompt_search(self, value, api_result):
-            menu = search.Search()
-            ask_user = menu.artist_menu(value, api_result, True)
-            if ask_user:
-                return {'id': ask_user['id'], 'name': ask_user['name']}
-            return logger.debug("No artist selected, skipping...")
+        menu = search.Search()
+        ask_user = menu.artist_menu(value, api_result, True)
+        if ask_user:
+            return {'id': ask_user['id'], 'name': ask_user['name']}
+        return logger.debug("No artist selected, skipping...")
 
     @performance.timeit
     def build_artist_query(self, api_result: list):
         existing = self.db.get_all_monitored_artist_ids()
         artists_to_add = []
-        pbar = tqdm(api_result, total=len(api_result), desc="Monitoring artists ...", ascii=" #", bar_format='[{n_fmt}/{total_fmt}] {desc} [{bar}] {percentage:3.0f}%')
+        pbar = tqdm(api_result, total=len(api_result), desc="Monitoring artists ...", ascii=" #",
+                    bar_format='[{n_fmt}/{total_fmt}] {desc} [{bar}] {percentage:3.0f}%')
         for i, artist in enumerate(pbar):
             if artist['id'] in existing:
                 logger.info(f"Already monitoring {artist['name']}, skipping...")
@@ -101,7 +104,8 @@ class Monitor:
     def build_playlist_query(self, api_result: list):
         existing = self.db.get_all_monitored_playlist_ids() or []
         playlists_to_add = []
-        pbar = tqdm(api_result, total=len(api_result), desc="Monitoring playlists..", ascii=" #", bar_format='[{n_fmt}/{total_fmt}] {desc} [{bar}] {percentage:3.0f}%')
+        pbar = tqdm(api_result, total=len(api_result), desc="Monitoring playlists..", ascii=" #",
+                    bar_format='[{n_fmt}/{total_fmt}] {desc} [{bar}] {percentage:3.0f}%')
         for i, playlist in enumerate(pbar):
             if playlist['id'] in existing:
                 logger.info(f"Already monitoring {playlist['title']}, skipping...")
@@ -128,7 +132,9 @@ class Monitor:
         if self.remove:
             return self.purge_artists(names=names)
         with ThreadPoolExecutor(max_workers=self.api.max_threads) as ex:
-            api_result = list(tqdm(ex.map(self.get_best_result, names), total=len(names), desc="Getting artist data...", ascii=" #", bar_format='[{n_fmt}/{total_fmt}] {desc} [{bar}] {percentage:3.0f}%'))
+            api_result = list(
+                tqdm(ex.map(self.get_best_result, names), total=len(names), desc="Getting artist data...", ascii=" #",
+                     bar_format='[{n_fmt}/{total_fmt}] {desc} [{bar}] {percentage:3.0f}%'))
         api_result = [item for elem in api_result for item in elem if len(item)]
         self.build_artist_query(api_result)
         self.call_refresh()
@@ -139,7 +145,9 @@ class Monitor:
         if self.remove:
             return self.purge_artists(ids=ids)
         with ThreadPoolExecutor(max_workers=self.api.max_threads) as ex:
-            api_result = list(tqdm(ex.map(self.api.get_artist_by_id, ids), total=len(ids), desc="Getting artist info...", ascii=" #", bar_format='[{n_fmt}/{total_fmt}] {desc} [{bar}] {percentage:3.0f}%'))
+            api_result = list(
+                tqdm(ex.map(self.api.get_artist_by_id, ids), total=len(ids), desc="Getting artist info...", ascii=" #",
+                     bar_format='[{n_fmt}/{total_fmt}] {desc} [{bar}] {percentage:3.0f}%'))
         self.build_artist_query(api_result)
         self.call_refresh()
 
@@ -166,7 +174,9 @@ class Monitor:
             return self.purge_playlists(ids=playlists)
         ids = [int(x) for x in playlists]
         with ThreadPoolExecutor(max_workers=self.api.max_threads) as ex:
-            api_result = list(tqdm(ex.map(self.api.get_playlist, ids), total=len(ids), desc="Getting playlist info...", ascii=" #", bar_format='[{n_fmt}/{total_fmt}] {desc} [{bar}] {percentage:3.0f}%'))
+            api_result = list(
+                tqdm(ex.map(self.api.get_playlist, ids), total=len(ids), desc="Getting playlist info...", ascii=" #",
+                     bar_format='[{n_fmt}/{total_fmt}] {desc} [{bar}] {percentage:3.0f}%'))
         self.build_playlist_query(api_result)
         self.call_refresh()
 

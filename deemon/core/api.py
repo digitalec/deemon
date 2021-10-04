@@ -2,6 +2,7 @@ import logging
 
 import deezer.errors
 from deezer import Deezer
+
 from deemon.core.config import Config as config
 
 logger = logging.getLogger(__name__)
@@ -73,13 +74,16 @@ class PlatformAPI:
             for r in result:
                 if r['ART_ID'] == str(query['artist_id']):
                     # TYPE 0 - single, TYPE 1 - album, TYPE 2 - compilation, TYPE 3 - ep
-                    if r['TYPE'] == '0': r['TYPE'] = "single"
-                    elif r['TYPE'] == '3': r['TYPE'] = "ep"
-                    else: r['TYPE'] = "album"
+                    if r['TYPE'] == '0':
+                        r['TYPE'] = "single"
+                    elif r['TYPE'] == '3':
+                        r['TYPE'] = "ep"
+                    else:
+                        r['TYPE'] = "album"
                     api_result.append({'id': int(r['ALB_ID']), 'title': r['ALB_TITLE'],
-                                  'release_date': r['DIGITAL_RELEASE_DATE'],
-                                  'explicit_lyrics': r['EXPLICIT_ALBUM_CONTENT']['EXPLICIT_LYRICS_STATUS'],
-                                  'record_type': r['TYPE'], 'future': 0,})
+                                       'release_date': r['DIGITAL_RELEASE_DATE'],
+                                       'explicit_lyrics': r['EXPLICIT_ALBUM_CONTENT']['EXPLICIT_LYRICS_STATUS'],
+                                       'record_type': r['TYPE'], 'future': 0, })
         else:
             api_result = self.api.get_artist_albums(query=query, limit=limit)
 
