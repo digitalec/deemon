@@ -5,7 +5,7 @@ from datetime import datetime
 from tqdm import tqdm
 
 from deemon.cmd.download import QueueItem, Download
-from deemon.core import db, api
+from deemon.core import db, api, notifier
 from deemon.core.config import Config as config
 from deemon.utils import dates
 
@@ -18,6 +18,7 @@ class Refresh:
         self.release_date = datetime.now()
         self.api = api.PlatformAPI("deezer-gw")
         self.new_releases = []
+        self.new_releases_alert = []
         self.new_playlist_releases = []
         self.time_machine = False
         self.total_new_releases = 0
@@ -65,7 +66,7 @@ class Refresh:
                     album_release = dates.str_to_datetime_obj(release['release_date'])
                     if album_release > datetime.now():
                         release['future'] = 1
-                        logger.info(f":: FUTURE RELEASE DETECTED :: {release['artist_name']} - {release['title']} "
+                        logger.debug(f":: FUTURE RELEASE DETECTED :: {payload['artist_name']} - {release['title']} "
                                     f"({release['release_date']})")
                     else:
                         new_release = release.copy()
@@ -81,6 +82,9 @@ class Refresh:
                             self.queue_list.append(QueueItem(artist=payload, album=release,
                                                              bitrate=payload['bitrate'],
                                                              download_path=payload['download_path']))
+                            if payload["alerts"] == 1 or not payload['alerts'] and config.alerts():
+                                self.append_new_release(release['release_date'], payload['artist_name'],
+                                                        release['title'])
         if payload.get('tracks'):
             if len(payload['tracks']):
                 for track in payload['tracks']:
@@ -136,6 +140,10 @@ class Refresh:
         self.db.add_new_releases(self.new_releases)
         self.db.commit()
 
+        if len(self.new_releases_alert) > 0:
+            notification = notifier.Notify(self.new_releases_alert)
+            notification.send()
+
     # @performance.timeit
     def get_release_data(self, to_refresh: dict) -> dict:
         """
@@ -168,34 +176,12 @@ class Refresh:
                 )
         return api_result
 
-    def queue_new_releases(self, artist, album):
-        is_new_release = 0
-        if (artist['record_type'] == album['record_type']) or artist['record_type'] == "all":
-            if config.release_by_date():
-                max_release_date = dates.get_max_release_date(config.release_max_days())
-                if album['release_date'] < max_release_date:
-                    logger.debug(f"Release {album['id']} outside of max_release_date, skipping...")
-                    return is_new_release
-            self.total_new_releases += 1
-            is_new_release = 1
-
-            self.queue_list.append(QueueItem(artist=artist, album=album, bitrate=artist['bitrate'],
-                                             download_path=artist['download_path']))
-            logger.debug(f"Release {album['id']} added to queue")
-            if artist["alerts"]:
-                self.append_new_release(album['release_date'], artist['artist_name'],
-                                        album['title'], album['cover_medium'])
-        else:
-            logger.debug(f"Release {album['id']} does not meet album_type "
-                         f"requirement of '{config.record_type()}'")
-        return is_new_release
-
-    def append_new_release(self, release_date, artist, album, cover):
-        for days in self.new_releases:
+    def append_new_release(self, release_date, artist, album):
+        for days in self.new_releases_alert:
             for key in days:
                 if key == "release_date":
                     if release_date in days[key]:
-                        days["releases"].append({'artist': artist, 'album': album, 'cover': cover})
+                        days["releases"].append({'artist': artist, 'album': album})
                         return
 
-        self.new_releases.append({'release_date': release_date, 'releases': [{'artist': artist, 'album': album}]})
+        self.new_releases_alert.append({'release_date': release_date, 'releases': [{'artist': artist, 'album': album}]})

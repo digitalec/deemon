@@ -68,31 +68,6 @@ class Notify:
         # msg.attach(part1)
         msg.attach(part2)
 
-        logo = pkg_resources.resource_filename('deemon', 'assets/images/logo.png')
-        github = pkg_resources.resource_filename('deemon', 'assets/images/github.png')
-        reddit = pkg_resources.resource_filename('deemon', 'assets/images/reddit.png')
-        discord = pkg_resources.resource_filename('deemon', 'assets/images/discord.png')
-
-        with open(logo, 'rb') as f:
-            image = MIMEImage(f.read())
-            image.add_header('Content-ID', 'logo')
-            msg.attach(image)
-
-        with open(github, 'rb') as f:
-            image = MIMEImage(f.read())
-            image.add_header('Content-ID', 'github')
-            msg.attach(image)
-
-        with open(reddit, 'rb') as f:
-            image = MIMEImage(f.read())
-            image.add_header('Content-ID', 'reddit')
-            msg.attach(image)
-
-        with open(discord, 'rb') as f:
-            image = MIMEImage(f.read())
-            image.add_header('Content-ID', 'discord')
-            msg.attach(image)
-
         return msg
 
     def test(self):
@@ -146,6 +121,8 @@ class Notify:
         """
 
         all_new_releases = ""
+
+        self.releases = sorted(self.releases, key=lambda x: x['release_date'], reverse=True)
 
         for release in self.releases:
 

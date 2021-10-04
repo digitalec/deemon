@@ -10,7 +10,7 @@ from plexapi.server import PlexServer
 from deemon import utils
 from deemon.core import dmi
 from deemon.core.config import Config as config
-from deemon.utils import dataprocessor, validate, startup, dates, performance
+from deemon.utils import dataprocessor, validate, startup, dates
 
 logger = logging.getLogger(__name__)
 
@@ -101,7 +101,7 @@ class Download:
         self.verbose = os.environ.get("VERBOSE")
         self.duplicate_id_count = 0
 
-    @performance.timeit
+    # @performance.timeit
     def download_queue(self, queue_list: list = None):
         if queue_list:
             self.queue_list = queue_list
