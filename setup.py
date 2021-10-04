@@ -1,7 +1,6 @@
 from pathlib import Path
 from setuptools import setup, find_packages
 from deemon import __version__
-import os
 
 with open('requirements.txt') as f:
     required = f.read().splitlines()

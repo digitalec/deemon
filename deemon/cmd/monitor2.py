@@ -79,7 +79,7 @@ class Monitor:
             return logger.debug("No artist selected, skipping...")
 
     @performance.timeit
-    def build_query(self, api_result: list):
+    def build_artist_query(self, api_result: list):
         existing = self.db.get_all_monitored_artist_ids()
         artists_to_add = []
         pbar = tqdm(api_result, total=len(api_result), desc="Monitoring artists ...", ascii=" #", bar_format='[{n_fmt}/{total_fmt}] {desc} [{bar}] {percentage:3.0f}%')
@@ -98,6 +98,24 @@ class Monitor:
                 self.db.commit()
                 pbar.set_description_str("Monitoring complete!  ")
 
+    def build_playlist_query(self, api_result: list):
+        existing = self.db.get_all_monitored_playlist_ids() or []
+        playlists_to_add = []
+        pbar = tqdm(api_result, total=len(api_result), desc="Monitoring playlists..", ascii=" #", bar_format='[{n_fmt}/{total_fmt}] {desc} [{bar}] {percentage:3.0f}%')
+        for i, playlist in enumerate(pbar):
+            if playlist['id'] in existing:
+                logger.info(f"Already monitoring {playlist['title']}, skipping...")
+            else:
+                playlist.update({'bitrate': self.bitrate, 'alerts': self.alerts, 'download_path': self.download_path,
+                                 'profile_id': config.profile_id(), 'trans_id': config.transaction_id()})
+                playlists_to_add.append(playlist)
+            if playlist == api_result[-1]:
+                pbar.set_description_str("Updating database  ...")
+                self.db.new_transaction()
+                self.db.fast_monitor_playlist(playlists_to_add)
+                self.db.commit()
+                pbar.set_description_str("Monitoring complete!  ")
+
     def call_refresh(self):
         refresh = Refresh(self.time_machine)
         refresh.run()
@@ -112,7 +130,7 @@ class Monitor:
         with ThreadPoolExecutor(max_workers=self.api.max_threads) as ex:
             api_result = list(tqdm(ex.map(self.get_best_result, names), total=len(names), desc="Getting artist data...", ascii=" #", bar_format='[{n_fmt}/{total_fmt}] {desc} [{bar}] {percentage:3.0f}%'))
         api_result = [item for elem in api_result for item in elem if len(item)]
-        self.build_query(api_result)
+        self.build_artist_query(api_result)
         self.call_refresh()
 
     # @performance.timeit
@@ -122,7 +140,7 @@ class Monitor:
             return self.purge_artists(ids=ids)
         with ThreadPoolExecutor(max_workers=self.api.max_threads) as ex:
             api_result = list(tqdm(ex.map(self.api.get_artist_by_id, ids), total=len(ids), desc="Getting artist info...", ascii=" #", bar_format='[{n_fmt}/{total_fmt}] {desc} [{bar}] {percentage:3.0f}%'))
-        self.build_query(api_result)
+        self.build_artist_query(api_result)
         self.call_refresh()
 
     # @performance.timeit
@@ -142,14 +160,14 @@ class Monitor:
             logger.error(f"File or directory not found: {import_path}")
             return
 
+    # @performance.timeit
     def playlists(self, playlists: list):
+        if self.remove:
+            return self.purge_playlists(ids=playlists)
         ids = [int(x) for x in playlists]
-        for id in ids:
-            self.api.get_playlist(id)
-        exit()
         with ThreadPoolExecutor(max_workers=self.api.max_threads) as ex:
-            api_result = list(tqdm(ex.map(self.api.get_playlist, ids), total=len(ids), desc="Getting artist info...", ascii=" #", bar_format='[{n_fmt}/{total_fmt}] {desc} [{bar}] {percentage:3.0f}%'))
-        self.build_query(api_result)
+            api_result = list(tqdm(ex.map(self.api.get_playlist, ids), total=len(ids), desc="Getting playlist info...", ascii=" #", bar_format='[{n_fmt}/{total_fmt}] {desc} [{bar}] {percentage:3.0f}%'))
+        self.build_playlist_query(api_result)
         self.call_refresh()
 
     # @performance.timeit
@@ -172,4 +190,11 @@ class Monitor:
                     logger.info(f"{i} is not being monitored yet")
 
     def purge_playlists(self, titles: list = None, ids: list = None):
-        pass
+        if ids:
+            for i in ids:
+                monitored = self.db.get_monitored_playlist_by_id(i)
+                if monitored:
+                    self.db.remove_monitored_playlists(monitored['id'])
+                    logger.info(f"No longer monitoring {monitored['title']}")
+                else:
+                    logger.info(f"{i} is not being monitored yet")

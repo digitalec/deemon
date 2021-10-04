@@ -271,6 +271,10 @@ class Database(object):
         return self.query(f"SELECT * FROM monitor WHERE artist_name = :name COLLATE NOCASE "
                           f"AND profile_id = :profile_id", values).fetchone()
 
+    def get_all_monitored_playlist_ids(self):
+        vals = {'profile_id': config.profile_id()}
+        return self.query("SELECT id FROM playlists WHERE profile_id = :profile_id", vals).fetchone()
+
     def get_all_monitored_playlists(self):
         vals = {'profile_id': config.profile_id()}
         return self.query("SELECT * FROM playlists WHERE profile_id = :profile_id "
@@ -307,12 +311,8 @@ class Database(object):
 
     def get_playlist_tracks(self, playlist_id):
         sql_values = {'playlist_id': playlist_id, 'profile_id': config.profile_id()}
-        # TODO BUG - issue #25 - Artist/playlist treated as new until at least one release has been seen
         query = "SELECT * FROM 'playlist_tracks' WHERE playlist_id = :playlist_id AND profile_id = :profile_id"
-        playlist_exists = self.query(query, sql_values).fetchone()
-        if not playlist_exists:
-            logger.debug(f"** New playlist detected {playlist_id}")
-            return True
+        return self.query(query, sql_values).fetchall()
 
     def get_track_from_playlist(self, playlist_id, track_id):
         values = {'pid': playlist_id, 'tid': track_id, 'profile_id': config.profile_id()}
@@ -361,7 +361,7 @@ class Database(object):
         self.new_transaction()
         sql = (f"INSERT INTO releases ('artist_id', 'artist_name', 'album_id', 'album_name', 'album_release', "
                f"'album_added', 'future_release', 'profile_id', 'trans_id') "
-               f"VALUES (:artist_id, :artist_name, :id, :title, :release_date, {int(time.time())}, :future, "
+               f"VALUES (:id, :name, :id, :title, :release_date, {int(time.time())}, :future, "
                f"{config.profile_id()}, {config.transaction_id()})")
         self.cursor.executemany(sql, values)
         self.set_all_refreshed()
@@ -544,8 +544,15 @@ class Database(object):
         values = {"profile_id": config.profile_id()}
         return self.query("SELECT * FROM monitor WHERE profile_id = :profile_id AND refreshed = 0", values).fetchall()
 
+    def get_unrefreshed_playlists(self):
+        values = {"profile_id": config.profile_id()}
+        return self.query("SELECT * FROM playlists WHERE profile_id = :profile_id AND refreshed = 0", values).fetchall()
+
     def fast_monitor(self, values):
         self.cursor.executemany("INSERT OR REPLACE INTO monitor (artist_id, artist_name, bitrate, record_type, alerts, profile_id, download_path, trans_id) VALUES (:id, :name, :bitrate, :record_type, :alerts, :profile_id, :download_path, :trans_id)", values)
+
+    def fast_monitor_playlist(self, values):
+        self.cursor.executemany("INSERT OR REPLACE INTO playlists (id, title, url, bitrate, alerts, profile_id, download_path, trans_id) VALUES (:id, :title, :link, :bitrate, :alerts, :profile_id, :download_path, :trans_id)", values)
 
     def insert_multiple(self, table, values):
         self.cursor.executemany(f"INSERT INTO {table} (artist_id, artist_name, album_id, album_name, album_release, album_added, profile_id, future_release, trans_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", values)
@@ -560,7 +567,12 @@ class Database(object):
         self.cursor.executemany(f"DELETE FROM releases WHERE profile_id = {config.profile_id()} AND artist_id = ?", values)
         self.commit()
 
-    @performance.timeit
+    # @performance.timeit
     def remove_specific_releases(self, values):
         self.cursor.executemany(f"DELETE FROM releases WHERE artist_id = :id AND profile_id = {config.profile_id()}", values)
+        self.commit()
+
+    # @performance.timeit
+    def remove_specific_playlist_tracks(self, values):
+        self.cursor.executemany(f"DELETE FROM playlist_tracks WHERE playlist_id = :id AND profile_id = {config.profile_id()}", values)
         self.commit()

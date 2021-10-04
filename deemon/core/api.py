@@ -3,7 +3,6 @@ import logging
 import deezer.errors
 from deezer import Deezer
 from deemon.core.config import Config as config
-from deemon.utils import performance
 
 logger = logging.getLogger(__name__)
 
@@ -64,33 +63,40 @@ class PlatformAPI:
                 logger.debug(f"API error: {e}")
                 return {}
 
-    def get_artist_albums(self, query: int, limit: int = -1):
+    def get_artist_albums(self, query: dict, limit: int = -1):
         """
         Return a list of dictionaries from API containing
         """
         if self.platform == "deezer-gw":
-            result = self.api.get_artist_discography(art_id=query, limit=limit)['data']
+            result = self.api.get_artist_discography(art_id=query['artist_id'], limit=limit)['data']
             api_result = []
             for r in result:
-                if r['ART_ID'] == str(query):
+                if r['ART_ID'] == str(query['artist_id']):
                     # TYPE 0 - single, TYPE 1 - album, TYPE 2 - compilation, TYPE 3 - ep
-                    if r['TYPE'] == '0':
-                        rtype = "single"
-                    elif r['TYPE'] == '3':
-                        rtype = "ep"
-                    else:
-                        rtype = "album"
+                    if r['TYPE'] == '0': r['TYPE'] = "single"
+                    elif r['TYPE'] == '3': r['TYPE'] = "ep"
+                    else: r['TYPE'] = "album"
                     api_result.append({'id': int(r['ALB_ID']), 'title': r['ALB_TITLE'],
-                                       'release_date': r['DIGITAL_RELEASE_DATE'], 'record_type': rtype,
-                                       'explicit_lyrics': r['EXPLICIT_ALBUM_CONTENT']['EXPLICIT_LYRICS_STATUS'],
-                                       'artist_id': int(r['ART_ID']), 'artist_name': r['ART_NAME'], 'future': 0})
-            return api_result
+                                  'release_date': r['DIGITAL_RELEASE_DATE'],
+                                  'explicit_lyrics': r['EXPLICIT_ALBUM_CONTENT']['EXPLICIT_LYRICS_STATUS'],
+                                  'record_type': r['TYPE'], 'future': 0,})
         else:
-            return self.api.get_artist_albums(query=query, limit=limit)
+            api_result = self.api.get_artist_albums(query=query, limit=limit)
 
-    def get_playlist(self, query: int, limit: int = -1):
-        if self.platform == "deezer-gw":
-            result = self.api.get_playlist(query=query)
-            print(result)
-        else:
-            return self.api.get_playlist(query=query)
+        query['releases'] = api_result
+        return query
+
+    def get_playlist(self, query: dict):
+        # if self.platform == "deezer-gw":
+        #     # deezer-py BUG: Receiving a 'method unknown' for 'playlist_getData'
+        #     result = self.api.get_playlist(query)
+        #     print(result)
+        # else:
+        #     return self.api.get_playlist(query)
+        track_list = []
+        api_result = Deezer().api.get_playlist(query['id'])
+        for track in api_result['tracks']['data']:
+            track_list.append({'id': track['id'], 'title': track['title'], 'artist_id': track['artist']['id'],
+                               'artist_name': track['artist']['name']})
+        query['tracks'] = track_list
+        return query

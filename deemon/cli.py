@@ -190,7 +190,7 @@ def monitor_command(artist, im, playlist, bitrate, record_type, alerts, artist_i
 
     if url:
         artist_id = True
-        urls = artist.copy()
+        urls = [x for x in artist]
         artist = []
         for u in urls:
             id_from_url = u.split('/artist/')
@@ -202,7 +202,7 @@ def monitor_command(artist, im, playlist, bitrate, record_type, alerts, artist_i
             artist.append(aid)
 
     if playlist:
-        urls = artist.copy()
+        urls = [x for x in artist]
         artist = []
         for u in urls:
             id_from_url = u.split('/playlist/')
@@ -216,7 +216,7 @@ def monitor_command(artist, im, playlist, bitrate, record_type, alerts, artist_i
     if im:
         monitor.importer(im)
     elif playlist:
-        monitor.playlists(dataprocessor.csv_to_list(artist))
+        monitor.playlists(artist)
     elif artist_id:
         monitor.artist_ids(dataprocessor.csv_to_list(artist))
     elif artist:
@@ -224,11 +224,10 @@ def monitor_command(artist, im, playlist, bitrate, record_type, alerts, artist_i
 
 @run.command(name='refresh')
 @click.argument('NAME', nargs=-1, type=str, required=False)
-@click.option('-d', '--dry-run', is_flag=True, help='Simulate refresh without making any changes')
 @click.option('-p', '--playlist', is_flag=True, help="Refresh a specific playlist by name")
 @click.option('-s', '--skip-download', is_flag=True, help="Skips downloading of new releases")
 @click.option('-T', '--time-machine', metavar='DATE', type=str, help='Refresh as if it were this date (YYYY-MM-DD)')
-def refresh_command(name, playlist, skip_download, time_machine, dry_run):
+def refresh_command(name, playlist, skip_download, time_machine):
     """Check artists for new releases"""
 
     if time_machine:
@@ -236,9 +235,11 @@ def refresh_command(name, playlist, skip_download, time_machine, dry_run):
         if not time_machine:
             return logger.error("Date for time machine is invalid")
 
-    refresh = Refresh(time_machine)
+    refresh = Refresh(time_machine, skip_download)
     if name:
-        refresh.run(dataprocessor.csv_to_list(name))
+        refresh.run(artists=dataprocessor.csv_to_list(name))
+    elif playlist:
+        refresh.run(playlists=dataprocessor.csv_to_list(name))
     else:
         refresh.run()
 

@@ -2,7 +2,6 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 import deemix.errors
 import plexapi.exceptions
-from datetime import datetime
 from plexapi.server import PlexServer
 from tqdm import tqdm
 
@@ -12,7 +11,6 @@ from deemon.core.config import Config as config
 from deemon import utils
 import logging
 import deezer
-import sys
 import os
 
 logger = logging.getLogger(__name__)
@@ -31,7 +29,6 @@ class QueueItem:
         self.playlist_title = None
         self.bitrate = bitrate or config.bitrate()
         self.download_path = download_path or config.download_path()
-        self.verbose = os.environ.get('VERBOSE')
 
         if artist:
             try:
@@ -60,12 +57,6 @@ class QueueItem:
         if playlist:
             self.url = playlist["url"]
             self.playlist_title = playlist["title"]
-
-        self.print_queue_to_log()
-
-    def print_queue_to_log(self):
-        if self.verbose == "true":
-            logger.debug("Item created in queue: " + str(self.__dict__))
 
 
 class Download:
@@ -153,10 +144,13 @@ class Download:
                     except deemix.errors.GenerationError:
                         return [(queue, "No tracks listed or unavailable in your country")]
 
-            with ThreadPoolExecutor(max_workers=5) as ex:
-                failed_count = list(tqdm(ex.map(send_queue_to_deemix, self.queue_list),
-                                         total=len(self.queue_list), desc="Downloading        ...", ascii=" #",
-                                         bar_format='[{n_fmt}/{total_fmt}] {desc} [{bar}] {percentage:3.0f}%'))
+            failed_count = []
+            for q in self.queue_list:
+                failed_count.append(send_queue_to_deemix(q))
+            # with ThreadPoolExecutor(max_workers=5) as ex:
+            #     failed_count = list(tqdm(ex.map(send_queue_to_deemix, self.queue_list),
+            #                              total=len(self.queue_list), desc="Downloading        ...", ascii=" #",
+            #                              bar_format='[{n_fmt}/{total_fmt}] {desc} [{bar}] {percentage:3.0f}%'))
 
             failed_count = [x for x in failed_count if x]
 
