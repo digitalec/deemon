@@ -361,8 +361,16 @@ class Database(object):
         self.new_transaction()
         sql = (f"INSERT INTO releases ('artist_id', 'artist_name', 'album_id', 'album_name', 'album_release', "
                f"'album_added', 'future_release', 'profile_id', 'trans_id') "
-               f"VALUES (:id, :name, :id, :title, :release_date, {int(time.time())}, :future, "
+               f"VALUES (:artist_id, :artist_name, :id, :title, :release_date, {int(time.time())}, :future, "
                f"{config.profile_id()}, {config.transaction_id()})")
+        self.cursor.executemany(sql, values)
+        self.set_all_refreshed()
+
+    def add_new_playlist_releases(self, values):
+        self.new_transaction()
+        sql = (f"INSERT INTO playlist_tracks ('artist_id', 'artist_name', 'track_id', 'track_name', 'playlist_id', "
+               f"'track_added', 'profile_id', 'trans_id') VALUES (:artist_id, :artist_name, :id, :title, :playlist_id, "
+               f"{int(time.time())}, {config.profile_id()}, {config.transaction_id()})")
         self.cursor.executemany(sql, values)
         self.set_all_refreshed()
 

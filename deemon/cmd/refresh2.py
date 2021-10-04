@@ -1,12 +1,11 @@
 import logging
-import sys
 from concurrent.futures import ThreadPoolExecutor
 from tqdm import tqdm
 from datetime import datetime
 from deemon.cmd.download import QueueItem, Download
 from deemon.core.config import Config as config
 from deemon.core import db, api
-from deemon.utils import dates, performance
+from deemon.utils import dates
 
 logger = logging.getLogger(__name__)
 
@@ -17,6 +16,7 @@ class Refresh:
         self.release_date = datetime.now()
         self.api = api.PlatformAPI("deezer-gw")
         self.new_releases = []
+        self.new_playlist_releases = []
         self.time_machine = False
         self.total_new_releases = 0
         self.queue_list = []
@@ -35,12 +35,14 @@ class Refresh:
         new_releases = []
 
         if payload.get('artist_id'):
+            new_releases = []
             artist_id = payload['artist_id']
             seen_releases = self.db.get_artist_releases(artist_id)
             if seen_releases:
                 seen_releases = [v for x in seen_releases for k, v in x.items()]
                 new_releases = [x for x in payload['releases'] if type(x) == dict for k, v in x.items() if k == "id" and v not in seen_releases]
                 return new_releases
+            return [x for x in payload['releases']]
 
         if payload.get('tracks'):
             playlist_id = payload['id']
@@ -62,9 +64,14 @@ class Refresh:
                         logger.info(f":: FUTURE RELEASE DETECTED :: {release['artist_name']} - {release['title']} "
                                     f"({release['release_date']})")
                     else:
-                        self.new_releases.append(release)
+                        new_release = release.copy()
+                        new_release['artist_id'] = payload['artist_id']
+                        new_release['artist_name'] = payload['artist_name']
+                        self.new_releases.append(new_release)
+                        if self.skip_download:
+                            continue
                         if (self.time_machine and album_release > self.release_date) or \
-                                (payload['refreshed'] and not self.skip_download and not self.time_machine):
+                                (payload['refreshed'] and not self.time_machine):
                             logger.debug(f"Queueing new release: {payload['artist_name']} - {release['title']} "
                                          f"({release['id']})")
                             self.queue_list.append(QueueItem(artist=payload, album=release,
@@ -72,9 +79,13 @@ class Refresh:
                                                              download_path=payload['download_path']))
         if payload.get('tracks'):
             if len(payload['tracks']):
-                # TODO ADD NEW TRACK TO DB
-                self.queue_list.append(QueueItem(playlist=payload, bitrate=payload['bitrate'],
-                                                 download_path=payload['download_path']))
+                for track in payload['tracks']:
+                    new_track = track.copy()
+                    new_track['playlist_id'] = payload['id']
+                    self.new_playlist_releases.append(new_track)
+                if not self.skip_download:
+                    self.queue_list.append(QueueItem(playlist=payload, bitrate=payload['bitrate'],
+                                                     download_path=payload['download_path']))
 
     def waiting_for_refresh(self):
         playlists = self.db.get_unrefreshed_playlists()
@@ -117,7 +128,7 @@ class Refresh:
             dl = Download()
             dl.download_queue(self.queue_list)
 
-        print(self.new_releases)
+        self.db.add_new_playlist_releases(self.new_playlist_releases)
         self.db.add_new_releases(self.new_releases)
         self.db.commit()
 
