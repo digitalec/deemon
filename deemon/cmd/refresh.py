@@ -124,11 +124,13 @@ class Refresh:
 
         for payload in api_result['artists']:
             if len(payload):
+                logger.info("Processing artist data, please wait...")
                 payload['releases'] = self.remove_existing_releases(payload)
                 self.filter_new_releases(payload)
 
         for payload in api_result['playlists']:
             if len(payload):
+                logger.info("Processing playlist data, please wait...")
                 payload['tracks'] = self.remove_existing_releases(payload)
                 self.filter_new_releases(payload)
 
