@@ -13,10 +13,10 @@ from deemon.core.db import Database
 from deemon.core.config import Config, LoadProfile
 from deemon.cmd.profile import ProfileConfig
 from deemon.cmd.search import Search
-from deemon.cmd.refresh2 import Refresh
+from deemon.cmd.refresh import Refresh
 from deemon.cmd.show import Show
 from deemon.cmd.artistconfig import artist_lookup
-from deemon.cmd.monitor2 import Monitor
+from deemon.cmd.monitor import Monitor
 from pathlib import Path
 import click
 

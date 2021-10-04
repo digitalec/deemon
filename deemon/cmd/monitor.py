@@ -1,158 +1,200 @@
-from deemon.utils import performance
-from sqlite3 import OperationalError
-from pathlib import Path
-from deemon.core.db import Database
-from deemon.core.config import Config as config
-from deemon.cmd import search
 import logging
-import deezer
+from pathlib import Path
+from deemon.cmd import search
+from deemon.cmd.refresh import Refresh
+from deemon.utils import performance, dataprocessor
+from tqdm import tqdm
+from deemon.core.db import Database
+from concurrent.futures import ThreadPoolExecutor
+from deemon.core.config import Config as config
+from deemon.core.api import PlatformAPI
 
 logger = logging.getLogger(__name__)
 
-@performance.timeit
-def monitor(profile, value, artist_config: dict = None, remove=False, dl_obj=None, is_search=False):
 
-    artist_config = artist_config or {}
+class Monitor:
 
-    bitrate = artist_config.get('bitrate')
-    alerts = artist_config.get('alerts')
-    record_type = artist_config.get('record_type')
-    download_path = artist_config.get('download_path')
+    def __init__(self):
+        self.bitrate = None
+        self.alerts = False
+        self.record_type = None
+        self.download_path = None
+        self.remove = False
+        self.refresh = True
+        self.is_search = False
+        self.duplicates = 0
+        self.time_machine = None
+        self.dl = None
+        self.db = Database()
+        self.api = PlatformAPI("deezer-gw")
+        self.artist_not_found = []
 
-    value = str(value)
+    def set_config(self, bitrate: str, alerts: bool, record_type: str, download_path: Path):
+        self.bitrate = bitrate
+        self.alerts = alerts
+        self.record_type = record_type
+        self.download_path = download_path
 
-    dz = deezer.Deezer()
-    db = Database()
+    def set_options(self, remove, download_object, search):
+        self.remove = remove
+        self.dl = download_object
+        self.is_search = search
 
-    def purge_playlist(id: int):
-        playlist = db.get_monitored_playlist_by_id(id)
-        if playlist:
-            db.remove_monitored_playlists(id)
-            logger.info(f"No longer monitoring playlist '{playlist['title']}'")
-        else:
-            logger.error(f"Unable to remove from monitoring: playlist not found.")
-
-    def purge_artist(id: int = None, name: str = None):
-        if id:
-            output = str(id)
-            artist = db.get_monitored_artist_by_id(id)
-        else:
-            output = name
-            artist = db.get_monitored_artist_by_name(name)
-
-        if artist:
-            db.remove_monitored_artist(artist['artist_id'])
-            logger.info(f"No longer monitoring artist '{artist['artist_name']}'")
-        else:
-            logger.error(f"Unable to remove from monitoring: '{output}' not found.")
-
-    def get_best_result(api_data):
-        matches: list = []
-        for idx, artist in enumerate(api_data):
-            if value.lower() == artist['name'].lower():
-                matches.append(artist)
-        if len(matches) == 1 and not is_search:
-            return matches[0]
-        elif len(matches) > 1:
-            if is_search or config.prompt_duplicates():
-                menu = search.Search()
-                ask_user = menu.search_menu(value)
-                if ask_user:
-                    return ask_user[0]
-                return logger.debug("No artist selected, skipping...")
+    def get_best_result(self, name) -> list:
+        api_result: list = self.api.search_artist(name)
+        matches = [r for r in api_result if r['name'].lower() == name.lower()]
+        if len(matches) == 1:
+            if self.is_search:
+                pass
             else:
-                if not config.prompt_duplicates():
-                    return matches[0]
-                logger.error(f"Duplicate artist names found for {value}. Try again using --search")
-        elif is_search or config.prompt_no_matches():
+                return [matches[0]]
+        elif len(matches) > 1:
+            if self.is_search or config.prompt_duplicates():
+                prompt = self.prompt_search(name, matches)
+                if prompt:
+                    return [prompt]
+                else:
+                    logger.info(f"No selection made, skipping {name}...")
+                    return []
+            else:
+                self.duplicates += 1
+                return [matches[0]]
+        elif not len(matches):
+            if config.prompt_no_matches():
+                prompt = self.prompt_search(name, api_result)
+                if prompt:
+                    return [prompt]
+                else:
+                    logger.info(f"No selection made, skipping {name}...")
+                    return []
+            else:
+                self.artist_not_found.append(name)
+                return []
+
+    def prompt_search(self, value, api_result):
             menu = search.Search()
-            ask_user = menu.search_menu(value)
+            ask_user = menu.artist_menu(value, api_result, True)
             if ask_user:
-                return ask_user[0]
-        elif not config.prompt_no_matches():
-            return api_data[0]
+                return {'id': ask_user['id'], 'name': ask_user['name']}
+            return logger.debug("No artist selected, skipping...")
+
+    @performance.timeit
+    def build_artist_query(self, api_result: list):
+        existing = self.db.get_all_monitored_artist_ids()
+        artists_to_add = []
+        pbar = tqdm(api_result, total=len(api_result), desc="Monitoring artists ...", ascii=" #", bar_format='[{n_fmt}/{total_fmt}] {desc} [{bar}] {percentage:3.0f}%')
+        for i, artist in enumerate(pbar):
+            if artist['id'] in existing:
+                logger.info(f"Already monitoring {artist['name']}, skipping...")
+            else:
+                artist.update({'bitrate': self.bitrate, 'alerts': self.alerts, 'record_type': self.record_type,
+                               'download_path': self.download_path, 'profile_id': config.profile_id(),
+                               'trans_id': config.transaction_id()})
+                artists_to_add.append(artist)
+            if artist == api_result[-1]:
+                pbar.set_description_str("Updating database  ...")
+                self.db.new_transaction()
+                self.db.fast_monitor(artists_to_add)
+                self.db.commit()
+                pbar.set_description_str("Monitoring complete!  ")
+
+    def build_playlist_query(self, api_result: list):
+        existing = self.db.get_all_monitored_playlist_ids() or []
+        playlists_to_add = []
+        pbar = tqdm(api_result, total=len(api_result), desc="Monitoring playlists..", ascii=" #", bar_format='[{n_fmt}/{total_fmt}] {desc} [{bar}] {percentage:3.0f}%')
+        for i, playlist in enumerate(pbar):
+            if playlist['id'] in existing:
+                logger.info(f"Already monitoring {playlist['title']}, skipping...")
+            else:
+                playlist.update({'bitrate': self.bitrate, 'alerts': self.alerts, 'download_path': self.download_path,
+                                 'profile_id': config.profile_id(), 'trans_id': config.transaction_id()})
+                playlists_to_add.append(playlist)
+            if playlist == api_result[-1]:
+                pbar.set_description_str("Updating database  ...")
+                self.db.new_transaction()
+                self.db.fast_monitor_playlist(playlists_to_add)
+                self.db.commit()
+                pbar.set_description_str("Monitoring complete!  ")
+
+    def call_refresh(self):
+        refresh = Refresh(self.time_machine)
+        refresh.run()
+
+    @performance.timeit
+    def artists(self, names: list) -> None:
+        """
+        Return list of dictionaries containing each artist
+        """
+        if self.remove:
+            return self.purge_artists(names=names)
+        with ThreadPoolExecutor(max_workers=self.api.max_threads) as ex:
+            api_result = list(tqdm(ex.map(self.get_best_result, names), total=len(names), desc="Getting artist data...", ascii=" #", bar_format='[{n_fmt}/{total_fmt}] {desc} [{bar}] {percentage:3.0f}%'))
+        api_result = [item for elem in api_result for item in elem if len(item)]
+        self.build_artist_query(api_result)
+        self.call_refresh()
+
+    # @performance.timeit
+    def artist_ids(self, ids: list):
+        ids = [int(x) for x in ids]
+        if self.remove:
+            return self.purge_artists(ids=ids)
+        with ThreadPoolExecutor(max_workers=self.api.max_threads) as ex:
+            api_result = list(tqdm(ex.map(self.api.get_artist_by_id, ids), total=len(ids), desc="Getting artist info...", ascii=" #", bar_format='[{n_fmt}/{total_fmt}] {desc} [{bar}] {percentage:3.0f}%'))
+        self.build_artist_query(api_result)
+        self.call_refresh()
+
+    # @performance.timeit
+    def importer(self, import_path: str):
+        if Path(import_path).is_file():
+            imported_file = dataprocessor.read_file_as_csv(import_path)
+            artist_list = dataprocessor.process_input_file(imported_file)
+            if isinstance(artist_list[0], int):
+                self.artist_ids(artist_list)
+            else:
+                self.artists(artist_list)
+        elif Path(import_path).is_dir():
+            import_list = [x.relative_to(import_path) for x in sorted(Path(import_path).iterdir()) if x.is_dir()]
+            if import_list:
+                self.artists(import_list)
         else:
-            logger.error(f"Artist {value} not found. Try again using --search")
+            logger.error(f"File or directory not found: {import_path}")
             return
 
-    # TODO move this to config!
-    if not Path(config.download_path()).exists:
-        return logger.error(f"Invalid download path: {config.download_path()}")
+    # @performance.timeit
+    def playlists(self, playlists: list):
+        if self.remove:
+            return self.purge_playlists(ids=playlists)
+        ids = [int(x) for x in playlists]
+        with ThreadPoolExecutor(max_workers=self.api.max_threads) as ex:
+            api_result = list(tqdm(ex.map(self.api.get_playlist, ids), total=len(ids), desc="Getting playlist info...", ascii=" #", bar_format='[{n_fmt}/{total_fmt}] {desc} [{bar}] {percentage:3.0f}%'))
+        self.build_playlist_query(api_result)
+        self.call_refresh()
 
-    if profile in ['artist', 'artist_id']:
-        if profile == "artist":
-            if remove:
-                return purge_artist(name=value)
-            api_result = dz.api.search_artist(value, limit=config.query_limit())["data"]
+    # @performance.timeit
+    def purge_artists(self, names: list = None, ids: list = None):
+        if names:
+            for n in names:
+                monitored = self.db.get_monitored_artist_by_name(n)
+                if monitored:
+                    self.db.remove_monitored_artist(monitored['artist_id'])
+                    logger.info(f"No longer monitoring {monitored['artist_name']}")
+                else:
+                    logger.info(f"{n} is not being monitored yet")
+        if ids:
+            for i in ids:
+                monitored = self.db.get_monitored_artist_by_id(i)
+                if monitored:
+                    self.db.remove_monitored_artist(monitored['artist_id'])
+                    logger.info(f"No longer monitoring {monitored['artist_name']}")
+                else:
+                    logger.info(f"{i} is not being monitored yet")
 
-            if len(api_result) == 0:
-                if is_search:
-                    return logger.error(f"No results found for {value}")
-                return logger.error(f"Artist {value} not found.")
-
-            api_result = get_best_result(api_result)
-
-            if not api_result:
-                return
-        else:
-            if remove:
-                return purge_artist(id=value)
-            try:
-                api_result = dz.api.get_artist(value)
-            except deezer.api.DataException:
-                logger.error(f"Artist ID {value} not found.")
-                return
-        # TODO speed this up by pulling ALL and storing in class var
-        if db.get_monitored_artist_by_id(api_result['id']):
-            logger.warning(f"Artist '{api_result['name']}' is already being monitored")
-            return
-
-        artist_config = {'bitrate': bitrate, 'record_type': record_type,
-                         'alerts': alerts, 'download_path': download_path}
-
-        db.monitor_artist(api_result, artist_config)
-
-        logger.info(f"Now monitoring artist '{api_result['name']}'")
-
-        # TODO - does this work?
-        if dl_obj:
-            dl_obj.download(None, [api_result['id']], None, None, None, False)
-        db.commit()
-        return api_result['id']
-
-    if profile == "playlist":
-        playlist_id_from_url = value.split('/playlist/')
-        try:
-            playlist_id = int(playlist_id_from_url[1])
-        except (IndexError, ValueError):
-            return logger.error(f"Invalid playlist URL -- {playlist_id_from_url}")
-
-        if remove:
-            return purge_playlist(playlist_id)
-
-        try:
-            api_result = dz.api.get_playlist(playlist_id)
-        except deezer.api.DataException:
-            return logger.error(f"Playlist ID {playlist_id} not found.")
-
-        playlist_exists = db.get_monitored_playlist_by_id(api_result['id'])
-
-        if playlist_exists:
-            return logger.warning(f"Playlist '{api_result['title']}' is already being monitored")
-
-        api_result['bitrate'] = artist_config.get('bitrate')
-        api_result['alerts'] = artist_config.get('alerts')
-        api_result['download_path'] = artist_config.get('download_path')
-
-        try:
-            db.monitor_playlist(api_result)
-        except OperationalError as e:
-            logger.error("sqlite Operational Error: " + e)
-
-        logger.info(f"Now monitoring playlist '{api_result['title']}'")
-
-        # TODO - does this work?
-        if dl_obj:
-            dl_obj.download(None, None, None, [api_result['link']], None, False)
-        db.commit()
-        return api_result['id']
+    def purge_playlists(self, titles: list = None, ids: list = None):
+        if ids:
+            for i in ids:
+                monitored = self.db.get_monitored_playlist_by_id(i)
+                if monitored:
+                    self.db.remove_monitored_playlists(monitored['id'])
+                    logger.info(f"No longer monitoring {monitored['title']}")
+                else:
+                    logger.info(f"{i} is not being monitored yet")
