@@ -122,15 +122,15 @@ class Refresh:
                 monitored_artists = self.db.get_all_monitored_artists()
                 api_result = self.get_release_data({'artists': monitored_artists, 'playlists': monitored_playlists})
 
-        for payload in api_result['artists']:
+        artist_processor = tqdm(api_result['artists'], total=len(api_result['artists']), desc="Filtering releases ...",
+                                ascii=" #", bar_format='[{n_fmt}/{total_fmt}] {desc} [{bar}] {percentage:3.0f}%')
+        for payload in artist_processor:
             if len(payload):
-                logger.info("Processing artist data, please wait...")
                 payload['releases'] = self.remove_existing_releases(payload)
                 self.filter_new_releases(payload)
 
         for payload in api_result['playlists']:
             if len(payload):
-                logger.info("Processing playlist data, please wait...")
                 payload['tracks'] = self.remove_existing_releases(payload)
                 self.filter_new_releases(payload)
 
@@ -138,6 +138,7 @@ class Refresh:
             dl = Download()
             dl.download_queue(self.queue_list)
 
+        logging.info("Updating database...")
         self.db.add_new_playlist_releases(self.new_playlist_releases)
         self.db.add_new_releases(self.new_releases)
         self.db.commit()
