@@ -72,7 +72,7 @@ class PlatformAPI:
             result = self.api.get_artist_discography(art_id=query['artist_id'], limit=limit)['data']
             api_result = []
             for r in result:
-                if r['ART_ID'] == str(query['artist_id']):
+                if r['ART_ID'] == str(query['artist_id']) and r['ARTISTS_ALBUMS_IS_OFFICIAL']:
                     # TYPE 0 - single, TYPE 1 - album, TYPE 2 - compilation, TYPE 3 - ep
                     if r['TYPE'] == '0':
                         r['TYPE'] = "single"
@@ -80,8 +80,16 @@ class PlatformAPI:
                         r['TYPE'] = "ep"
                     else:
                         r['TYPE'] = "album"
+
+                    if r['DIGITAL_RELEASE_DATE'] != "0000-00-00":
+                        release_date = r['DIGITAL_RELEASE_DATE']
+                    elif r['ORIGINAL_RELEASE_DATE'] != "0000-00-00":
+                        release_date = r['ORIGINAL_RELEASE_DATE']
+                    else:
+                        release_date = r['PHYSICAL_RELEASE_DATE']
+
                     api_result.append({'id': int(r['ALB_ID']), 'title': r['ALB_TITLE'],
-                                       'release_date': r['ORIGINAL_RELEASE_DATE'],
+                                       'release_date': release_date,
                                        'explicit_lyrics': r['EXPLICIT_ALBUM_CONTENT']['EXPLICIT_LYRICS_STATUS'],
                                        'record_type': r['TYPE'], 'future': 0, })
         else:
