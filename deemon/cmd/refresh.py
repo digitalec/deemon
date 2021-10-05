@@ -60,6 +60,7 @@ class Refresh:
 
     def run(self):
         logger.debug("Starting refresh...")
+        logger.debug(f"Refresh date is set to: {self.refresh_date}")
         if not self.refresh_date:
             logger.error(f"Error while setting time machine to {self.time_machine}")
 
@@ -126,6 +127,7 @@ class Refresh:
 
         if self.time_machine:
             self.time_machine = None
+            self.refresh_date = self.set_refresh_date()
             self.run()
 
     def queue_new_releases(self, artist, album):
@@ -251,13 +253,14 @@ class Refresh:
                 future = self.is_future_release(album['release_date'])
                 if future:
                     if self.time_machine:
+                        logger.debug("Skipping this release, time machine is active!")
                         continue
                     logger.debug(f"Pre-release detected: {artist['artist_name']} - {album['title']} [{album['release_date']}]")
 
                 self.db.add_new_release(artist['artist_id'], artist['artist_name'], album['id'],
                                         album['title'], album['release_date'], future)
 
-                if artist['refreshed'] == 0:
+                if artist['refreshed'] == 0 or self.time_machine:
                     continue
 
                 artist_new_release_count += self.queue_new_releases(artist, album)
