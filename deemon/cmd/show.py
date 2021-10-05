@@ -1,3 +1,4 @@
+import csv
 import logging
 import os
 import time
@@ -15,7 +16,7 @@ class Show:
     def __init__(self):
         self.db = Database()
 
-    def monitoring(self, artist: bool = True, query: str = None, csv: bool = False,
+    def monitoring(self, artist: bool = True, query: str = None, export_csv: bool = False,
                    save_path: Union[str, Path] = None, filter: str = None, hide_header: bool = False,
                    is_id: bool = False):
 
@@ -93,7 +94,7 @@ class Show:
                                                                                   db_result['download_path']))
             print("")
         else:
-            if csv or save_path:
+            if export_csv or save_path:
                 if artist:
                     if not filter:
                         filter = "name,id,bitrate,alerts,type,path"
@@ -140,7 +141,11 @@ class Show:
 
                     with open(output_filename, 'w', encoding="utf-8") as f:
                         for line in output_to_file:
+                            if line == output_to_file[-1]:
+                                f.writelines(line)
+                                break
                             f.writelines(line + "\n")
+
                     return logger.info("CSV data has been saved to: " + str(output_filename))
 
                 return

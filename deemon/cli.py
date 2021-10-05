@@ -274,7 +274,7 @@ def show_artists(artist, artist_id, csv, export, filter, hide_header):
         artist = ' '.join([x for x in artist])
 
     show = Show()
-    show.monitoring(artist=True, query=artist, csv=csv, save_path=export, filter=filter, hide_header=hide_header,
+    show.monitoring(artist=True, query=artist, export_csv=csv, save_path=export, filter=filter, hide_header=hide_header,
                     is_id=artist_id)
 
 
@@ -290,7 +290,7 @@ def show_artists(title, playlist_id, csv, filter, hide_header):
         title = ' '.join([x for x in title])
 
     show = Show()
-    show.monitoring(artist=False, query=title, csv=csv, filter=filter, hide_header=hide_header, is_id=playlist_id)
+    show.monitoring(artist=False, query=title, export_csv=csv, filter=filter, hide_header=hide_header, is_id=playlist_id)
 
 
 @show_command.command(name="releases")

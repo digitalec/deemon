@@ -5,7 +5,7 @@ logger = logging.getLogger(__name__)
 
 
 def read_file_as_csv(file):
-    with open(file, 'r', encoding="utf-8", errors="replace") as f:
+    with open(file, 'r', encoding="utf-8-sig", errors="replace") as f:
         make_csv = f.read()
         csv_to_list = make_csv.split('\n')
         sorted_list = sorted(list(filter(None, csv_to_list)))
@@ -16,8 +16,10 @@ def process_input_file(artist_list):
     logger.debug("Processing file contents")
     try:
         artists = [int(x) for x in artist_list]
+        logger.debug(f"File detected as containing {len(artists)} artist IDs")
     except ValueError:
         artists = [x for x in artist_list]
+        logger.debug(f"File detected as containing {len(artists)} artist names")
     return artists
 
 
