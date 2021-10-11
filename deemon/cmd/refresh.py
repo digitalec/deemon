@@ -71,8 +71,6 @@ class Refresh:
                         new_release['artist_id'] = payload['artist_id']
                         new_release['artist_name'] = payload['artist_name']
                         self.new_releases.append(new_release)
-                        if self.skip_download:
-                            continue
                         if (self.time_machine and album_release > self.release_date) or \
                                 (payload['refreshed'] and not self.time_machine):
                             logger.debug(f"Queueing new release: {payload['artist_name']} - {release['title']} "
@@ -89,7 +87,6 @@ class Refresh:
                     new_track = track.copy()
                     new_track['playlist_id'] = payload['id']
                     self.new_playlist_releases.append(new_track)
-                if not self.skip_download:
                     self.queue_list.append(QueueItem(playlist=payload, bitrate=payload['bitrate'],
                                                      download_path=payload['download_path']))
 
@@ -131,6 +128,11 @@ class Refresh:
             if len(payload):
                 payload['tracks'] = self.remove_existing_releases(payload)
                 self.filter_new_releases(payload)
+
+        if self.skip_download:
+            logger.info(f"You have opted to skip downloads, emptying {len(self.queue_list)} item(s) from queue...")
+            self.queue_list.clear()
+            self.new_releases_alert.clear()
 
         if len(self.queue_list):
             dl = Download()
