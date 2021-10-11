@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 
 import deezer.errors
 from deezer import Deezer
@@ -86,8 +87,12 @@ class PlatformAPI:
                         release_date = r['DIGITAL_RELEASE_DATE']
                     elif r['ORIGINAL_RELEASE_DATE'] != "0000-00-00":
                         release_date = r['ORIGINAL_RELEASE_DATE']
-                    else:
+                    elif r['PHYSICAL_RELEASE_DATE'] != "0000-00-00":
                         release_date = r['PHYSICAL_RELEASE_DATE']
+                    else:
+                        # In the event of an unknown release date, set it to today's date
+                        # See album ID: 417403
+                        release_date = datetime.strftime(datetime.today(), "%Y-%m-%d")
 
                     api_result.append({'id': int(r['ALB_ID']), 'title': r['ALB_TITLE'],
                                        'release_date': release_date,
