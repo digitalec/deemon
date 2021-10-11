@@ -59,13 +59,14 @@ class Refresh:
 
     def filter_new_releases(self, payload: dict):
         if payload.get('artist_id'):
+            logger.debug(f"Filtering {len(payload['releases'])} releases for artist {payload['artist_name']}")
             for release in payload['releases']:
                 if config.record_type() == release['record_type'] or config.record_type() == "all":
                     album_release = dates.str_to_datetime_obj(release['release_date'])
                     if album_release > datetime.now():
                         release['future'] = 1
                         logger.debug(f":: FUTURE RELEASE DETECTED :: {payload['artist_name']} - {release['title']} "
-                                    f"({release['release_date']})")
+                                     f"({release['release_date']})")
                     else:
                         new_release = release.copy()
                         new_release['artist_id'] = payload['artist_id']
@@ -99,13 +100,15 @@ class Refresh:
     # @performance.timeit
     def run(self, artists: list = None, playlists: list = None):
         if artists:
-            monitored_artists = [self.db.get_monitored_artist_by_name(a) for a in artists]
+            monitored_artists = [x for x in (self.db.get_monitored_artist_by_name(a) for a in artists) if x]
+            if not len(monitored_artists):
+                return logger.warning("Specified artist(s) were not found")
             api_result = self.get_release_data({'artists': monitored_artists})
-            logger.debug(f"Accepted {len(artists)} artist(s) for refresh")
         elif playlists:
-            monitored_playlists = [self.db.get_monitored_playlist_by_name(p) for p in playlists]
+            monitored_playlists = [x for x in (self.db.get_monitored_playlist_by_name(p) for p in playlists) if x]
+            if not len(monitored_playlists):
+                return logger.warning("Specified playlist(s) were not found")
             api_result = self.get_release_data({'playlists': monitored_playlists})
-            logger.debug(f"Accepted {len(playlists)} playlist(s) for refresh")
         else:
             waiting = self.waiting_for_refresh()
             if waiting:
@@ -115,6 +118,8 @@ class Refresh:
             else:
                 monitored_playlists = self.db.get_all_monitored_playlists()
                 monitored_artists = self.db.get_all_monitored_artists()
+                if not len(monitored_playlists) and not len(monitored_artists):
+                    return logger.warning("No artists found to refresh")
                 api_result = self.get_release_data({'artists': monitored_artists, 'playlists': monitored_playlists})
 
         artist_processor = tqdm(api_result['artists'], total=len(api_result['artists']), desc="Filtering releases ...",
@@ -162,7 +167,7 @@ class Refresh:
 
         api_result = {'artists': [], 'playlists': []}
 
-        if len(to_refresh['playlists']):
+        if to_refresh.get('playlists') and len(to_refresh.get('playlists')):
             with ThreadPoolExecutor(max_workers=self.api.max_threads) as ex:
                 api_result['playlists'] = list(
                     tqdm(ex.map(self.api.get_playlist, to_refresh['playlists']),
@@ -170,7 +175,7 @@ class Refresh:
                          bar_format='[{n_fmt}/{total_fmt}] {desc} [{bar}] {percentage:3.0f}%')
                 )
 
-        if len(to_refresh['artists']):
+        if to_refresh.get('artists') and len(to_refresh['artists']):
             with ThreadPoolExecutor(max_workers=self.api.max_threads) as ex:
                 api_result['artists'] = list(
                     tqdm(ex.map(self.api.get_artist_albums, to_refresh['artists']),
