@@ -2,7 +2,7 @@
 from deemon.utils import startup
 
 __version__ = '2.1b3'
-__dbversion__ = '3.1'
+__dbversion__ = '3.2'
 
 appdata = startup.get_appdata_dir()
 startup.init_appdata_dir(appdata)

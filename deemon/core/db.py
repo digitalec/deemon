@@ -246,7 +246,23 @@ class Database(object):
             self.query("INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('version', '3.1')")
             self.query("INSERT INTO 'deemon' ('property', 'value') VALUES ('release_channel', 'stable')")
             self.commit()
-            logger.debug(f"Database upgraded to version 3.1")
+
+        if current_ver < parse_version("3.2"):
+            self.query("CREATE TABLE playlists_tmp ("
+                       "'id' INTEGER UNIQUE,"
+                       "'title' TEXT,"
+                       "'url' TEXT,"
+                       "'bitrate' TEXT,"
+                       "'alerts' INTEGER,"
+                       "'profile_id' INTEGER DEFAULT 1,"
+                       "'download_path' TEXT,"
+                       "'refreshed' INTEGER DEFAULT 0,"
+                       "'trans_id' INTEGER)")
+            self.query("INSERT INTO playlists_tmp SELECT * FROM playlists")
+            self.query("DROP TABLE playlists")
+            self.query("ALTER TABLE playlists_tmp RENAME TO playlists")
+            self.query("INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('version', '3.2')")
+            self.commit()
 
     def query(self, query, values=None):
         if values is None:
