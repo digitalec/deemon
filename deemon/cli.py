@@ -239,10 +239,12 @@ def refresh_command(name, playlist, skip_download, time_machine):
             return logger.error("Date for time machine is invalid")
 
     refresh = Refresh(time_machine, skip_download)
-    if name:
-        refresh.run(artists=dataprocessor.csv_to_list(name))
-    elif playlist:
+    if playlist:
+        if not len(name):
+            return logger.warning("You must provide the name of a playlist")
         refresh.run(playlists=dataprocessor.csv_to_list(name))
+    elif name:
+        refresh.run(artists=dataprocessor.csv_to_list(name))
     else:
         refresh.run()
 
