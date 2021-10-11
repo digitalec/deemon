@@ -263,6 +263,7 @@ class Database(object):
             self.query("ALTER TABLE playlists_tmp RENAME TO playlists")
             self.query("INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('version', '3.2')")
             self.commit()
+            logger.debug(f"Database upgraded to version 3.2")
 
     def query(self, query, values=None):
         if values is None:
@@ -323,9 +324,12 @@ class Database(object):
         self.query(query, vals)
         self.commit()
 
-    def get_artist_releases(self, artist_id):
+    def get_artist_releases(self, artist_id=None):
         sql_values = {'artist_id': artist_id, 'profile_id': config.profile_id()}
-        query = "SELECT album_id FROM 'releases' WHERE artist_id = :artist_id AND profile_id = :profile_id"
+        if artist_id:
+            query = "SELECT album_id FROM 'releases' WHERE artist_id = :artist_id AND profile_id = :profile_id"
+        else:
+            query = "SELECT album_id FROM 'releases' WHERE profile_id = :profile_id"
         return self.query(query, sql_values).fetchall()
 
     def get_playlist_tracks(self, playlist_id):

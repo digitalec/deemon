@@ -38,9 +38,7 @@ class Refresh:
         new_releases = []
 
         if payload.get('artist_id'):
-            new_releases = []
-            artist_id = payload['artist_id']
-            seen_releases = self.db.get_artist_releases(artist_id)
+            seen_releases = self.db.get_artist_releases()
             if seen_releases:
                 seen_releases = [v for x in seen_releases for k, v in x.items()]
                 new_releases = [x for x in payload['releases'] if type(x) == dict for k, v in x.items() if
