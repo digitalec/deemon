@@ -16,6 +16,12 @@ class PlatformAPI:
         self.platform = platform
         self.api = self.set_platform()
 
+    def debugger(self, message: str, payload = None):
+        if config.debug_mode():
+            if not payload:
+                payload = ""
+            logger.debug(f"DEBUG_MODE: {message} {str(payload)}")
+
     def set_platform(self):
         if self.platform == "deezer-gw":
             dz = Deezer()
@@ -69,7 +75,7 @@ class PlatformAPI:
         """
         Return a list of dictionaries from API containing
         """
-        logger.debug(f"Requesting artist discography for {query['artist_name']}")
+        self.debugger("ArtistLookup", query['artist_name'])
         if self.platform == "deezer-gw":
             result = self.api.get_artist_discography(art_id=query['artist_id'], limit=limit)['data']
             api_result = []
@@ -92,6 +98,8 @@ class PlatformAPI:
                     else:
                         # In the event of an unknown release date, set it to today's date
                         # See album ID: 417403
+                        logger.warning(f"Found release without release date, assuming today: "
+                                       f"{query['artist_name']} - {r['ALB_TITLE']}")
                         release_date = datetime.strftime(datetime.today(), "%Y-%m-%d")
 
                     api_result.append({'id': int(r['ALB_ID']), 'title': r['ALB_TITLE'],

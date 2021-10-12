@@ -18,6 +18,7 @@ ALLOWED_VALUES = {
 
 DEFAULT_CONFIG = {
     "check_update": 1,
+    "debug_mode": False,
     "release_channel": "stable",
     "query_limit": 5,
     "rollback_view_limit": 10,

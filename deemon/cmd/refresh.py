@@ -31,6 +31,12 @@ class Refresh:
             logger.info(f":: Time Machine active: {datetime.strftime(self.release_date, '%b %d, %Y')}!")
             config.set('by_release_date', False)
 
+    def debugger(self, message: str, payload = None):
+        if config.debug_mode():
+            if not payload:
+                payload = ""
+            logger.debug(f"DEBUG_MODE: {message} {str(payload)}")
+
     def remove_existing_releases(self, payload: dict) -> list:
         """
         Return list of releases that have not been stored in the database
@@ -59,8 +65,10 @@ class Refresh:
 
     def filter_new_releases(self, payload: dict):
         if payload.get('artist_id'):
-            logger.debug(f"Filtering {len(payload['releases'])} releases for artist {payload['artist_name']}")
+            logger.debug(f"Filtering {len(payload['releases'])} releases for artist {payload['artist_name']} "
+                         f"({payload['artist_id']})")
             for release in payload['releases']:
+                self.debugger("ProcessingRelease", release)
                 if config.record_type() == release['record_type'] or config.record_type() == "all":
                     album_release = dates.str_to_datetime_obj(release['release_date'])
                     if album_release > datetime.now():
@@ -76,20 +84,25 @@ class Refresh:
                                 (payload['refreshed'] and not self.time_machine):
                             logger.debug(f"Queueing new release: {payload['artist_name']} - {release['title']} "
                                          f"({release['id']})")
-                            self.queue_list.append(QueueItem(artist=payload, album=release,
-                                                             bitrate=payload['bitrate'],
-                                                             download_path=payload['download_path']))
+                            queue_obj = QueueItem(artist=payload, album=release, bitrate=payload['bitrate'],
+                                                     download_path=payload['download_path'])
+                            self.debugger("QueueArtistItem", vars(queue_obj))
+                            self.queue_list.append(queue_obj)
                             if payload["alerts"] == 1 or not payload['alerts'] and config.alerts():
                                 self.append_new_release(release['release_date'], payload['artist_name'],
                                                         release['title'])
+
         if payload.get('tracks'):
+            logger.debug(f"Filtering {len(payload['tracks'])} tracks for playlist {payload['title']}")
             if len(payload['tracks']):
                 for track in payload['tracks']:
                     new_track = track.copy()
                     new_track['playlist_id'] = payload['id']
                     self.new_playlist_releases.append(new_track)
-                    self.queue_list.append(QueueItem(playlist=payload, bitrate=payload['bitrate'],
-                                                     download_path=payload['download_path']))
+                    queue_obj = QueueItem(playlist=payload, bitrate=payload['bitrate'],
+                                          download_path=payload['download_path'])
+                    self.debugger("QueuePlaylistItem", queue_obj)
+                    self.queue_list.append(queue_obj)
 
     def waiting_for_refresh(self):
         playlists = self.db.get_unrefreshed_playlists()
@@ -100,11 +113,13 @@ class Refresh:
     # @performance.timeit
     def run(self, artists: list = None, playlists: list = None):
         if artists:
+            self.debugger("ManualRefresh", artists)
             monitored_artists = [x for x in (self.db.get_monitored_artist_by_name(a) for a in artists) if x]
             if not len(monitored_artists):
                 return logger.warning("Specified artist(s) were not found")
             api_result = self.get_release_data({'artists': monitored_artists})
         elif playlists:
+            self.debugger("ManualRefresh", playlists)
             monitored_playlists = [x for x in (self.db.get_monitored_playlist_by_name(p) for p in playlists) if x]
             if not len(monitored_playlists):
                 return logger.warning("Specified playlist(s) were not found")
@@ -116,6 +131,7 @@ class Refresh:
                              f"{len(waiting['artists'])} artist(s) waiting to be refreshed.")
                 api_result = self.get_release_data(waiting)
             else:
+                self.debugger("FullRefresh")
                 monitored_playlists = self.db.get_all_monitored_playlists()
                 monitored_artists = self.db.get_all_monitored_artists()
                 if not len(monitored_playlists) and not len(monitored_artists):
@@ -168,6 +184,7 @@ class Refresh:
         api_result = {'artists': [], 'playlists': []}
 
         if to_refresh.get('playlists') and len(to_refresh.get('playlists')):
+            self.debugger("SpawningThreads", self.api.max_threads)
             with ThreadPoolExecutor(max_workers=self.api.max_threads) as ex:
                 api_result['playlists'] = list(
                     tqdm(ex.map(self.api.get_playlist, to_refresh['playlists']),
@@ -176,6 +193,7 @@ class Refresh:
                 )
 
         if to_refresh.get('artists') and len(to_refresh['artists']):
+            self.debugger("SpawningThreads", self.api.max_threads)
             with ThreadPoolExecutor(max_workers=self.api.max_threads) as ex:
                 api_result['artists'] = list(
                     tqdm(ex.map(self.api.get_artist_albums, to_refresh['artists']),

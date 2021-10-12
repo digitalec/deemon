@@ -36,11 +36,19 @@ class Monitor:
         self.alerts = alerts
         self.record_type = record_type
         self.download_path = download_path
+        self.debugger("SetConfig", {'bitrate': bitrate, 'alerts': alerts, 'type': record_type, 'path': download_path})
 
     def set_options(self, remove, download_object, search):
         self.remove = remove
         self.dl = download_object
         self.is_search = search
+        self.debugger("SetOptions", {'remove': remove, 'dl': download_object, 'search': search})
+
+    def debugger(self, message: str, payload = None):
+        if config.debug_mode():
+            if not payload:
+                payload = ""
+            logger.debug(f"DEBUG_MODE: {message} {str(payload)}")
 
     def get_best_result(self, name) -> list:
         api_result: list = self.api.search_artist(name)
@@ -80,7 +88,7 @@ class Monitor:
             return {'id': ask_user['id'], 'name': ask_user['name']}
         return logger.debug("No artist selected, skipping...")
 
-    @performance.timeit
+    # @performance.timeit
     def build_artist_query(self, api_result: list):
         existing = self.db.get_all_monitored_artist_ids()
         artists_to_add = []
@@ -124,13 +132,14 @@ class Monitor:
         refresh = Refresh(self.time_machine)
         refresh.run()
 
-    @performance.timeit
+    # @performance.timeit
     def artists(self, names: list) -> None:
         """
         Return list of dictionaries containing each artist
         """
         if self.remove:
             return self.purge_artists(names=names)
+        self.debugger("SpawningThreads", self.api.max_threads)
         with ThreadPoolExecutor(max_workers=self.api.max_threads) as ex:
             api_result = list(
                 tqdm(ex.map(self.get_best_result, names), total=len(names), desc="Getting artist data...", ascii=" #",
@@ -144,6 +153,7 @@ class Monitor:
         ids = [int(x) for x in ids]
         if self.remove:
             return self.purge_artists(ids=ids)
+        self.debugger("SpawningThreads", self.api.max_threads)
         with ThreadPoolExecutor(max_workers=self.api.max_threads) as ex:
             api_result = list(
                 tqdm(ex.map(self.api.get_artist_by_id, ids), total=len(ids), desc="Getting artist info...", ascii=" #",
@@ -173,6 +183,7 @@ class Monitor:
         if self.remove:
             return self.purge_playlists(ids=playlists)
         ids = [int(x) for x in playlists]
+        self.debugger("SpawningThreads", self.api.max_threads)
         with ThreadPoolExecutor(max_workers=self.api.max_threads) as ex:
             api_result = list(
                 tqdm(ex.map(self.api.get_playlist, ids), total=len(ids), desc="Getting playlist info...", ascii=" #",
