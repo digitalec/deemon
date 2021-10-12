@@ -105,9 +105,9 @@ class PlatformAPI:
                     api_result.append({'id': int(r['ALB_ID']), 'title': r['ALB_TITLE'],
                                        'release_date': release_date,
                                        'explicit_lyrics': r['EXPLICIT_ALBUM_CONTENT']['EXPLICIT_LYRICS_STATUS'],
-                                       'record_type': r['TYPE'], 'future': 0, })
+                                       'record_type': r['TYPE']})
         else:
-            api_result = self.api.get_artist_albums(query=query, limit=limit)
+            api_result = self.api.get_artist_albums(artist_id=query['artist_id'], limit=limit)['data']
 
         query['releases'] = api_result
         return query

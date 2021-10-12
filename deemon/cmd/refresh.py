@@ -76,6 +76,7 @@ class Refresh:
                         logger.debug(f":: FUTURE RELEASE DETECTED :: {payload['artist_name']} - {release['title']} "
                                      f"({release['release_date']})")
                     else:
+                        release['future'] = 0
                         new_release = release.copy()
                         new_release['artist_id'] = payload['artist_id']
                         new_release['artist_name'] = payload['artist_name']
