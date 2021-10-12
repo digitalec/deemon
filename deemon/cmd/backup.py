@@ -15,10 +15,11 @@ logger = logging.getLogger(__name__)
 
 def run(include_logs: bool = False):
     def filter_func(item):
-        exclusions = ['deemon/backups']
-        if not include_logs:
-            exclusions.append('deemon/logs')
-        if item.name not in exclusions:
+        includes = ['deemon', 'deemon/config.json', 'deemon/deemon.db']
+        if include_logs:
+            if 'deemon/logs' in item.name:
+                includes.append(item.name)
+        if item.name in includes:
             return item
 
     backup_tar = dates.generate_date_filename("backup-" + __version__ + "-") + ".tar"
