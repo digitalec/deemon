@@ -58,6 +58,7 @@ def restore():
                     'version': backup_appversion,
                     'date': friendly_date,
                     'time': friendly_time,
+                    'age': fn_name[-2] + fn_name[-1],
                     'filename': fn
                 }
                 return backup_info
@@ -119,7 +120,7 @@ def restore():
         if tar_files:
             backups.append(tar_files)
     if backups:
-        backups = sorted(backups, key=lambda x: x['filename'], reverse=True)
+        backups = sorted(backups, key=lambda x: x['age'], reverse=True)
         display_backup_list(backups)
     else:
         logger.info("No backups available to restore")
