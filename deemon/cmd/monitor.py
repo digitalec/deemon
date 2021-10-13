@@ -171,7 +171,7 @@ class Monitor:
             else:
                 self.artists(artist_list)
         elif Path(import_path).is_dir():
-            import_list = [x.relative_to(import_path) for x in sorted(Path(import_path).iterdir()) if x.is_dir()]
+            import_list = [x.relative_to(import_path).name for x in sorted(Path(import_path).iterdir()) if x.is_dir()]
             if import_list:
                 self.artists(import_list)
         else:

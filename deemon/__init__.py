@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 from deemon.utils import startup
 
-__version__ = '2.1b5'
+__version__ = '2.1b6'
 __dbversion__ = '3.2'
 
 appdata = startup.get_appdata_dir()
