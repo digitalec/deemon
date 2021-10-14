@@ -293,7 +293,8 @@ class Database(object):
 
     def get_all_monitored_playlist_ids(self):
         vals = {'profile_id': config.profile_id()}
-        return self.query("SELECT id FROM playlists WHERE profile_id = :profile_id", vals).fetchone()
+        query = self.query("SELECT id FROM playlists WHERE profile_id = :profile_id", vals).fetchall()
+        return [v for x in query for v in x.values()]
 
     def get_all_monitored_playlists(self):
         vals = {'profile_id': config.profile_id()}
@@ -331,6 +332,11 @@ class Database(object):
         else:
             query = "SELECT album_id FROM 'releases' WHERE profile_id = :profile_id"
         return self.query(query, sql_values).fetchall()
+
+    def get_future_releases(self):
+        vals = {'profile_id': config.profile_id()}
+        return self.query("SELECT album_id FROM releases "
+                          "WHERE future_release = 1 AND profile_id = :profile_id", vals).fetchall()
 
     def get_playlist_tracks(self, playlist_id):
         sql_values = {'playlist_id': playlist_id, 'profile_id': config.profile_id()}
