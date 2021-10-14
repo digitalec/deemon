@@ -9,7 +9,7 @@ from deemon.cmd.refresh import Refresh
 from deemon.core.api import PlatformAPI
 from deemon.core.config import Config as config
 from deemon.core.db import Database
-from deemon.utils import performance, dataprocessor
+from deemon.utils import dataprocessor, ui
 
 logger = logging.getLogger(__name__)
 
@@ -44,24 +44,34 @@ class Monitor:
         self.is_search = search
         self.debugger("SetOptions", {'remove': remove, 'dl': download_object, 'search': search})
 
-    def debugger(self, message: str, payload = None):
+    def debugger(self, message: str, payload=None):
         if config.debug_mode():
             if not payload:
                 payload = ""
             logger.debug(f"DEBUG_MODE: {message} {str(payload)}")
 
-    def get_best_result(self, name) -> list:
-        api_result: list = self.api.search_artist(name)
-        matches = [r for r in api_result if r['name'].lower() == name.lower()]
+    def get_best_result(self, api_result) -> list:
+        name = api_result['query']
+
+        if self.is_search:
+            logger.debug("Waiting for user input...")
+            prompt = self.prompt_search(name, api_result['results'])
+            if prompt:
+                logger.debug(f"User selected {prompt}")
+                return [prompt]
+
+        matches = [r for r in api_result['results'] if r['name'].lower() == name.lower()]
+        self.debugger("Matches", matches)
+
         if len(matches) == 1:
-            if self.is_search:
-                pass
-            else:
-                return [matches[0]]
+            return [matches[0]]
         elif len(matches) > 1:
-            if self.is_search or config.prompt_duplicates():
+            logger.debug(f"Multiple matches were found for artist \"{api_result['query']}\"")
+            if config.prompt_duplicates():
+                logger.debug("Waiting for user input...")
                 prompt = self.prompt_search(name, matches)
                 if prompt:
+                    logger.debug(f"User selected {prompt}")
                     return [prompt]
                 else:
                     logger.info(f"No selection made, skipping {name}...")
@@ -70,9 +80,12 @@ class Monitor:
                 self.duplicates += 1
                 return [matches[0]]
         elif not len(matches):
+            logger.debug(f"No matches were found for artist \"{api_result['query']}\"")
             if config.prompt_no_matches():
-                prompt = self.prompt_search(name, api_result)
+                logger.debug("Waiting for user input...")
+                prompt = self.prompt_search(name, api_result['results'])
                 if prompt:
+                    logger.debug(f"User selected {prompt}")
                     return [prompt]
                 else:
                     logger.info(f"No selection made, skipping {name}...")
@@ -92,41 +105,39 @@ class Monitor:
     def build_artist_query(self, api_result: list):
         existing = self.db.get_all_monitored_artist_ids()
         artists_to_add = []
-        pbar = tqdm(api_result, total=len(api_result), desc="Monitoring artists ...", ascii=" #",
-                    bar_format='[{n_fmt}/{total_fmt}] {desc} [{bar}] {percentage:3.0f}%')
+        pbar = tqdm(api_result, total=len(api_result), desc="Setting up artists for monitoring...", ascii=" #",
+                    bar_format=ui.TQDM_FORMAT)
         for i, artist in enumerate(pbar):
             if artist['id'] in existing:
-                logger.info(f"Already monitoring {artist['name']}, skipping...")
+                logger.info(f"   - Already monitoring {artist['name']}, skipping...")
             else:
                 artist.update({'bitrate': self.bitrate, 'alerts': self.alerts, 'record_type': self.record_type,
                                'download_path': self.download_path, 'profile_id': config.profile_id(),
                                'trans_id': config.transaction_id()})
                 artists_to_add.append(artist)
-            if artist == api_result[-1]:
-                pbar.set_description_str("Updating database  ...")
-                self.db.new_transaction()
-                self.db.fast_monitor(artists_to_add)
-                self.db.commit()
-                pbar.set_description_str("Monitoring complete!  ")
+        if len(artists_to_add):
+            logger.debug("New artists have been monitored. Saving changes to the database...")
+            self.db.new_transaction()
+            self.db.fast_monitor(artists_to_add)
+            self.db.commit()
 
     def build_playlist_query(self, api_result: list):
         existing = self.db.get_all_monitored_playlist_ids() or []
         playlists_to_add = []
-        pbar = tqdm(api_result, total=len(api_result), desc="Monitoring playlists..", ascii=" #",
-                    bar_format='[{n_fmt}/{total_fmt}] {desc} [{bar}] {percentage:3.0f}%')
+        pbar = tqdm(api_result, total=len(api_result), desc="Monitoring playlists...", ascii=" #",
+                    bar_format=ui.TQDM_FORMAT)
         for i, playlist in enumerate(pbar):
             if playlist['id'] in existing:
-                logger.info(f"Already monitoring {playlist['title']}, skipping...")
+                logger.info(f"   Already monitoring {playlist['title']}, skipping...")
             else:
                 playlist.update({'bitrate': self.bitrate, 'alerts': self.alerts, 'download_path': self.download_path,
                                  'profile_id': config.profile_id(), 'trans_id': config.transaction_id()})
                 playlists_to_add.append(playlist)
-            if playlist == api_result[-1]:
-                pbar.set_description_str("Updating database  ...")
-                self.db.new_transaction()
-                self.db.fast_monitor_playlist(playlists_to_add)
-                self.db.commit()
-                pbar.set_description_str("Monitoring complete!  ")
+        if len(playlists_to_add):
+            logger.debug("New playlists have been monitored. Saving changes to the database...")
+            self.db.new_transaction()
+            self.db.fast_monitor_playlist(playlists_to_add)
+            self.db.commit()
 
     def call_refresh(self):
         refresh = Refresh(self.time_machine)
@@ -142,11 +153,27 @@ class Monitor:
         self.debugger("SpawningThreads", self.api.max_threads)
         with ThreadPoolExecutor(max_workers=self.api.max_threads) as ex:
             api_result = list(
-                tqdm(ex.map(self.get_best_result, names), total=len(names), desc="Getting artist data...", ascii=" #",
-                     bar_format='[{n_fmt}/{total_fmt}] {desc} [{bar}] {percentage:3.0f}%'))
-        api_result = [item for elem in api_result for item in elem if len(item)]
-        self.build_artist_query(api_result)
-        self.call_refresh()
+                tqdm(ex.map(self.api.search_artist, names), total=len(names),
+                     desc=f"Fetching artist data for {len(names):,} artist(s), please wait...",
+                     ascii=" #", bar_format=ui.TQDM_FORMAT))
+
+        select_artist = tqdm(api_result, total=len(api_result), desc="Examining results for best match...", ascii=" #",
+                             bar_format=ui.TQDM_FORMAT)
+
+        to_monitor = []
+        for artist in select_artist:
+            best_result = self.get_best_result(artist)
+            if best_result:
+                to_monitor.append(best_result)
+
+        if len(to_monitor):
+            to_process = [item for elem in to_monitor for item in elem if len(item)]
+            self.build_artist_query(to_process)
+            self.call_refresh()
+        else:
+            print("")
+            logger.info("No new artists were added for monitoring, exiting...")
+            return
 
     # @performance.timeit
     def artist_ids(self, ids: list):
@@ -156,8 +183,10 @@ class Monitor:
         self.debugger("SpawningThreads", self.api.max_threads)
         with ThreadPoolExecutor(max_workers=self.api.max_threads) as ex:
             api_result = list(
-                tqdm(ex.map(self.api.get_artist_by_id, ids), total=len(ids), desc="Getting artist info...", ascii=" #",
-                     bar_format='[{n_fmt}/{total_fmt}] {desc} [{bar}] {percentage:3.0f}%'))
+                tqdm(ex.map(self.api.get_artist_by_id, ids), total=len(ids),
+                     desc=f"Fetching artist data for {len(ids):,} artist(s), please wait...",
+                     ascii=" #", bar_format=ui.TQDM_FORMAT))
+
         self.build_artist_query(api_result)
         self.call_refresh()
 
@@ -186,8 +215,10 @@ class Monitor:
         self.debugger("SpawningThreads", self.api.max_threads)
         with ThreadPoolExecutor(max_workers=self.api.max_threads) as ex:
             api_result = list(
-                tqdm(ex.map(self.api.get_playlist, ids), total=len(ids), desc="Getting playlist info...", ascii=" #",
-                     bar_format='[{n_fmt}/{total_fmt}] {desc} [{bar}] {percentage:3.0f}%'))
+                tqdm(ex.map(self.api.get_playlist, ids), total=len(ids),
+                     desc=f"Fetching playlist data for {len(ids):,} playlist(s), please wait...",
+                     ascii=" #", bar_format=ui.TQDM_FORMAT))
+
         self.build_playlist_query(api_result)
         self.call_refresh()
 

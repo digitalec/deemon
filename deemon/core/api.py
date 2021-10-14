@@ -1,3 +1,4 @@
+import json
 import logging
 from datetime import datetime
 
@@ -40,7 +41,7 @@ class PlatformAPI:
         logger.debug(f"API in use: {self.platform}, thread count set to: {self.max_threads}")
         return api_obj
 
-    def search_artist(self, query: str, limit: int = 1) -> list:
+    def search_artist(self, query: str, limit: int = 1) -> dict:
         """
         Return a list of dictionaries from API containing {'id': int, 'name': str}
         """
@@ -49,7 +50,7 @@ class PlatformAPI:
             api_result = []
             for r in result:
                 api_result.append({'id': int(r['ART_ID']), 'name': r['ART_NAME']})
-            return api_result
+            return {'query': query, 'results': api_result}
         else:
             return self.api.search_artist(query=query, limit=limit)['data']
 
@@ -75,9 +76,19 @@ class PlatformAPI:
         """
         Return a list of dictionaries from API containing
         """
-        self.debugger("ArtistLookup", query['artist_name'])
+        self.debugger("RefreshArtist", query['artist_name'])
         if self.platform == "deezer-gw":
-            result = self.api.get_artist_discography(art_id=query['artist_id'], limit=limit)['data']
+            try:
+                result = self.api.get_artist_discography(art_id=query['artist_id'], limit=limit)['data']
+            except deezer.errors.GWAPIError as e:
+                if "UNKNOWN" in str(e):
+                    logger.error(f"Artist discography is not available for "
+                                 f"{query['artist_name']} ({query['artist_id']})")
+                else:
+                    logger.error(f"An error occured while attempting to get the discography for "
+                                 f"{query['artist_id']} ({query['artist_id']})")
+                query['releases'] = []
+                return query
             api_result = []
             for r in result:
                 if r['ART_ID'] == str(query['artist_id']) and r['ARTISTS_ALBUMS_IS_OFFICIAL']:

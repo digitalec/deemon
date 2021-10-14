@@ -1,3 +1,4 @@
+import logging
 import sys
 
 from deezer import Deezer
@@ -7,6 +8,8 @@ from deemon.cmd.refresh import Refresh
 from deemon.core import db
 from deemon.core.config import Config as config
 from deemon.utils import dates
+
+logger = logging.getLogger(__name__)
 
 
 class Search:
