@@ -1,6 +1,9 @@
 import os
 
 
+TQDM_FORMAT = ":: {desc} {percentage:3.0f}%"
+
+
 def get_progress_bar_size() -> int:
     try:
         screen_size = int(os.get_terminal_size().columns)
