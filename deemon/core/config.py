@@ -169,10 +169,14 @@ class Config(object):
                         if key in ALLOWED_VALUES:
                             if isinstance(ALLOWED_VALUES[key], dict):
                                 if key == "bitrate" and value in ["1", "3", "9"]:
-                                    if value == "1": value = "128"
-                                    if value == "3": value = "320"
-                                    if value == "9": value = "FLAC"
-                                if value in ALLOWED_VALUES[key].keys():
+                                    if value == "1":
+                                        dict1['bitrate'] = "128"
+                                    if value == "3":
+                                        dict1['bitrate'] = "320"
+                                    if value == "9":
+                                        dict1['bitrate'] = "FLAC"
+                                    modified += 1
+                                elif value in ALLOWED_VALUES[key].keys():
                                     dict1_tmp = dict1
                                     pos = find_position(dict1_tmp, key)
                                     for i in pos[:-1]:
