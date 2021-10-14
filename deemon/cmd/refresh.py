@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 class Refresh:
-    def __init__(self, time_machine: datetime = None, skip_download: bool = False):
+    def __init__(self, time_machine: datetime = None, skip_download: bool = False, ignore_filters: bool = False):
         self.db = db.Database()
         self.release_date = datetime.now()
         self.api = api.PlatformAPI("deezer-gw")
@@ -24,6 +24,7 @@ class Refresh:
         self.total_new_releases = 0
         self.queue_list = []
         self.skip_download = skip_download
+        self.ignore_filters = ignore_filters
 
         if time_machine:
             self.release_date = time_machine
@@ -68,6 +69,15 @@ class Refresh:
         if payload.get('artist_id'):
             self.debugger(f"Filtering {len(payload['releases'])} releases for artist {payload['artist_name']} "
                          f"({payload['artist_id']})")
+            if self.ignore_filters:
+                logger.debug("Ignore filters has been set, adding all releases")
+                for release in payload['releases']:
+                    self.new_releases.append(release)
+                    queue_obj = QueueItem(artist=payload, album=release, bitrate=payload['bitrate'],
+                                          download_path=payload['download_path'])
+                    self.debugger("QueueArtistItem", vars(queue_obj))
+                    self.queue_list.append(queue_obj)
+                return
             for release in payload['releases']:
                 release['artist_id'] = payload['artist_id']
                 release['artist_name'] = payload['artist_name']

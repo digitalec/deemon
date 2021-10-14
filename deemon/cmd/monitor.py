@@ -1,5 +1,4 @@
 import logging
-import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -34,16 +33,16 @@ class Monitor:
 
     def set_config(self, bitrate: str, alerts: bool, record_type: str, download_path: Path):
         self.bitrate = bitrate
-        self.alerts = alerts
+        self.alerts = True if alerts else False
         self.record_type = record_type
         self.download_path = download_path
         self.debugger("SetConfig", {'bitrate': bitrate, 'alerts': alerts, 'type': record_type, 'path': download_path})
 
-    def set_options(self, remove, download_object, search):
-        self.remove = remove
-        self.dl = download_object
-        self.is_search = search
-        self.debugger("SetOptions", {'remove': remove, 'dl': download_object, 'search': search})
+    def set_options(self, remove, dl_all, search):
+        self.remove = True if remove else False
+        self.dl = True if dl_all else False
+        self.is_search = True if search else False
+        self.debugger("SetOptions", {'remove': remove, 'dl': dl_all, 'search': search})
 
     def debugger(self, message: str, payload=None):
         if config.debug_mode():
@@ -143,7 +142,7 @@ class Monitor:
             return True
 
     def call_refresh(self):
-        refresh = Refresh(self.time_machine)
+        refresh = Refresh(self.time_machine, ignore_filters=self.dl)
         refresh.run()
 
     # @performance.timeit
