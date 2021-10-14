@@ -1,4 +1,5 @@
 import logging
+import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -107,7 +108,7 @@ class Monitor:
         artists_to_add = []
         pbar = tqdm(api_result, total=len(api_result), desc="Setting up artists for monitoring...", ascii=" #",
                     bar_format=ui.TQDM_FORMAT)
-        for i, artist in enumerate(pbar):
+        for artist in pbar:
             if artist['id'] in existing:
                 logger.info(f"   - Already monitoring {artist['name']}, skipping...")
             else:
@@ -120,11 +121,12 @@ class Monitor:
             self.db.new_transaction()
             self.db.fast_monitor(artists_to_add)
             self.db.commit()
+            return True
 
     def build_playlist_query(self, api_result: list):
         existing = self.db.get_all_monitored_playlist_ids() or []
         playlists_to_add = []
-        pbar = tqdm(api_result, total=len(api_result), desc="Monitoring playlists...", ascii=" #",
+        pbar = tqdm(api_result, total=len(api_result), desc="Setting up playlists for monitoring...", ascii=" #",
                     bar_format=ui.TQDM_FORMAT)
         for i, playlist in enumerate(pbar):
             if playlist['id'] in existing:
@@ -138,6 +140,7 @@ class Monitor:
             self.db.new_transaction()
             self.db.fast_monitor_playlist(playlists_to_add)
             self.db.commit()
+            return True
 
     def call_refresh(self):
         refresh = Refresh(self.time_machine)
@@ -166,14 +169,12 @@ class Monitor:
             if best_result:
                 to_monitor.append(best_result)
 
-        if len(to_monitor):
-            to_process = [item for elem in to_monitor for item in elem if len(item)]
-            self.build_artist_query(to_process)
+        to_process = [item for elem in to_monitor for item in elem if len(item)]
+        if self.build_artist_query(to_process):
             self.call_refresh()
         else:
             print("")
-            logger.info("No new artists were added for monitoring, exiting...")
-            return
+            logger.info("No new artists have been added, skipping refresh.")
 
     # @performance.timeit
     def artist_ids(self, ids: list):
@@ -187,8 +188,11 @@ class Monitor:
                      desc=f"Fetching artist data for {len(ids):,} artist(s), please wait...",
                      ascii=" #", bar_format=ui.TQDM_FORMAT))
 
-        self.build_artist_query(api_result)
-        self.call_refresh()
+        if self.build_artist_query(api_result):
+            self.call_refresh()
+        else:
+            print("")
+            logger.info("No new artists have been added, skipping refresh.")
 
     # @performance.timeit
     def importer(self, import_path: str):
@@ -219,8 +223,11 @@ class Monitor:
                      desc=f"Fetching playlist data for {len(ids):,} playlist(s), please wait...",
                      ascii=" #", bar_format=ui.TQDM_FORMAT))
 
-        self.build_playlist_query(api_result)
-        self.call_refresh()
+        if self.build_playlist_query(api_result):
+            self.call_refresh()
+        else:
+            print("")
+            logger.info("No new playlists have been added, skipping refresh.")
 
     # @performance.timeit
     def purge_artists(self, names: list = None, ids: list = None):
