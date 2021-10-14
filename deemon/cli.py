@@ -304,7 +304,7 @@ def show_artists(title, playlist_id, csv, filter, hide_header):
 @click.option('-f', '--future', is_flag=True, help='Display future releases')
 def show_releases(n, future):
     """
-    Show list of new releases
+    Show list of new or future releases
     """
     show = Show()
     show.releases(n, future)
@@ -435,6 +435,7 @@ def config_command(artist):
 @click.argument('num', type=int, required=False)
 @click.option('-v', '--view', is_flag=True, help="View recent refresh transactions")
 def rollback_command(num, view):
+    """Rollback a previous monitor or refresh transaction"""
     if view:
         rollback.view_transactions()
     elif num:
