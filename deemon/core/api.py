@@ -82,7 +82,7 @@ class PlatformAPI:
                 result = self.api.get_artist_discography(art_id=query['artist_id'], limit=limit)['data']
             except deezer.errors.GWAPIError as e:
                 if "UNKNOWN" in str(e):
-                    logger.error(f"Artist discography is not available for "
+                    logger.error(f"   [!] Artist discography is not available for "
                                  f"{query['artist_name']} ({query['artist_id']})")
                 else:
                     logger.error(f"An error occured while attempting to get the discography for "
@@ -109,7 +109,7 @@ class PlatformAPI:
                     else:
                         # In the event of an unknown release date, set it to today's date
                         # See album ID: 417403
-                        logger.warning(f"Found release without release date, assuming today: "
+                        logger.warning(f"   [!] Found release without release date, assuming today: "
                                        f"{query['artist_name']} - {r['ALB_TITLE']}")
                         release_date = datetime.strftime(datetime.today(), "%Y-%m-%d")
 
