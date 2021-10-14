@@ -9,22 +9,27 @@ from packaging.version import parse as parse_version
 logger = logging.getLogger(__name__)
 
 
+def get_appdata_root():
+
+    home_dir = Path.home()
+
+    if os.getenv("XDG_CONFIG_HOME"):
+        appdata_dir = Path(os.getenv("XDG_CONFIG_HOME"))
+    elif os.getenv("APPDATA"):
+        appdata_dir = Path(os.getenv("APPDATA"))
+    elif sys.platform.startswith('darwin'):
+        appdata_dir = home_dir / 'Library' / 'Application Support'
+    else:
+        appdata_dir = home_dir / '.config'
+
+    return appdata_dir
+
+
 def get_appdata_dir():
     """
     Get appdata directory where configuration and data is stored
     """
-    home_dir = Path.home()
-
-    if os.getenv("XDG_CONFIG_HOME"):
-        appdata_dir = Path(os.getenv("XDG_CONFIG_HOME")) / 'deemon'
-    elif os.getenv("APPDATA"):
-        appdata_dir = Path(os.getenv("APPDATA")) / "deemon"
-    elif sys.platform.startswith('darwin'):
-        appdata_dir = home_dir / 'Library' / 'Application Support' / 'deemon'
-    else:
-        appdata_dir = home_dir / '.config' / 'deemon'
-
-    return appdata_dir
+    return get_appdata_root() / 'deemon'
 
 
 def get_backup_dir():

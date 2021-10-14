@@ -73,6 +73,19 @@ class Config(object):
             if self.validate() > 0:
                 self.__write_modified_config()
 
+            if not self.arl():
+                logger.debug("Attempting to locate deemix's .arl file")
+                arl_file = startup.get_appdata_root() / 'deemix' / '.arl'
+                if Path(arl_file).is_file():
+                    with open(arl_file) as f:
+                        arl_from_file = f.readline().replace("\n", "")
+                        self.set('arl', arl_from_file)
+                        logger.debug("Successfully loaded ARL")
+
+            if len(self.arl()) > 0 and len(self.arl()) != 192:
+                logger.warning(f"[!] Possible invalid ARL detected (length: {len(self.arl())}). ARL should "
+                               "be 192 characters")
+
             # Set as default profile for init
             self.set('profile_id', 1, validate=False)
 
