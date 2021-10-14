@@ -14,3 +14,10 @@ def timeit(method):
         return result
 
     return timed
+
+
+def operation_time(start_time):
+    end_time = int(time.time())
+    duration = end_time - start_time
+    output = time.strftime("%H:%M:%S", time.gmtime(duration))
+    logger.info(f"Operation completed in {output}")

@@ -27,7 +27,6 @@ db = None
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
-
 @click.group(context_settings=CONTEXT_SETTINGS)
 @click.option('-P', '--profile', help="Specify profile to run deemon as")
 @click.version_option(__version__, '-V', '--version', message='deemon %(version)s')
@@ -100,6 +99,8 @@ def run(verbose, profile):
             logger.info("* To upgrade, run `pip install --upgrade deemon`")
         print("*" * 50)
         print("")
+
+    config.set("start_time", int(time.time()), False)
 
 
 @run.command(name='test')
@@ -251,13 +252,6 @@ def refresh_command(name, playlist, skip_download, time_machine):
         refresh.run(artists=dataprocessor.csv_to_list(name))
     else:
         refresh.run()
-
-    # if name and playlist:
-    #     playlist = list_of_names
-    #     name = None
-    #
-    # Refresh(artist_name=name, playlist_title=playlist, skip_download=skip_download,
-    #         time_machine=time_machine, dry_run=dry_run)
 
 
 @click.group(name="show")
@@ -440,3 +434,4 @@ def rollback_command(num, view):
         rollback.view_transactions()
     elif num:
         rollback.rollback_last(num)
+

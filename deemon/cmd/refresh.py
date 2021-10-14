@@ -7,7 +7,7 @@ from tqdm import tqdm
 from deemon.cmd.download import QueueItem, Download
 from deemon.core import db, api, notifier
 from deemon.core.config import Config as config
-from deemon.utils import dates, ui
+from deemon.utils import dates, ui, performance
 
 logger = logging.getLogger(__name__)
 
@@ -180,9 +180,11 @@ class Refresh:
                 self.db.add_new_releases(self.new_releases)
             self.db.commit()
             self.db_stats()
+            performance.operation_time(config.get('start_time'))
             logger.info("Database is up-to-date.")
         else:
             self.db_stats()
+            performance.operation_time(config.get('start_time'))
             logger.info("Database is up-to-date. No new releases were found.")
 
         if len(self.new_releases_alert) > 0:
