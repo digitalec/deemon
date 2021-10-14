@@ -31,7 +31,7 @@ class PlatformAPI:
                 logger.debug(f"Login OK, max_threads set to {self.max_threads}")
                 api_obj = dz.gw
             else:
-                logger.warning("Falling back to standard API (expired ARL?)")
+                logger.warning("[!] Falling back to standard API (expired ARL?)")
                 self.platform = "deezer-api"
                 api_obj = dz.api
         else:
@@ -50,9 +50,10 @@ class PlatformAPI:
             api_result = []
             for r in result:
                 api_result.append({'id': int(r['ART_ID']), 'name': r['ART_NAME']})
-            return {'query': query, 'results': api_result}
         else:
-            return self.api.search_artist(query=query, limit=limit)['data']
+            api_result = self.api.search_artist(query=query, limit=limit)['data']
+
+        return {'query': query, 'results': api_result}
 
     def get_artist_by_id(self, query: int, limit: int = 1) -> dict:
         """
