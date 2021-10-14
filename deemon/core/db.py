@@ -335,7 +335,7 @@ class Database(object):
 
     def get_future_releases(self):
         vals = {'profile_id': config.profile_id()}
-        return self.query("SELECT album_id FROM releases "
+        return self.query("SELECT * FROM releases "
                           "WHERE future_release = 1 AND profile_id = :profile_id", vals).fetchall()
 
     def get_playlist_tracks(self, playlist_id):

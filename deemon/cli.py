@@ -301,13 +301,13 @@ def show_artists(title, playlist_id, csv, filter, hide_header):
 
 @show_command.command(name="releases")
 @click.argument('N', default=7)
-def show_releases(n):
+@click.option('-f', '--future', is_flag=True, help='Display future releases')
+def show_releases(n, future):
     """
     Show list of new releases
     """
     show = Show()
-    show.releases(n)
-    # TODO add ability to download from this list
+    show.releases(n, future)
 
 
 run.add_command(show_command)

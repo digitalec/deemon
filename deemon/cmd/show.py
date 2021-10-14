@@ -198,18 +198,30 @@ class Show:
             all_artists[idx] = artist
         return all_artists
 
-    def releases(self, days):
-        seconds_per_day = 86400
-        days_in_seconds = (days * seconds_per_day)
-        now = int(time.time())
-        back_date = (now - days_in_seconds)
-        releases = self.db.show_new_releases(back_date, now)
-        release_list = [x for x in releases]
-        if len(release_list) > 0:
-            logger.info(f"New releases found within last {days} day(s):")
-            print("")
-            release_list.sort(key=lambda x: x['album_release'], reverse=True)
-            for release in release_list:
-                print('+ [%-10s] %s - %s' % (release['album_release'], release['artist_name'], release['album_name']))
+    def releases(self, days, future):
+        if future:
+            future_releases = self.db.get_future_releases()
+            future_release_list = [x for x in future_releases]
+            if len(future_release_list) > 0:
+                logger.info(f"Future releases:")
+                print("")
+                future_release_list.sort(key=lambda x: x['album_release'], reverse=True)
+                for release in future_release_list:
+                    print('+ [%-10s] %s - %s' % (release['album_release'], release['artist_name'], release['album_name']))
+            else:
+                logger.info("No future releases have been detected")
         else:
-            logger.info(f"No releases found in the last {days} day(s)")
+            seconds_per_day = 86400
+            days_in_seconds = (days * seconds_per_day)
+            now = int(time.time())
+            back_date = (now - days_in_seconds)
+            releases = self.db.show_new_releases(back_date, now)
+            release_list = [x for x in releases]
+            if len(release_list) > 0:
+                logger.info(f"New releases found within last {days} day(s):")
+                print("")
+                release_list.sort(key=lambda x: x['album_release'], reverse=True)
+                for release in release_list:
+                    print('+ [%-10s] %s - %s' % (release['album_release'], release['artist_name'], release['album_name']))
+            else:
+                logger.info(f"No releases found in the last {days} day(s)")
