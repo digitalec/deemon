@@ -48,6 +48,9 @@ def run(verbose, profile):
     logger.debug(f"command: \"{' '.join([x for x in sys.argv[1:]])}\"")
     logger.debug("Python " + platform.python_version())
     logger.debug(platform.platform())
+    logger.debug(f"deemon appdata is located at {startup.get_appdata_dir()}")
+
+    print(f"Initializing deemon {__version__}\n")
 
     config = Config()
     db = Database()
@@ -238,6 +241,7 @@ def refresh_command(name, playlist, skip_download, time_machine):
         if not time_machine:
             return logger.error("Date for time machine is invalid")
 
+    logger.info("Starting database refresh")
     refresh = Refresh(time_machine, skip_download)
     if playlist:
         if not len(name):
@@ -377,9 +381,10 @@ def api_test(artist, artist_id, album_id, playlist_id, limit, raw):
 @run.command(name="reset")
 def reset_db():
     """Reset monitoring database"""
-    logger.warning("** ALL ARTISTS AND PLAYLISTS WILL BE REMOVED! **")
+    logger.warning("** WARNING: All artists and playlists will be removed regardless of profile! **")
     confirm = input(":: Type 'reset' to confirm: ")
     if confirm.lower() == "reset":
+        print("")
         db.reset_database()
     else:
         logger.info("Reset aborted. Database has NOT been modified.")
