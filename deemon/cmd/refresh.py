@@ -7,7 +7,7 @@ from tqdm import tqdm
 from deemon.cmd.download import QueueItem, Download
 from deemon.core import db, api, notifier
 from deemon.core.config import Config as config
-from deemon.utils import dates
+from deemon.utils import dates, ui
 
 logger = logging.getLogger(__name__)
 
@@ -63,23 +63,31 @@ class Refresh:
 
         return new_releases
 
+    # TODO This is a mess.
     def filter_new_releases(self, payload: dict):
         if payload.get('artist_id'):
-            logger.debug(f"Filtering {len(payload['releases'])} releases for artist {payload['artist_name']} "
+            self.debugger(f"Filtering {len(payload['releases'])} releases for artist {payload['artist_name']} "
                          f"({payload['artist_id']})")
             for release in payload['releases']:
+                release['artist_id'] = payload['artist_id']
+                release['artist_name'] = payload['artist_name']
+                release['future'] = 0
                 self.debugger("ProcessingRelease", release)
                 if config.record_type() == release['record_type'] or config.record_type() == "all":
                     album_release = dates.str_to_datetime_obj(release['release_date'])
+                    if config.release_by_date():
+                        max_release_date = dates.str_to_datetime_obj(dates.get_max_release_date(config.release_max_days()))
+                        if album_release < max_release_date:
+                            logger.debug(f"Release {release['id']} outside of max_release_date, skipping...")
+                            self.new_releases.append(release)
+                            continue
                     if album_release > datetime.now():
                         release['future'] = 1
-                        logger.debug(f":: FUTURE RELEASE DETECTED :: {payload['artist_name']} - {release['title']} "
-                                     f"({release['release_date']})")
+                        self.new_releases.append(release)
+                        logger.debug(f"Future release detected >>> {payload['artist_name']} - {release['title']} "
+                                     f"[{release['release_date']}]")
                     else:
-                        release['future'] = 0
                         new_release = release.copy()
-                        new_release['artist_id'] = payload['artist_id']
-                        new_release['artist_name'] = payload['artist_name']
                         self.new_releases.append(new_release)
                         if (self.time_machine and album_release > self.release_date) or \
                                 (payload['refreshed'] and not self.time_machine):
@@ -92,9 +100,14 @@ class Refresh:
                             if payload["alerts"] == 1 or not payload['alerts'] and config.alerts():
                                 self.append_new_release(release['release_date'], payload['artist_name'],
                                                         release['title'])
+                else:
+                    logger.debug(f"Release {release['id']} does not match record_type "
+                                 f"\"{config.record_type()}\", skipping...")
+                    self.new_releases.append(release)
+
 
         if payload.get('tracks'):
-            logger.debug(f"Filtering {len(payload['tracks'])} tracks for playlist {payload['title']}")
+            self.debugger(f"Filtering {len(payload['tracks'])} tracks for playlist {payload['title']}")
             if len(payload['tracks']):
                 for track in payload['tracks']:
                     new_track = track.copy()
@@ -139,8 +152,8 @@ class Refresh:
                     return logger.warning("No artists found to refresh")
                 api_result = self.get_release_data({'artists': monitored_artists, 'playlists': monitored_playlists})
 
-        artist_processor = tqdm(api_result['artists'], total=len(api_result['artists']), desc="Filtering releases ...",
-                                ascii=" #", bar_format='[{n_fmt}/{total_fmt}] {desc} [{bar}] {percentage:3.0f}%')
+        artist_processor = tqdm(api_result['artists'], total=len(api_result['artists']), desc="Checking for new releases...",
+                                ascii=" #", bar_format=ui.TQDM_FORMAT)
         for payload in artist_processor:
             if len(payload):
                 payload['releases'] = self.remove_existing_releases(payload)
@@ -160,14 +173,34 @@ class Refresh:
             dl = Download()
             dl.download_queue(self.queue_list)
 
-        logging.info("Updating database...")
-        self.db.add_new_playlist_releases(self.new_playlist_releases)
-        self.db.add_new_releases(self.new_releases)
-        self.db.commit()
+        if len(self.new_playlist_releases) or len(self.new_releases):
+            if len(self.new_playlist_releases):
+                self.db.add_new_playlist_releases(self.new_playlist_releases)
+            if len(self.new_releases):
+                self.db.add_new_releases(self.new_releases)
+            self.db.commit()
+            self.db_stats()
+            logger.info("Database is up-to-date.")
+        else:
+            self.db_stats()
+            logger.info("Database is up-to-date. No new releases were found.")
 
         if len(self.new_releases_alert) > 0:
             notification = notifier.Notify(self.new_releases_alert)
             notification.send()
+
+    def db_stats(self):
+        artists = len(self.db.get_all_monitored_artist_ids())
+        playlists = len(self.db.get_all_monitored_playlist_ids())
+        releases = len(self.db.get_artist_releases())
+        future = len(self.db.get_future_releases())
+
+        print("")
+        print(f"+ Artists monitored: {artists:,}")
+        print(f"+ Playlists monitored: {playlists:,}")
+        print(f"+ Releases seen: {releases:,}")
+        print(f"+ Pending future releases: {future:,}")
+        print("")
 
     # @performance.timeit
     def get_release_data(self, to_refresh: dict) -> dict:
@@ -184,22 +217,26 @@ class Refresh:
 
         api_result = {'artists': [], 'playlists': []}
 
+        logger.debug(f"Standby, starting refresh...")
+
         if to_refresh.get('playlists') and len(to_refresh.get('playlists')):
+            logger.debug("Fetching playlist track data...")
             self.debugger("SpawningThreads", self.api.max_threads)
             with ThreadPoolExecutor(max_workers=self.api.max_threads) as ex:
                 api_result['playlists'] = list(
                     tqdm(ex.map(self.api.get_playlist, to_refresh['playlists']),
-                         total=len(to_refresh['playlists']), desc="Refreshing playlists ...", ascii=" #",
-                         bar_format='[{n_fmt}/{total_fmt}] {desc} [{bar}] {percentage:3.0f}%')
+                         total=len(to_refresh['playlists']), desc=f"Fetching playlist track data for {len(to_refresh['playlists'])} playlist(s), please wait...", ascii=" #",
+                         bar_format=ui.TQDM_FORMAT)
                 )
 
         if to_refresh.get('artists') and len(to_refresh['artists']):
+            logger.debug("Fetching artist release data...")
             self.debugger("SpawningThreads", self.api.max_threads)
             with ThreadPoolExecutor(max_workers=self.api.max_threads) as ex:
                 api_result['artists'] = list(
                     tqdm(ex.map(self.api.get_artist_albums, to_refresh['artists']),
-                         total=len(to_refresh['artists']), desc="Refreshing artists ...", ascii=" #",
-                         bar_format='[{n_fmt}/{total_fmt}] {desc} [{bar}] {percentage:3.0f}%')
+                         total=len(to_refresh['artists']), desc=f"Fetching artist release data for {len(to_refresh['artists']):,} artist(s), please wait...", ascii=" #",
+                         bar_format=ui.TQDM_FORMAT)
                 )
         return api_result
 
