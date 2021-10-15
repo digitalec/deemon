@@ -83,7 +83,10 @@ class Refresh:
                 release['artist_name'] = payload['artist_name']
                 release['future'] = 0
                 self.debugger("ProcessingRelease", release)
-                if config.record_type() == release['record_type'] or config.record_type() == "all":
+                if payload['record_type'] and payload['record_type'] != release['record_type']:
+                    self.new_releases.append(release)
+                    continue
+                if payload['record_type'] == release['record_type'] or config.record_type() == release['record_type'] or config.record_type() == "all":
                     album_release = dates.str_to_datetime_obj(release['release_date'])
                     if config.release_by_date():
                         max_release_date = dates.str_to_datetime_obj(dates.get_max_release_date(config.release_max_days()))
