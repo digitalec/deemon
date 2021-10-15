@@ -3,7 +3,8 @@ import sys
 
 from deezer import Deezer
 
-from deemon.cmd import monitor, download
+from deemon.cmd import download
+from deemon.cmd import monitor as mon
 from deemon.cmd.refresh import Refresh
 from deemon.core import db
 from deemon.core.config import Config as config
@@ -257,7 +258,10 @@ class Search:
                     stop = False
                 record_type = self.filter or config.record_type()
                 self.clear()
-                monitor.monitor("artist_id", artist['id'], remove=stop, dl_obj=None)
+                monitor = mon.Monitor()
+                monitor.set_config(None, None, record_type, None)
+                monitor.set_options(stop, False, False)
+                monitor.artist_ids([artist['id']])
                 if not stop:
                     self.new_artist_monitored.append(artist['id'])
             elif prompt == "f":

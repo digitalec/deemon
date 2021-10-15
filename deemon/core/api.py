@@ -68,10 +68,11 @@ class PlatformAPI:
             return {'id': int(result['ART_ID']), 'name': result['ART_NAME']}
         else:
             try:
-                self.api.get_artist(query)
+                result = self.api.get_artist(query)
             except deezer.errors.DataException as e:
                 logger.debug(f"API error: {e}")
                 return {}
+            return {'id': result['id'], 'name': result['name']}
 
     def get_artist_albums(self, query: dict, limit: int = -1):
         """
