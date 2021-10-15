@@ -5,7 +5,6 @@ from deezer import Deezer
 
 from deemon.cmd import download
 from deemon.cmd import monitor as mon
-from deemon.cmd.refresh import Refresh
 from deemon.core import db
 from deemon.core.config import Config as config
 from deemon.utils import dates
@@ -23,7 +22,6 @@ class Search:
         self.select_mode = False
         self.explicit_only = False
         self.user_search_query: str = None
-        self.new_artist_monitored: list = []
 
         self.sort: str = "release_date"
         self.filter: str = None
@@ -262,8 +260,6 @@ class Search:
                 monitor.set_config(None, None, record_type, None)
                 monitor.set_options(stop, False, False)
                 monitor.artist_ids([artist['id']])
-                if not stop:
-                    self.new_artist_monitored.append(artist['id'])
             elif prompt == "f":
                 if len(filtered_choices) > 0:
                     for item in filtered_choices:
@@ -407,14 +403,6 @@ class Search:
             exit_all = input(":: Quit before downloading queue? [y|N] ")
             if exit_all.lower() != 'y':
                 return False
-            else:
-                if len(self.new_artist_monitored) > 0:
-                    self.clear()
-                    Refresh(artist_id=self.new_artist_monitored)
-                return True
-        if len(self.new_artist_monitored) > 0:
-            self.clear()
-            Refresh(artist_id=self.new_artist_monitored)
         return True
 
     def display_options(self, filter=None, sort=None, mode=None, options=None):
