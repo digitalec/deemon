@@ -72,6 +72,9 @@ class Refresh:
             if self.ignore_filters:
                 logger.debug("Ignore filters has been set, adding all releases")
                 for release in payload['releases']:
+                    release['artist_id'] = payload['artist_id']
+                    release['artist_name'] = payload['artist_name']
+                    release['future'] = 0
                     self.new_releases.append(release)
                     queue_obj = QueueItem(artist=payload, album=release, bitrate=payload['bitrate'],
                                           download_path=payload['download_path'])
