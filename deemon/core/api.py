@@ -125,17 +125,17 @@ class PlatformAPI:
         query['releases'] = api_result
         return query
 
-    def get_playlist(self, query: dict):
-        # if self.platform == "deezer-gw":
-        #     # deezer-py BUG: Receiving a 'method unknown' for 'playlist_getData'
-        #     result = self.api.get_playlist(query)
-        #     print(result)
-        # else:
-        #     return self.api.get_playlist(query)
+    def get_playlist(self, query: int):
+        api_result = Deezer().api.get_playlist(query)
+        return {'id': query, 'title': api_result['title'],
+                'link': f"https://deezer.com/playlist/{str(api_result['id'])}"}
+
+    def get_playlist_tracks(self, query: dict):
         track_list = []
         api_result = Deezer().api.get_playlist(query['id'])
         for track in api_result['tracks']['data']:
-            track_list.append({'id': track['id'], 'title': track['title'], 'artist_id': track['artist']['id'],
+            track_list.append({'id': track['id'], 'title': track['title'],
+                               'artist_id': track['artist']['id'],
                                'artist_name': track['artist']['name']})
         query['tracks'] = track_list
         return query

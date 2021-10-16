@@ -18,7 +18,8 @@ logger = logging.getLogger(__name__)
 class QueueItem:
     # TODO - Accept new playlist tracks for output/alerts
     def __init__(self, artist=None, album=None, track=None, playlist=None,
-                 bitrate: str = None, download_path: str = None):
+                 bitrate: str = None, download_path: str = None,
+                 release_full: dict = None):
         self.artist_name = None
         self.album_id = None
         self.album_title = None
@@ -28,6 +29,12 @@ class QueueItem:
         self.playlist_title = None
         self.bitrate = bitrate or config.bitrate()
         self.download_path = download_path or config.download_path()
+        
+        if release_full:
+            self.artist_name = release_full['artist_name']
+            self.album_id = release_full['id']
+            self.album_title = release_full['title']
+            self.url = f"https://www.deezer.com/album/{self.album_id}"
 
         if artist:
             try:
@@ -186,7 +193,7 @@ class Download:
             filtered_albums = []
             for album in album_api:
                 if (album['record_type'] == config.record_type()) or config.record_type() == "all":
-                    album_date = dates.str_to_datetime(album['release_date'])
+                    album_date = dates.format_date_string(album['release_date'])
                     if self.from_release_date:
                         if album_date >= self.from_release_date:
                             filtered_albums.append(album)

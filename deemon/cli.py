@@ -199,7 +199,7 @@ def monitor_command(artist, im, playlist, bitrate, record_type, alerts, artist_i
 
     if url:
         artist_id = True
-        urls = [x for x in artist]
+        urls = [x.replace(",", "") for x in artist]
         artist = []
         for u in urls:
             id_from_url = u.split('/artist/')
@@ -211,8 +211,8 @@ def monitor_command(artist, im, playlist, bitrate, record_type, alerts, artist_i
             artist.append(aid)
 
     if playlist:
-        urls = [x for x in artist]
-        artist = []
+        urls = [x.replace(",", "") for x in artist]
+        playlist_id = []
         for u in urls:
             id_from_url = u.split('/playlist/')
             try:
@@ -220,12 +220,12 @@ def monitor_command(artist, im, playlist, bitrate, record_type, alerts, artist_i
             except (IndexError, ValueError):
                 logger.error(f"Invalid playlist URL -- {url}")
                 return
-            artist.append(aid)
+            playlist_id.append(aid)
 
     if im:
         monitor.importer(im)
     elif playlist:
-        monitor.playlists(artist)
+        monitor.playlists(playlist_id)
     elif artist_id:
         monitor.artist_ids(dataprocessor.csv_to_list(artist))
     elif artist:

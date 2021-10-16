@@ -1,6 +1,6 @@
 import logging
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from tqdm import tqdm
 
@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 class Refresh:
     def __init__(self, time_machine: datetime = None, skip_download: bool = False, ignore_filters: bool = False):
         self.db = db.Database()
-        self.release_date = datetime.now()
+        self.refresh_date = datetime.now()
         self.api = api.PlatformAPI("deezer-gw")
         self.new_releases = []
         self.new_releases_alert = []
@@ -24,12 +24,12 @@ class Refresh:
         self.total_new_releases = 0
         self.queue_list = []
         self.skip_download = skip_download
-        self.ignore_filters = ignore_filters
+        self.download_all = ignore_filters
 
         if time_machine:
-            self.release_date = time_machine
+            self.refresh_date = time_machine
             self.time_machine = True
-            logger.info(f":: Time Machine active: {datetime.strftime(self.release_date, '%b %d, %Y')}!")
+            logger.info(f":: Time Machine active: {datetime.strftime(self.refresh_date, '%b %d, %Y')}!")
             config.set('by_release_date', False)
 
     def debugger(self, message: str, payload = None):
@@ -58,81 +58,114 @@ class Refresh:
             seen_releases = self.db.get_playlist_tracks(playlist_id)
             if seen_releases:
                 seen_releases = [v for x in seen_releases for k, v in x.items()]
-                new_releases = [x for x in payload['tracks'] if type(x) == dict for k, v in x.items() if
-                                k == "id" and v not in seen_releases]
+                new_releases = [x for x in payload['tracks']
+                                if type(x) == dict for k, v in x.items()
+                                if k == "id" and v not in seen_releases]
                 return new_releases
+            return [x for x in payload['tracks']]
 
         return new_releases
 
-    # TODO This is a mess.
-    def filter_new_releases(self, payload: dict):
-        if payload.get('artist_id'):
-            self.debugger(f"Filtering {len(payload['releases'])} releases for artist {payload['artist_name']} "
-                         f"({payload['artist_id']})")
-            if self.ignore_filters:
-                logger.debug("Ignore filters has been set, adding all releases")
-                for release in payload['releases']:
-                    release['artist_id'] = payload['artist_id']
-                    release['artist_name'] = payload['artist_name']
-                    release['future'] = 0
-                    self.new_releases.append(release)
-                    queue_obj = QueueItem(artist=payload, album=release, bitrate=payload['bitrate'],
-                                          download_path=payload['download_path'])
-                    self.debugger("QueueArtistItem", vars(queue_obj))
-                    self.queue_list.append(queue_obj)
-                return
-            for release in payload['releases']:
-                release['artist_id'] = payload['artist_id']
-                release['artist_name'] = payload['artist_name']
-                release['future'] = 0
-                self.debugger("ProcessingRelease", release)
-                if payload['record_type'] and payload['record_type'] != release['record_type']:
-                    self.new_releases.append(release)
-                    continue
-                if payload['record_type'] == release['record_type'] or config.record_type() == release['record_type'] or config.record_type() == "all":
-                    album_release = dates.str_to_datetime_obj(release['release_date'])
-                    if config.release_by_date():
-                        max_release_date = dates.str_to_datetime_obj(dates.get_max_release_date(config.release_max_days()))
-                        if album_release < max_release_date:
-                            logger.debug(f"Release {release['id']} outside of max_release_date, skipping...")
-                            self.new_releases.append(release)
-                            continue
-                    if album_release > datetime.now():
-                        release['future'] = 1
-                        self.new_releases.append(release)
-                        logger.debug(f"Future release detected >>> {payload['artist_name']} - {release['title']} "
-                                     f"[{release['release_date']}]")
-                    else:
-                        new_release = release.copy()
-                        self.new_releases.append(new_release)
-                        if (self.time_machine and album_release > self.release_date) or \
-                                (payload['refreshed'] and not self.time_machine):
-                            logger.debug(f"Queueing new release: {payload['artist_name']} - {release['title']} "
-                                         f"({release['id']})")
-                            queue_obj = QueueItem(artist=payload, album=release, bitrate=payload['bitrate'],
-                                                     download_path=payload['download_path'])
-                            self.debugger("QueueArtistItem", vars(queue_obj))
-                            self.queue_list.append(queue_obj)
-                            if payload["alerts"] == 1 or not payload['alerts'] and config.alerts():
-                                self.append_new_release(release['release_date'], payload['artist_name'],
-                                                        release['title'])
+    def filter_artist_releases(self, payload: dict):
+        """ Inspect artist releases and decide what to do with each release """
+        
+        self.debugger("FilterReleases", {'artist': payload['artist_id'],
+                                         'releases': len(payload['releases'])})
+        for release in payload['releases']:
+            release['artist_id'] = payload['artist_id']
+            release['artist_name'] = payload['artist_name']
+            release['future'] = self.is_future_release(release['release_date'])
+            
+            if release['explicit_lyrics'] != 1:
+                release['explicit_lyrics'] = 0
+            
+            self.append_database_release(release)
+            
+            if release['future']:
+                continue
+            
                 else:
-                    logger.debug(f"Release {release['id']} does not match record_type "
-                                 f"\"{config.record_type()}\", skipping...")
-                    self.new_releases.append(release)
+                    continue
+            
+            if self.download_all:
+                self.queue_release(release)
+                continue
+            
+            if not self.allowed_record_type(payload['record_type'],
+                                            release['record_type']):
+                logger.debug(f"Record type \"{release['record_type']}\" "
+                                "has been filtered out, skipping release "
+                                f"{release['id']}")
+                continue
+            
+            if self.release_too_old(release['release_date']):
+                logger.debug(f"Release {release['id']} is too old, "
+                                "skipping it.")
+                continue
+            
+            if not payload['refreshed']:
+                continue
+            
+            self.queue_release(release)
+            
+    def append_database_release(self, new_release: dict):
+        self.new_releases.append(new_release)
+                
+        
+    
+    def release_too_old(self, release_date: str):
+        release_date_dt = dates.str_to_datetime_obj(release_date)
+        if self.time_machine:
+            if release_date_dt < self.refresh_date:
+                return True
+        elif config.release_by_date():
+            if release_date_dt < (self.refresh_date - timedelta(config.release_max_age())):
+                return True
+                
+                
+    def is_future_release(self, release_date: str):
+        """ Return 1 if release date is in future, otherwise return 0 """
+        
+        release_date_dt = dates.str_to_datetime_obj(release_date)
+        if release_date_dt > datetime.now():
+            return 1
+        else:
+            return 0
+    
+    def allowed_record_type(self, artist_rec_type, release_rec_type: str):
+        """ Compare actual record_type against allowable """
+        
+        if artist_rec_type:
+            if artist_rec_type == release_rec_type:
+                return True
+            else:
+                return
+        elif config.record_type() == release_rec_type:
+            return True
+        elif config.record_type() == "all":
+            return True
 
+    def queue_release(self, release: dict):
+        """ Add release to download queue and create alert notification """
+        
+        self.create_notification(release)
+        self.queue_list.append(QueueItem(release_full=release))
 
-        if payload.get('tracks'):
-            self.debugger(f"Filtering {len(payload['tracks'])} tracks for playlist {payload['title']}")
-            if len(payload['tracks']):
-                for track in payload['tracks']:
-                    new_track = track.copy()
-                    new_track['playlist_id'] = payload['id']
-                    self.new_playlist_releases.append(new_track)
-                    queue_obj = QueueItem(playlist=payload, bitrate=payload['bitrate'],
-                                          download_path=payload['download_path'])
-                    self.debugger("QueuePlaylistItem", queue_obj)
-                    self.queue_list.append(queue_obj)
+    def filter_playlist_releases(self, payload: dict):
+        self.debugger(f"Filtering {len(payload['tracks'])} tracks for playlist {payload['title']}")
+        if len(payload['tracks']):
+            for track in payload['tracks']:
+                new_track = track.copy()
+                new_track['playlist_id'] = payload['id']
+                self.new_playlist_releases.append(new_track)
+                
+                if payload['refreshed'] == 0:
+                    continue
+                
+                queue_obj = QueueItem(playlist=payload, bitrate=payload['bitrate'],
+                                        download_path=payload['download_path'])
+                self.debugger("QueuePlaylistItem", queue_obj)
+                self.queue_list.append(queue_obj)
 
     def waiting_for_refresh(self):
         playlists = self.db.get_unrefreshed_playlists()
@@ -173,12 +206,12 @@ class Refresh:
         for payload in artist_processor:
             if len(payload):
                 payload['releases'] = self.remove_existing_releases(payload)
-                self.filter_new_releases(payload)
+                self.filter_artist_releases(payload)
 
         for payload in api_result['playlists']:
             if len(payload):
                 payload['tracks'] = self.remove_existing_releases(payload)
-                self.filter_new_releases(payload)
+                self.filter_playlist_releases(payload)
 
         if self.skip_download:
             logger.info(f"You have opted to skip downloads, emptying {len(self.queue_list)} item(s) from queue...")
@@ -191,8 +224,10 @@ class Refresh:
 
         if len(self.new_playlist_releases) or len(self.new_releases):
             if len(self.new_playlist_releases):
+                logger.debug("Updating playlist releases in database...")
                 self.db.add_new_playlist_releases(self.new_playlist_releases)
             if len(self.new_releases):
+                logger.debug("Updating artist releases in database...")
                 self.db.add_new_releases(self.new_releases)
             self.db.commit()
             self.db_stats()
@@ -242,8 +277,13 @@ class Refresh:
             self.debugger("SpawningThreads", self.api.max_threads)
             with ThreadPoolExecutor(max_workers=self.api.max_threads) as ex:
                 api_result['playlists'] = list(
-                    tqdm(ex.map(self.api.get_playlist, to_refresh['playlists']),
-                         total=len(to_refresh['playlists']), desc=f"Fetching playlist track data for {len(to_refresh['playlists'])} playlist(s), please wait...", ascii=" #",
+                    tqdm(ex.map(self.api.get_playlist_tracks,
+                                to_refresh['playlists']),
+                         total=len(to_refresh['playlists']),
+                         desc=f"Fetching playlist track data for "
+                              f"{len(to_refresh['playlists'])} playlist(s), "
+                              "please wait...",
+                         ascii=" #",
                          bar_format=ui.TQDM_FORMAT)
                 )
 
@@ -258,12 +298,12 @@ class Refresh:
                 )
         return api_result
 
-    def append_new_release(self, release_date, artist, album):
+    def create_notification(self, release: dict):
         for days in self.new_releases_alert:
             for key in days:
                 if key == "release_date":
-                    if release_date in days[key]:
-                        days["releases"].append({'artist': artist, 'album': album})
+                    if release['release_date'] in days[key]:
+                        days["releases"].append({'artist': release['artist_name'], 'album': release['title']})
                         return
 
-        self.new_releases_alert.append({'release_date': release_date, 'releases': [{'artist': artist, 'album': album}]})
+        self.new_releases_alert.append({'release_date': release['release_date'], 'releases': [{'artist': release['artist_name'], 'album': release['title']}]})

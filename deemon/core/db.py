@@ -383,17 +383,20 @@ class Database(object):
             return self.query("SELECT * FROM monitor WHERE artist_name = ':artist' "
                               "AND profile_id = :profile_id COLLATE NOCASE", values).fetchone()
 
-    def set_all_refreshed(self):
+    def set_all_artists_refreshed(self):
         self.query("UPDATE monitor SET refreshed = 1 WHERE refreshed = 0")
+        
+    def set_all_playlists_refreshed(self):
+        self.query("UPDATE playlists SET refreshed = 1 WHERE refreshed = 0")
 
     def add_new_releases(self, values):
         self.new_transaction()
         sql = (f"INSERT INTO releases ('artist_id', 'artist_name', 'album_id', 'album_name', 'album_release', "
-               f"'album_added', 'future_release', 'profile_id', 'trans_id') "
+               f"'album_added', 'future_release', 'explicit', 'profile_id', 'trans_id') "
                f"VALUES (:artist_id, :artist_name, :id, :title, :release_date, {int(time.time())}, :future, "
-               f"{config.profile_id()}, {config.transaction_id()})")
+               f":explicit_lyrics, {config.profile_id()}, {config.transaction_id()})")
         self.cursor.executemany(sql, values)
-        self.set_all_refreshed()
+        self.set_all_artists_refreshed()
 
     def add_new_playlist_releases(self, values):
         self.new_transaction()
@@ -401,7 +404,7 @@ class Database(object):
                f"'track_added', 'profile_id', 'trans_id') VALUES (:artist_id, :artist_name, :id, :title, :playlist_id, "
                f"{int(time.time())}, {config.profile_id()}, {config.transaction_id()})")
         self.cursor.executemany(sql, values)
-        self.set_all_refreshed()
+        self.set_all_playlists_refreshed()
 
     def show_new_releases(self, from_date_ts, now_ts):
         today_date = datetime.utcfromtimestamp(now_ts).strftime('%Y-%m-%d')
