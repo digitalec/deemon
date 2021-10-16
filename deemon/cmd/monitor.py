@@ -33,7 +33,7 @@ class Monitor:
 
     def set_config(self, bitrate: str, alerts: bool, record_type: str, download_path: Path):
         self.bitrate = bitrate
-        self.alerts = True if alerts else False
+        self.alerts = alerts
         self.record_type = record_type
         self.download_path = download_path
         self.debugger("SetConfig", {'bitrate': bitrate, 'alerts': alerts, 'type': record_type, 'path': download_path})

@@ -190,6 +190,9 @@ def monitor_command(artist, im, playlist, bitrate, record_type, alerts, artist_i
             monitor.time_machine = time_machine
         else:
             return logger.error("Date for time machine is invalid")
+    
+    if not alerts:
+        alerts = None
 
     monitor.set_options(remove, dl, search_flag)
     monitor.set_config(bitrate, alerts, record_type, download_path)
