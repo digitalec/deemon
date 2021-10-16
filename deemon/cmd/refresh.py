@@ -108,7 +108,8 @@ class Refresh:
                 continue
             
             if not payload['refreshed']:
-                continue
+                if not self.time_machine:
+                    continue
             
             self.queue_release(release)
             
