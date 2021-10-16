@@ -77,3 +77,15 @@ def get_latest_version(release_type):
                     return latest_stable
     else:
         return latest_stable
+
+def get_changelog(ver: str):
+    try:
+        response = requests.get("https://api.github.com/repos/digitalec/"
+                                "deemon/releases")
+    except requests.exceptions.ConnectionError:
+        return print("Unable to reach GitHub API")
+    
+    for release in response.json():
+        if release['name'] == ver:
+            return print(release['body'])
+    return print(f"Changelog for v{ver} was not found.")

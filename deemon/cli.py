@@ -27,11 +27,13 @@ db = None
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
-@click.group(context_settings=CONTEXT_SETTINGS)
+@click.group(context_settings=CONTEXT_SETTINGS, invoke_without_command=True,
+             no_args_is_help=True)
+@click.option('--whats-new', is_flag=True, help="Show release notes from this version")
 @click.option('-P', '--profile', help="Specify profile to run deemon as")
 @click.version_option(__version__, '-V', '--version', message='deemon %(version)s')
 @click.option('-v', '--verbose', is_flag=True, help="Show debug output")
-def run(verbose, profile):
+def run(whats_new, verbose, profile):
     """Monitoring and alerting tool for new music releases using the Deezer API.
 
     deemon is a free and open source tool. To report issues or to contribute,
@@ -48,6 +50,9 @@ def run(verbose, profile):
     logger.debug("Python " + platform.python_version())
     logger.debug(platform.platform())
     logger.debug(f"deemon appdata is located at {startup.get_appdata_dir()}")
+    
+    if whats_new:
+        return startup.get_changelog(__version__)
 
     print(f"Initializing deemon {__version__}\n")
 
