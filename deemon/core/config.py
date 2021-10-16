@@ -283,7 +283,7 @@ class Config(object):
         return Config._CONFIG.get('new_releases').get('by_release_date')
 
     @staticmethod
-    def release_max_days() -> int:
+    def release_max_age() -> int:
         return Config._CONFIG.get('new_releases').get('release_max_age')
 
     @staticmethod
