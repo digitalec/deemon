@@ -27,12 +27,12 @@ def get_year(release_date: str):
     return datetime.strptime(release_date, '%Y-%m-%d').year
 
 
-def str_to_datetime(d: str):
+def format_date_string(d: str):
     date_string = datetime.strptime(d, "%Y-%m-%d")
     return datetime.strftime(date_string, "%Y-%m-%d")
 
 
-def str_to_datetime_obj(d: str):
+def str_to_datetime_obj(d: str) -> datetime:
     return datetime.strptime(d, "%Y-%m-%d")
 
 
