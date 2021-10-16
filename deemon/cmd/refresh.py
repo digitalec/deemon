@@ -84,6 +84,10 @@ class Refresh:
             if release['future']:
                 continue
             
+            explicit_album_id = self.explicit_id(release['title'], payload['releases'])
+            if explicit_album_id:
+                if explicit_album_id == release['id']:
+                    logger.debug(f"An explicit release was found for {release['title']}")
                 else:
                     continue
             
@@ -111,6 +115,13 @@ class Refresh:
     def append_database_release(self, new_release: dict):
         self.new_releases.append(new_release)
                 
+    @staticmethod
+    def explicit_id(release_title: str, payload: list):
+        explicit_found = {}
+        for release in payload:
+            if release['title'] == release_title:
+                if release['explicit_lyrics'] == 1:
+                    return release['id']
         
     
     def release_too_old(self, release_date: str):
