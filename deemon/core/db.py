@@ -263,7 +263,12 @@ class Database(object):
             self.query("ALTER TABLE playlists_tmp RENAME TO playlists")
             self.query("INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('version', '3.2')")
             self.commit()
-            logger.debug(f"Database upgraded to version 3.2")
+            
+        if current_ver < parse_version("3.3"):
+            self.query("ALTER TABLE releases ADD COLUMN explicit INTEGER")
+            self.query("INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('version', '3.3')")
+            self.commit()
+            logger.debug(f"Database upgraded to version 3.3")
 
     def query(self, query, values=None):
         if values is None:
