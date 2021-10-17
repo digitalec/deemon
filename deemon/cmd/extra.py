@@ -21,7 +21,8 @@ def main():
     db = dbase.Database()
     api = PlatformAPI("deezer-gw")
     releases = db.get_artist_releases()
-    
+    if not len(releases):
+        return logger.warning("No releases found in local database")
     logger.debug("Fetching extra release data...")
     debugger("SpawningThreads", api.max_threads)
     with ThreadPoolExecutor(max_workers=api.max_threads) as ex:
@@ -32,9 +33,9 @@ def main():
                          "releases, please wait...", ascii=" #",
                     bar_format=ui.TQDM_FORMAT)
         )
-    
+
     if len(api_result):
-        logger.info("Saving changes to database, this can take several minutes...")
+        logger.info(":: Saving changes to database, this can take several minutes...")
         db.add_extra_release_info(api_result)
         db.commit()
         print("")
