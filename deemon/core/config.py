@@ -24,6 +24,7 @@ DEFAULT_CONFIG = {
     "rollback_view_limit": 10,
     "prompt_duplicates": False,
     "prompt_no_matches": True,
+    "extra_release_info": False,
     "new_releases": {
         "by_release_date": True,
         "release_max_age": 90
@@ -365,6 +366,10 @@ class Config(object):
     @staticmethod
     def transaction_id() -> int:
         return Config._CONFIG.get('tid')
+    
+    @staticmethod
+    def extra_release_info() -> bool:
+        return Config._CONFIG.get('extra_release_info')
 
     @staticmethod
     def find_position(d, property):

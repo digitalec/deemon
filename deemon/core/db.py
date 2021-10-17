@@ -102,6 +102,7 @@ class Database(object):
                    "'album_release' TEXT,"
                    "'album_added' INTEGER,"
                    "'explicit' INTEGER,"
+                   "'label' TEXT,"
                    "'profile_id' INTEGER DEFAULT 1,"
                    "'future_release' INTEGER DEFAULT 0,"
                    "'trans_id' INTEGER)")
@@ -263,7 +264,12 @@ class Database(object):
             self.query("ALTER TABLE playlists_tmp RENAME TO playlists")
             self.query("INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('version', '3.2')")
             self.commit()
-            logger.debug(f"Database upgraded to version 3.2")
+        
+        if current_ver < parse_version("3.3"):
+            self.query("ALTER TABLE releases ADD COLUMN label TEXT")
+            self.query("INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('version', '3.3')")
+            self.commit()
+            logger.debug(f"Database upgraded to version 3.3")
 
     def query(self, query, values=None):
         if values is None:
@@ -392,9 +398,9 @@ class Database(object):
     def add_new_releases(self, values):
         self.new_transaction()
         sql = (f"INSERT INTO releases ('artist_id', 'artist_name', 'album_id', 'album_name', 'album_release', "
-               f"'album_added', 'future_release', 'explicit', 'profile_id', 'trans_id') "
+               f"'album_added', 'future_release', 'explicit', 'label', 'profile_id', 'trans_id') "
                f"VALUES (:artist_id, :artist_name, :id, :title, :release_date, {int(time.time())}, :future, "
-               f":explicit_lyrics, {config.profile_id()}, {config.transaction_id()})")
+               f":explicit_lyrics, :label, {config.profile_id()}, {config.transaction_id()})")
         self.cursor.executemany(sql, values)
         self.set_all_artists_refreshed()
 

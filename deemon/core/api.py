@@ -114,13 +114,35 @@ class PlatformAPI:
                         logger.warning(f"   [!] Found release without release date, assuming today: "
                                        f"{query['artist_name']} - {r['ALB_TITLE']}")
                         release_date = datetime.strftime(datetime.today(), "%Y-%m-%d")
+                    
+                    if config.extra_release_info():
+                        album_details = self.api.get_album(r['ALB_ID'])
+                        if album_details.get('LABEL_NAME'):
+                            r['LABEL_NAME'] = album_details['LABEL_NAME']
+                    
+                    if not r.get('LABEL_NAME'):
+                        r['LABEL_NAME'] = None
 
-                    api_result.append({'id': int(r['ALB_ID']), 'title': r['ALB_TITLE'],
-                                       'release_date': release_date,
-                                       'explicit_lyrics': r['EXPLICIT_ALBUM_CONTENT']['EXPLICIT_LYRICS_STATUS'],
-                                       'record_type': r['TYPE']})
+                    api_result.append(
+                        {
+                            'id': int(r['ALB_ID']),
+                            'title': r['ALB_TITLE'],
+                            'release_date': release_date,
+                            'explicit_lyrics': r['EXPLICIT_ALBUM_CONTENT']['EXPLICIT_LYRICS_STATUS'],
+                            'record_type': r['TYPE'],
+                            'label': r['LABEL_NAME']
+                         }
+                    )
         else:
             api_result = self.api.get_artist_albums(artist_id=query['artist_id'], limit=limit)['data']
+
+            for release in api_result:
+                if config.extra_release_info():
+                    album_details = self.api.get_album(release['id'])
+                    if album_details.get('label'):
+                        release['label'] = album_details['label']
+                if not release.get('label'):
+                    release['label'] = None
 
         query['releases'] = api_result
         return query
