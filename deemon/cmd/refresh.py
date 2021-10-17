@@ -13,9 +13,10 @@ logger = logging.getLogger(__name__)
 
 
 class Refresh:
-    def __init__(self, time_machine: datetime = None, skip_download: bool = False, ignore_filters: bool = False):
+    def __init__(self, time_machine: list = None, skip_download: bool = False, ignore_filters: bool = False):
         self.db = db.Database()
         self.refresh_date = datetime.now()
+        self.max_refresh_date = None
         self.api = api.PlatformAPI("deezer-gw")
         self.new_releases = []
         self.new_releases_alert = []
@@ -25,11 +26,19 @@ class Refresh:
         self.queue_list = []
         self.skip_download = skip_download
         self.download_all = ignore_filters
-
-        if time_machine:
-            self.refresh_date = time_machine
+        
+        if not time_machine: time_machine = []
+        if len(time_machine):
+            if len(time_machine) == 2:
+                self.refresh_date = time_machine[0]
+                self.max_refresh_date = time_machine[1]
+                logger.info(":: Time Machine active: "
+                            f"{datetime.strftime(self.refresh_date, '%b %d, %Y')}"
+                            f" - {datetime.strftime(self.max_refresh_date, '%b %d, %Y')}!")
+            else:
+                self.refresh_date = time_machine[0]
+                logger.info(f":: Time Machine active: {datetime.strftime(self.refresh_date, '%b %d, %Y')}!")
             self.time_machine = True
-            logger.info(f":: Time Machine active: {datetime.strftime(self.refresh_date, '%b %d, %Y')}!")
             config.set('by_release_date', False)
 
     def debugger(self, message: str, payload = None):
@@ -129,6 +138,10 @@ class Refresh:
         release_date_dt = dates.str_to_datetime_obj(release_date)
         if self.time_machine:
             if release_date_dt < self.refresh_date:
+                if self.max_refresh_date:
+                    if release_date_dt <= self.max_refresh_date:
+                        return True
+            else:
                 return True
         elif config.release_by_date():
             if release_date_dt < (self.refresh_date - timedelta(config.release_max_age())):
