@@ -30,11 +30,11 @@ class Refresh:
         if not time_machine: time_machine = []
         if len(time_machine):
             if len(time_machine) == 2:
-                self.refresh_date = time_machine[0]
-                self.max_refresh_date = time_machine[1]
+                self.refresh_date = time_machine[1]
+                self.max_refresh_date = time_machine[0]
                 logger.info(":: Time Machine active: "
-                            f"{datetime.strftime(self.refresh_date, '%b %d, %Y')}"
-                            f" - {datetime.strftime(self.max_refresh_date, '%b %d, %Y')}!")
+                            f"{datetime.strftime(self.max_refresh_date, '%b %d, %Y')}"
+                            f" - {datetime.strftime(self.refresh_date, '%b %d, %Y')}!")
             else:
                 self.refresh_date = time_machine[0]
                 logger.info(f":: Time Machine active: {datetime.strftime(self.refresh_date, '%b %d, %Y')}!")
@@ -137,11 +137,12 @@ class Refresh:
     def release_too_old(self, release_date: str):
         release_date_dt = dates.str_to_datetime_obj(release_date)
         if self.time_machine:
-            if release_date_dt < self.refresh_date:
-                if self.max_refresh_date:
-                    if release_date_dt <= self.max_refresh_date:
-                        return True
-            else:
+            if self.max_refresh_date:
+                if release_date_dt < self.max_refresh_date:
+                    return True
+                if release_date_dt > self.refresh_date:
+                    return True
+            elif release_date_dt < self.refresh_date:
                 return True
         elif config.release_by_date():
             if release_date_dt < (self.refresh_date - timedelta(config.release_max_age())):
