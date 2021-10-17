@@ -34,6 +34,7 @@ def main():
         )
     
     if len(api_result):
+        logger.info("Saving changes to database, this can take several minutes...")
         db.add_extra_release_info(api_result)
         db.commit()
         print("")
