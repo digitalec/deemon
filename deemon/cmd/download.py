@@ -296,14 +296,15 @@ class Download:
         if input_file:
             logger.info(f"Reading from file {input_file}")
             if Path(input_file).exists():
-                artist_list = utils.dataprocessor.read_file_as_csv(input_file)
-                artist_int_list, artist_str_list = utils.dataprocessor.process_input_file(artist_list)
-                if artist_str_list:
-                    for artist in artist_str_list:
-                        process_artist_by_name(artist)
-                if artist_int_list:
-                    for artist in artist_int_list:
-                        process_artist_by_id(artist)
+                artists_csv = utils.dataprocessor.read_file_as_csv(input_file)
+                artist_list = utils.dataprocessor.process_input_file(artists_csv)
+                if artist_list:
+                    if isinstance(artist_list[0], int):
+                        for artist in artist_list:
+                            process_artist_by_id(artist)
+                    else:
+                        for artist in artist_list:
+                            process_artist_by_name(artist)
 
         if url:
             logger.debug("Processing URLs")

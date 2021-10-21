@@ -12,3 +12,4 @@ artists.txt
 /deemon/tests/
 .vscode/settings.json
 .vscode/launch.json
+createenv.sh
