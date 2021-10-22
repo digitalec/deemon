@@ -8,7 +8,7 @@ import plexapi.exceptions
 from plexapi.server import PlexServer
 
 from deemon import utils
-from deemon.core import dmi
+from deemon.core import dmi, db
 from deemon.core.config import Config as config
 from deemon.utils import dataprocessor, validate, startup, dates
 
@@ -103,10 +103,25 @@ class Download:
         self.dz = deezer.Deezer()
         self.di = dmi.DeemixInterface()
         self.queue_list = []
+        self.db = db.Database()
         self.bitrate = None
-        self.from_release_date = None
+        self.release_from = None
+        self.release_to = None
         self.verbose = os.environ.get("VERBOSE")
         self.duplicate_id_count = 0
+
+    def set_dates(self, from_date: str = None, to_date: str = None) -> None:
+        """Set to/from dates to get while downloading"""
+        if from_date:
+            try:
+                self.release_from = dates.str_to_datetime_obj(from_date)
+            except ValueError as e:
+                raise ValueError(f"Invalid date provided - {from_date}: {e}")
+        if to_date:
+            try:
+                self.release_to = dates.str_to_datetime_obj(to_date)
+            except ValueError as e:
+                raise ValueError(f"Invalid date provided - {to_date}: {e}")
 
     # @performance.timeit
     def download_queue(self, queue_list: list = None):
@@ -118,8 +133,8 @@ class Download:
 
         if self.queue_list:
             plex = get_plex_server()
-            print("----------------------------")
-            logger.info("Sending " + str(len(self.queue_list)) + " release(s) to deemix for download:")
+            print("")
+            logger.info(":: Sending " + str(len(self.queue_list)) + " release(s) to deemix for download:")
 
             with open(startup.get_appdata_dir() / "queue.csv", "w", encoding="utf-8") as f:
                 f.writelines(','.join([str(x) for x in vars(self.queue_list[0]).keys()]) + "\n")
@@ -193,9 +208,15 @@ class Download:
             filtered_albums = []
             for album in album_api:
                 if (album['record_type'] == config.record_type()) or config.record_type() == "all":
-                    album_date = dates.format_date_string(album['release_date'])
-                    if self.from_release_date:
-                        if album_date >= self.from_release_date:
+                    album_date = dates.str_to_datetime_obj(album['release_date'])
+                    if self.release_from and self.release_to:
+                        if album_date > self.release_from and album_date < self.release_to:
+                            filtered_albums.append(album)
+                    elif self.release_from:
+                        if album_date > self.release_from:
+                            filtered_albums.append(album)
+                    elif self.release_to:
+                        if album_date < self.release_to:
                             filtered_albums.append(album)
                     else:
                         filtered_albums.append(album)
@@ -274,15 +295,22 @@ class Download:
                     continue
             return False, False
 
-        logger.info("Queueing releases, this might take awhile...")
+        logger.info("[!] Queueing releases, this might take awhile...")
 
-        if from_date:
-            logger.debug(f"Getting releases that were released on or after {from_date}")
-            from_date_datetime = validate.validate_date(from_date)
-            if from_date_datetime:
-                self.from_release_date = from_date_datetime
-            else:
-                return logger.error(f"The date you entered is invalid: {from_date}")
+        if self.release_from or self.release_to:
+            if self.release_from and self.release_to:
+                logger.info(":: Getting releases that were released between "
+                            f"{dates.ui_date(self.release_from)} and "
+                            f"{dates.ui_date(self.release_to)}")
+            elif self.release_from:
+                logger.info(":: Getting releases that were released after "
+                            f"{dates.ui_date(self.release_from)}")
+            elif self.release_to:
+                logger.info(":: Getting releases that were released before "
+                            f"{dates.ui_date(self.release_to)}")
+
+        if not artist or artist_id or album_id or url:
+            artist_id = self.db.get_all_monitored_artist_ids()
 
         if artist:
             [process_artist_by_name(a) for a in artist]
@@ -327,4 +355,5 @@ class Download:
             if len(self.queue_list):
                 self.download_queue()
             else:
+                print("")
                 logger.info("No releases found matching applied filters.")

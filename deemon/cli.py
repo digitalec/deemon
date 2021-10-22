@@ -116,16 +116,20 @@ def test():
 
 
 @run.command(name='download', no_args_is_help=True)
-@click.argument('artist', nargs=-1)
+@click.argument('artist', nargs=-1, required=False)
 @click.option('-A', '--album-id', multiple=True, metavar='ID', type=int, help='Download by album ID')
+@click.option('-a', '--after', 'from_date', metavar="YYYY-MM-DD", type=str, help='Grab releases released after this date')
+@click.option('-B', '--before', 'to_date', metavar="YYYY-MM-DD", type=str, help='Grab releases released before this date')
 @click.option('-b', '--bitrate', metavar="BITRATE", help='Set custom bitrate for this operation')
-@click.option('-F', '--from-date', metavar="YYYY-MM-DD", type=str, help='Grab releases from this date forward')
 @click.option('-f', '--file', metavar='FILE', help='Download batch of artists and/or artist IDs from file')
 @click.option('-i', '--artist-id', multiple=True, metavar='ID', type=int, help='Download by artist ID')
+@click.option('-m', '--monitored', is_flag=True, help='Download all currently monitored artists')
 @click.option('-o', '--download-path', metavar="PATH", type=str, help='Specify custom download directory')
 @click.option('-t', '--record-type', metavar="TYPE", type=str, help='Specify record types to download')
 @click.option('-u', '--url', metavar='URL', multiple=True, help='Download by URL of artist/album/track/playlist')
-def download_command(artist, artist_id, album_id, url, file, bitrate, record_type, download_path, from_date):
+def download_command(artist, artist_id, album_id, url, file, bitrate,
+                     record_type, download_path, from_date, to_date,
+                     monitored):
     """
     Download specific artist, album ID or by URL
 
@@ -141,10 +145,13 @@ def download_command(artist, artist_id, album_id, url, file, bitrate, record_typ
     if record_type:
         config.set('record_type', record_type)
 
-    artists = dataprocessor.csv_to_list(artist) if artist else None
-    artist_ids = [x for x in artist_id] if artist_id else None
-    album_ids = [x for x in album_id] if album_id else None
-    urls = [x for x in url] if url else None
+    if monitored:
+        artists, artist_ids, album_ids, urls = None, None, None, None
+    else:
+        artists = dataprocessor.csv_to_list(artist) if artist else None
+        artist_ids = [x for x in artist_id] if artist_id else None
+        album_ids = [x for x in album_id] if album_id else None
+        urls = [x for x in url] if url else None
 
     if download_path and download_path != "":
         if Path(download_path).exists:
@@ -154,7 +161,8 @@ def download_command(artist, artist_id, album_id, url, file, bitrate, record_typ
             return logger.error(f"Invalid download path: {download_path}")
 
     dl = download.Download()
-    dl.download(artists, artist_ids, album_ids, urls, file, from_date=from_date)
+    dl.set_dates(from_date, to_date)
+    dl.download(artists, artist_ids, album_ids, urls, file)
 
 
 @run.command(name='monitor', context_settings={"ignore_unknown_options": False}, no_args_is_help=True)
