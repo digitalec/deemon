@@ -54,8 +54,6 @@ def run(whats_new, verbose, profile):
     if whats_new:
         return startup.get_changelog(__version__)
 
-    print(f"Initializing deemon {__version__}\n")
-
     config = Config()
     db = Database()
 
