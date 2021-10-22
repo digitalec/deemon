@@ -237,8 +237,16 @@ class Config(object):
             nonlocal modified
             for key, value in dict1.items():
                 if key not in dict2.keys():
+                    logger.debug(f"New option added to config: {key}")
                     dict2[key] = value
                     modified += 1
+                elif isinstance(value, dict):
+                    for k, v in value.items():
+                        if k not in dict2[key].keys():
+                            logger.debug("New option added to config: "
+                                         f"{key}/{k}")
+                            dict2[key][k] = v
+                            modified += 1
 
         logger.debug("Loading configuration, please wait...")
         add_new_options(DEFAULT_CONFIG, Config._CONFIG)
