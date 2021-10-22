@@ -258,7 +258,7 @@ def refresh_command(name, playlist, skip_download, time_machine):
                 return logger.error("Date for time machine is invalid")
             time_machine.append(validated)
 
-    logger.info("Starting database refresh")
+    logger.info(":: Starting database refresh")
     refresh = Refresh(time_machine, skip_download)
     if playlist:
         if not len(name):

@@ -37,7 +37,8 @@ DEFAULT_CONFIG = {
     },
     "deemix": {
         "path": "",
-        "arl": ""
+        "arl": "",
+        "check_account_status": True
     },
     "smtp_settings": {
         "server": "",
@@ -83,10 +84,10 @@ class Config(object):
                         logger.debug("Successfully loaded ARL")
 
             if len(self.arl()) > 0 and len(self.arl()) != 192:
-                logger.warning(f"[!] Possible invalid ARL detected (length: {len(self.arl())}). ARL should "
+                logger.warning(f"   [!] Possible invalid ARL detected (length: {len(self.arl())}). ARL should "
                                "be 192 characters")
 
-            # Set as default profile for init
+            # Set default for runtime settings
             self.set('profile_id', 1, validate=False)
 
     @staticmethod
@@ -365,6 +366,10 @@ class Config(object):
     @staticmethod
     def transaction_id() -> int:
         return Config._CONFIG.get('tid')
+    
+    @staticmethod
+    def check_account_status() -> bool:
+        return Config._CONFIG.get('deemix').get('check_account_status')
 
     @staticmethod
     def find_position(d, property):

@@ -245,6 +245,14 @@ class Refresh:
             self.new_releases_alert.clear()
 
         if len(self.queue_list):
+            if config.check_account_status():
+                if self.api.account_type == "free" and config.bitrate() != "128":
+                    notification = notifier.Notify()
+                    notification.expired_arl()
+                    return logger.error("   [X] Deezer account only allows low"
+                                        " quality. If you wish to download "
+                                        "anyway, set `check_account_status` "
+                                        "to False in the config.")
             dl = Download()
             dl.download_queue(self.queue_list)
 

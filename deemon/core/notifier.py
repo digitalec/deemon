@@ -25,14 +25,15 @@ class Notify:
         self.subject = "New releases detected!"
         self.releases = new_releases
 
-    def send(self, body=None, test=False, expired=False):
+    def send(self, body=None, test=False):
         """
         Send email notification message
         """
         if not all([config.smtp_server(), config.smtp_port(), config.smtp_user(),
                     config.smtp_pass(), config.smtp_sender(), config.smtp_recipient()]):
             if test:
-                logger.info("Unable to send test notification, email is not configured")
+                logger.info("   [!] Unable to send test notification, email is"
+                            " not configured")
             logger.debug("Email not configured, no notifications will be sent")
             return False
 
@@ -94,7 +95,20 @@ class Notify:
         msg['From'] = formataddr(('deemon', config.smtp_sender()))
         msg['Subject'] = self.subject
         msg.set_content(message)
-        self.send(msg, test=True)
+        self.send(msg)
+
+    def expired_sub(self):
+        """
+        Verify SMTP settings by sending test email
+        """
+        self.subject = "deemon Notification"
+        message = "Your Deezer subscription only allows 128k (expired?)."
+        msg = EmailMessage()
+        msg['To'] = config.smtp_recipient()
+        msg['From'] = formataddr(('deemon', config.smtp_sender()))
+        msg['Subject'] = self.subject
+        msg.set_content(message)
+        self.send(msg)
 
     def plaintext(self) -> str:
         """

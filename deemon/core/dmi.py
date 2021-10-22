@@ -62,12 +62,38 @@ class DeemixInterface:
                     Downloader(self.dz, obj, self.dx_settings).start()
             else:
                 Downloader(self.dz, download_object, self.dx_settings).start()
+    
+    
+    def deezer_acct_type(self):
+        user_session = self.dz.get_session()
+    
+        if user_session.get('can_stream_lossless'):
+            logger.debug("Deezer account connected and supports lossless")
+            config.set('deezer_quality', 'lossless', validate=False)
+        elif user_session.get('can_stream_hq'):
+            logger.debug("Deezer account connected and supports high quality")
+            config.set('deezer_quality', 'hq', validate=False)
+        else:
+            logger.warning("Deezer account connected but only supports 128k")
+            config.set('deezer_quality', 'lq', validate=False)
 
     def verify_arl(self, arl):
         if not self.dz.login_via_arl(arl):
             print("FAILED")
             logger.debug(f"ARL Failed: {arl}")
             return False
+        user_session = self.dz.get_session()
+        
+        if user_session.get('can_stream_lossless'):
+            logger.debug("Deezer account connected and supports lossless")
+            config.set('deezer_quality', 'lossless', validate=False)
+        elif user_session.get('can_stream_hq'):
+            logger.debug("Deezer account connected and supports high quality")
+            config.set('deezer_quality', 'hq', validate=False)
+        else:
+            logger.debug("Deezer account connected but only supports 128k")
+            config.set('deezer_quality', 'lq', validate=False)
+            
         print("OK")
         logger.debug("ARL is valid")
         return True
@@ -77,7 +103,7 @@ class DeemixInterface:
         logger.debug("Looking for ARL...")
         if config.arl():
             logger.debug("ARL found in deemon config")
-            print("Found ARL in deemon config, checking... ", end="")
+            print(":: Found ARL in deemon config, checking... ", end="")
             if self.verify_arl(config.arl()):
                 return True
             else:
@@ -88,7 +114,7 @@ class DeemixInterface:
                 with open(self.config_dir / '.arl', 'r') as f:
                     arl_from_file = f.readline().rstrip("\n")
                     logger.debug("ARL found in deemix config")
-                    print("Found ARL in deemix .arl file, checking... ", end="")
+                    print(":: Found ARL in deemix .arl file, checking... ", end="")
                     if self.verify_arl(arl_from_file):
                         return True
                     else:

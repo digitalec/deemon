@@ -15,6 +15,9 @@ class PlatformAPI:
     def __init__(self, platform: str = "deezer-api"):
         self.max_threads = 2
         self.platform = platform
+        self.dz = Deezer()
+        self.logged_in = self.dz.login_via_arl(config.arl())
+        self.account_type = self.get_account_type()
         self.api = self.set_platform()
 
     def debugger(self, message: str, payload = None):
@@ -24,23 +27,30 @@ class PlatformAPI:
             logger.debug(f"DEBUG_MODE: {message} {str(payload)}")
 
     def set_platform(self):
+        logger.debug(f"Deezer account type: {self.account_type}")
         if self.platform == "deezer-gw":
-            dz = Deezer()
-            if dz.login_via_arl(config.arl()):
+            if self.logged_in:
                 self.max_threads = 50
-                logger.debug(f"Login OK, max_threads set to {self.max_threads}")
-                api_obj = dz.gw
+                logger.debug("Logged in to GW API, max_threads set "
+                             f"to {self.max_threads}")
+                return self.dz.gw
             else:
-                logger.warning("[!] Falling back to standard API (expired ARL?)")
+                logger.warning("   [!] Falling back to standard API (expired "
+                               "ARL?)")
                 self.platform = "deezer-api"
-                api_obj = dz.api
+                return self.dz.api
         else:
-            dz = Deezer()
-            api_obj = dz.api
+            return self.dz.api
+        
+    def get_account_type(self):
+        if self.dz.get_session()['current_user'].get('can_stream_lossless'):
+            return "hifi"
+        elif self.dz.get_session()['current_user'].get('can_stream_hq'):
+            return "premium"
+        else:
+            return "free"
 
-        logger.debug(f"API in use: {self.platform}, thread count set to: {self.max_threads}")
-        return api_obj
-
+    #TODO GW API appears to ignore limit; must implement afterwards
     def search_artist(self, query: str, limit: int = 1) -> dict:
         """
         Return a list of dictionaries from API containing {'id': int, 'name': str}
@@ -73,6 +83,10 @@ class PlatformAPI:
                 logger.debug(f"API error: {e}")
                 return {}
             return {'id': result['id'], 'name': result['name']}
+        
+    def get_album(self, query: int) -> dict:
+        """Return a dictionary from API containing album info"""
+        
 
     def get_artist_albums(self, query: dict, limit: int = -1):
         """
