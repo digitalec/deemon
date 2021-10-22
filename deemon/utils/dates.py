@@ -31,6 +31,9 @@ def format_date_string(d: str):
     date_string = datetime.strptime(d, "%Y-%m-%d")
     return datetime.strftime(date_string, "%Y-%m-%d")
 
+def ui_date(d: datetime):
+    return datetime.strftime(d, '%b %d, %Y')
+
 
 def str_to_datetime_obj(d: str) -> datetime:
     return datetime.strptime(d, "%Y-%m-%d")
