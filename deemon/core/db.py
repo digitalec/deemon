@@ -265,7 +265,10 @@ class Database(object):
             self.commit()
             
         if current_ver < parse_version("3.3"):
-            self.query("ALTER TABLE releases ADD COLUMN explicit INTEGER")
+            try:
+                self.query("ALTER TABLE releases ADD COLUMN explicit INTEGER")
+            except sqlite3.OperationalError as e:
+                logger.debug(f"Unable to create 'explicit' column in releases table: {e}")
             self.query("INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('version', '3.3')")
             self.commit()
             logger.debug(f"Database upgraded to version 3.3")
