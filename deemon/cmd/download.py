@@ -1,6 +1,7 @@
 import logging
 import os
 from pathlib import Path
+from tqdm import tqdm
 
 import deemix.errors
 import deezer
@@ -10,7 +11,7 @@ from plexapi.server import PlexServer
 from deemon import utils
 from deemon.core import dmi
 from deemon.core.config import Config as config
-from deemon.utils import dataprocessor, validate, startup, dates
+from deemon.utils import ui, validate, startup, dates
 
 logger = logging.getLogger(__name__)
 
@@ -118,8 +119,7 @@ class Download:
 
         if self.queue_list:
             plex = get_plex_server()
-            print("----------------------------")
-            logger.info("Sending " + str(len(self.queue_list)) + " release(s) to deemix for download:")
+            logger.info(":: Sending " + str(len(self.queue_list)) + " release(s) to deemix for download:")
 
             with open(startup.get_appdata_dir() / "queue.csv", "w", encoding="utf-8") as f:
                 f.writelines(','.join([str(x) for x in vars(self.queue_list[0]).keys()]) + "\n")
@@ -135,37 +135,33 @@ class Download:
                     f.writelines(','.join(raw_values) + "\n")
             logger.debug(f"Queue exported to {startup.get_appdata_dir()}/queue.csv")
 
-            def send_queue_to_deemix(queue) -> list:
-                dx_bitrate = get_deemix_bitrate(queue.bitrate)
-                if self.verbose == "true":
-                    logger.debug(f"Processing queue item {vars(queue)}")
-                try:
-                    if queue.artist_name:
-                        if queue.album_title:
-                            logger.info(f"{queue.artist_name} - {queue.album_title}... ")
-                            self.di.download_url([queue.url], dx_bitrate, config.download_path())
-                        else:
-                            logger.info(f"{queue.artist_name} - {queue.track_title}... ")
-                            self.di.download_url([queue.url], dx_bitrate, config.download_path())
-                    else:
-                        logger.info(f"{queue.playlist_title} (playlist)...")
-                        self.di.download_url([queue.url], dx_bitrate, queue.download_path, override_deemix=True)
-                except deemix.errors.GenerationError:
-                    return [(queue, "No tracks listed or unavailable in your country")]
-
             failed_count = []
-            for q in self.queue_list:
-                failed_count.append(send_queue_to_deemix(q))
-            # with ThreadPoolExecutor(max_workers=5) as ex:
-            #     failed_count = list(tqdm(ex.map(send_queue_to_deemix, self.queue_list),
-            #                              total=len(self.queue_list), desc="Downloading        ...", ascii=" #",
-            #                              bar_format='[{n_fmt}/{total_fmt}] {desc} [{bar}] {percentage:3.0f}%'))
-
+            download_progress = tqdm(self.queue_list, total=len(self.queue_list), desc="Downloading releases...", ascii=" #", bar_format=ui.TQDM_FORMAT)
+            for index, item in enumerate(download_progress):
+                i = str(index + 1)
+                t = str(len(download_progress))
+                download_progress.set_description_str(f"Downloading release {i} of {t}...")
+                dx_bitrate = get_deemix_bitrate(item.bitrate)
+                if self.verbose == "true":
+                    logger.debug(f"Processing queue item {vars(item)}")
+                try:
+                    if item.artist_name:
+                        if item.album_title:
+                            logger.info(f"   > {item.artist_name} - {item.album_title}... ")
+                            self.di.download_url([item.url], dx_bitrate, config.download_path())
+                        else:
+                            logger.info(f"   > {item.artist_name} - {item.track_title}... ")
+                            self.di.download_url([item.url], dx_bitrate, config.download_path())
+                    else:
+                        logger.info(f"   > {item.playlist_title} (playlist)...")
+                        self.di.download_url([item.url], dx_bitrate, item.download_path, override_deemix=True)
+                except deemix.errors.GenerationError:
+                    failed_count.append([(item, "No tracks listed or unavailable in your country")])
             failed_count = [x for x in failed_count if x]
 
             print("")
             if len(failed_count):
-                logger.info(f"Downloads completed with {len(failed_count)} error(s):")
+                logger.info(f"   [!] Downloads completed with {len(failed_count)} error(s):")
                 with open(startup.get_appdata_dir() / "failed.csv", "w", encoding="utf-8") as f:
                     f.writelines(','.join([str(x) for x in vars(self.queue_list[0]).keys()]) + "\n")
                     for failed in failed_count:
@@ -181,7 +177,7 @@ class Download:
                 print("")
                 logger.info(f":: Failed downloads exported to: {startup.get_appdata_dir()}/failed.csv")
             else:
-                logger.info("Downloads complete!")
+                logger.info("   Downloads complete!")
             if plex and (config.plex_library() != ""):
                 refresh_plex(plex)
         return True
@@ -274,7 +270,7 @@ class Download:
                     continue
             return False, False
 
-        logger.info("Queueing releases, this might take awhile...")
+        logger.info(":: Queueing releases, this might take awhile...")
 
         if from_date:
             logger.debug(f"Getting releases that were released on or after {from_date}")
@@ -294,7 +290,7 @@ class Download:
             [process_album_by_id(i) for i in album_id]
 
         if input_file:
-            logger.info(f"Reading from file {input_file}")
+            logger.info(f":: Reading from file {input_file}")
             if Path(input_file).exists():
                 artists_csv = utils.dataprocessor.read_file_as_csv(input_file)
                 artist_list = utils.dataprocessor.process_input_file(artists_csv)

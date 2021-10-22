@@ -235,7 +235,7 @@ class Monitor:
                 monitored = self.db.get_monitored_artist_by_name(n)
                 if monitored:
                     self.db.remove_monitored_artist(monitored['artist_id'])
-                    logger.info(f"No longer monitoring {monitored['artist_name']}")
+                    logger.info(f"\nNo longer monitoring {monitored['artist_name']}")
                 else:
                     logger.info(f"{n} is not being monitored yet")
         if ids:
@@ -243,7 +243,7 @@ class Monitor:
                 monitored = self.db.get_monitored_artist_by_id(i)
                 if monitored:
                     self.db.remove_monitored_artist(monitored['artist_id'])
-                    logger.info(f"No longer monitoring {monitored['artist_name']}")
+                    logger.info(f"\nNo longer monitoring {monitored['artist_name']}")
                 else:
                     logger.info(f"{i} is not being monitored yet")
 
@@ -253,6 +253,6 @@ class Monitor:
                 monitored = self.db.get_monitored_playlist_by_id(i)
                 if monitored:
                     self.db.remove_monitored_playlists(monitored['id'])
-                    logger.info(f"No longer monitoring {monitored['title']}")
+                    logger.info(f"\nNo longer monitoring {monitored['title']}")
                 else:
                     logger.info(f"{i} is not being monitored yet")
