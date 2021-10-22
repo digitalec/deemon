@@ -193,7 +193,7 @@ class Download:
             filtered_albums = []
             for album in album_api:
                 if (album['record_type'] == config.record_type()) or config.record_type() == "all":
-                    album_date = dates.format_date_string(album['release_date'])
+                    album_date = dates.str_to_datetime_obj(album['release_date'])
                     if self.from_release_date:
                         if album_date >= self.from_release_date:
                             filtered_albums.append(album)
