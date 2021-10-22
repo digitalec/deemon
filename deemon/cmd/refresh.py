@@ -30,8 +30,8 @@ class Refresh:
         if not time_machine: time_machine = []
         if len(time_machine):
             if len(time_machine) == 2:
-                self.refresh_date = time_machine[1]
-                self.max_refresh_date = time_machine[0]
+                self.refresh_date = time_machine[0]
+                self.max_refresh_date = time_machine[1]
                 logger.info(":: Time Machine active: "
                             f"{datetime.strftime(self.max_refresh_date, '%b %d, %Y')}"
                             f" - {datetime.strftime(self.refresh_date, '%b %d, %Y')}!")

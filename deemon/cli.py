@@ -8,7 +8,7 @@ import click
 from packaging.version import parse as parse_version
 
 from deemon import __version__
-from deemon.cmd import download, rollback, backup
+from deemon.cmd import download, rollback, backup, extra
 from deemon.cmd.artistconfig import artist_lookup
 from deemon.cmd.monitor import Monitor
 from deemon.cmd.profile import ProfileConfig
@@ -425,6 +425,10 @@ def profile_command(profile, add, clear, delete, edit):
     else:
         pc.show()
 
+@run.command(name="extra")
+def extra_command():
+    """Fetch extra release info"""
+    extra.main()
 
 @run.command(name="search")
 def search():

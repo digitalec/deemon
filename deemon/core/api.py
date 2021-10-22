@@ -88,6 +88,20 @@ class PlatformAPI:
         """Return a dictionary from API containing album info"""
         
 
+    def get_extra_release_info(self, query: dict):
+        album = {'id': query['album_id'], 'label': None}
+        if self.platform == "deezer-gw":
+            album_details = self.api.get_album(query['album_id'])
+            if album_details.get('LABEL_NAME'):
+                album['label'] = album_details['LABEL_NAME']
+        else:
+            album_details = self.api.get_album(query['album_id'])
+            if album_details.get('label'):
+                album['label'] = album_details['label']
+        
+        return album
+        
+
     def get_artist_albums(self, query: dict, limit: int = -1):
         """
         Return a list of dictionaries from API containing
@@ -129,10 +143,15 @@ class PlatformAPI:
                                        f"{query['artist_name']} - {r['ALB_TITLE']}")
                         release_date = datetime.strftime(datetime.today(), "%Y-%m-%d")
 
-                    api_result.append({'id': int(r['ALB_ID']), 'title': r['ALB_TITLE'],
-                                       'release_date': release_date,
-                                       'explicit_lyrics': r['EXPLICIT_ALBUM_CONTENT']['EXPLICIT_LYRICS_STATUS'],
-                                       'record_type': r['TYPE']})
+                    api_result.append(
+                        {
+                            'id': int(r['ALB_ID']),
+                            'title': r['ALB_TITLE'],
+                            'release_date': release_date,
+                            'explicit_lyrics': r['EXPLICIT_ALBUM_CONTENT']['EXPLICIT_LYRICS_STATUS'],
+                            'record_type': r['TYPE']
+                         }
+                    )
         else:
             api_result = self.api.get_artist_albums(artist_id=query['artist_id'], limit=limit)['data']
 
