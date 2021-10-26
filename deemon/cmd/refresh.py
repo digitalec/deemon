@@ -1,6 +1,5 @@
 import logging
-from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
-from multiprocessing import Pool
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
 
 from tqdm import tqdm
@@ -221,12 +220,12 @@ class Refresh:
 
         if len(api_result):
             self.seen = self.db.get_artist_releases()
-            with ThreadPoolExecutor(max_workers=1) as ex:
-                result = list(tqdm(ex.map(self.prep_payload, api_result['artists']),
-                                   total=len(api_result['artists']),
-                                   desc=f"Scanning release data for new releases...",
-                                   ascii=" #",
-                                   bar_format=ui.TQDM_FORMAT))
+            payload_container = tqdm(api_result['artists'], total=len(api_result['artists']),
+                                     desc=f"Scanning release data for new releases...",
+                                     ascii=" #",
+                                     bar_format=ui.TQDM_FORMAT)
+            for payload in payload_container:
+                self.prep_payload(payload)
 
         for payload in api_result['playlists']:
             if len(payload):
@@ -234,7 +233,7 @@ class Refresh:
                 self.filter_playlist_releases(payload)
 
         if self.skip_download:
-            logger.info(f"You have opted to skip downloads, emptying {len(self.queue_list):,} item(s) from queue...")
+            logger.info(f"   [!] You have opted to skip downloads, clearing {len(self.queue_list):,} item(s) from queue...")
             self.queue_list.clear()
             self.new_releases_alert.clear()
 
