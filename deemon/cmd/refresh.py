@@ -27,7 +27,7 @@ class Refresh:
         self.queue_list = []
         self.skip_download = skip_download
         self.download_all = ignore_filters
-        self.seen = self.db.get_artist_releases()
+        self.seen = None
 
         if time_machine:
             self.refresh_date = time_machine
@@ -35,7 +35,8 @@ class Refresh:
             logger.info(f":: Time Machine active: {datetime.strftime(self.refresh_date, '%b %d, %Y')}!")
             config.set('by_release_date', False)
 
-    def debugger(self, message: str, payload = None):
+    @staticmethod
+    def debugger(message: str, payload = None):
         if config.debug_mode():
             if not payload:
                 payload = ""
@@ -71,9 +72,9 @@ class Refresh:
 
     def filter_artist_releases(self, payload: dict):
         """ Inspect artist releases and decide what to do with each release """
-        
         self.debugger("FilterReleases", {'artist': payload['artist_id'],
                                          'releases': len(payload['releases'])})
+
         for release in payload['releases']:
             release['artist_id'] = payload['artist_id']
             release['artist_name'] = payload['artist_name']
@@ -86,34 +87,30 @@ class Refresh:
             
             if release['future']:
                 continue
-            
+
             explicit_album_id = self.explicit_id(release['title'], payload['releases'])
             if explicit_album_id:
                 if explicit_album_id == release['id']:
                     logger.debug(f"An explicit release was found for {release['title']}")
                 else:
                     continue
-            
+
             if self.download_all:
                 self.queue_release(release)
                 continue
-            
-            if not self.allowed_record_type(payload['record_type'],
-                                            release['record_type']):
-                logger.debug(f"Record type \"{release['record_type']}\" "
-                                "has been filtered out, skipping release "
-                                f"{release['id']}")
+
+            if not self.allowed_record_type(payload['record_type'], release['record_type']):
+                logger.debug(f"Record type \"{release['record_type']}\" has been filtered out, skipping release "
+                             f"{release['id']}")
                 continue
-            
+
             if self.release_too_old(release['release_date']):
-                logger.debug(f"Release {release['id']} is too old, "
-                                "skipping it.")
+                logger.debug(f"Release {release['id']} is too old, skipping it.")
                 continue
-            
-            if not payload['refreshed']:
-                if not self.time_machine:
-                    continue
-            
+
+            if not payload['refreshed'] and not self.time_machine:
+                continue
+
             self.queue_release(release)
 
     def append_database_release(self, new_release: dict):
@@ -121,7 +118,6 @@ class Refresh:
                 
     @staticmethod
     def explicit_id(release_title: str, payload: list):
-        explicit_found = {}
         for release in payload:
             if release['title'] == release_title:
                 if release['explicit_lyrics'] == 1:
@@ -129,28 +125,26 @@ class Refresh:
 
     def release_too_old(self, release_date: str):
         release_date_dt = dates.str_to_datetime_obj(release_date)
-        if self.time_machine:
-            if self.max_refresh_date:
-                if release_date_dt < self.max_refresh_date:
-                    return True
-                if release_date_dt > self.refresh_date:
-                    return True
-            elif release_date_dt < self.refresh_date:
-                return True
-        elif config.release_by_date():
+        if config.release_by_date():
             if release_date_dt < (self.refresh_date - timedelta(config.release_max_age())):
                 return True
+        else:
+            if release_date_dt < self.refresh_date:
+                return True
 
-    def is_future_release(self, release_date: str):
+    @staticmethod
+    def is_future_release(release_date: str):
         """ Return 1 if release date is in future, otherwise return 0 """
         
         release_date_dt = dates.str_to_datetime_obj(release_date)
         if release_date_dt > datetime.now():
+            logger.debug(f"{release_date_dt} is in the future")
             return 1
         else:
             return 0
-    
-    def allowed_record_type(self, artist_rec_type, release_rec_type: str):
+
+    @staticmethod
+    def allowed_record_type(artist_rec_type, release_rec_type: str):
         """ Compare actual record_type against allowable """
         
         if artist_rec_type:
@@ -195,6 +189,8 @@ class Refresh:
         if len(p):
             p['releases'] = self.remove_existing_releases(p, self.seen)
             self.filter_artist_releases(p)
+        else:
+            logger.debug("No payload provided")
 
     def run(self, artists: list = None, playlists: list = None):
         if artists:
@@ -224,7 +220,8 @@ class Refresh:
                 api_result = self.get_release_data({'artists': monitored_artists, 'playlists': monitored_playlists})
 
         if len(api_result):
-            with ThreadPoolExecutor(max_workers=50) as ex:
+            self.seen = self.db.get_artist_releases()
+            with ThreadPoolExecutor(max_workers=1) as ex:
                 result = list(tqdm(ex.map(self.prep_payload, api_result['artists']),
                                    total=len(api_result['artists']),
                                    desc=f"Scanning release data for new releases...",
@@ -237,7 +234,7 @@ class Refresh:
                 self.filter_playlist_releases(payload)
 
         if self.skip_download:
-            logger.info(f"You have opted to skip downloads, emptying {len(self.queue_list)} item(s) from queue...")
+            logger.info(f"You have opted to skip downloads, emptying {len(self.queue_list):,} item(s) from queue...")
             self.queue_list.clear()
             self.new_releases_alert.clear()
 
