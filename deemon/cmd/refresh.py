@@ -154,7 +154,7 @@ class Refresh:
         """ Compare actual record_type against allowable """
         
         if artist_rec_type:
-            if artist_rec_type == release_rec_type:
+            if artist_rec_type == release_rec_type or "all":
                 return True
             else:
                 return
