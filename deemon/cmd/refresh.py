@@ -1,5 +1,6 @@
 import logging
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
+from multiprocessing import Pool
 from datetime import datetime, timedelta
 
 from tqdm import tqdm
@@ -13,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 class Refresh:
-    def __init__(self, time_machine: list = None, skip_download: bool = False, ignore_filters: bool = False):
+    def __init__(self, time_machine: datetime = None, skip_download: bool = False, ignore_filters: bool = False):
         self.db = db.Database()
         self.refresh_date = datetime.now()
         self.max_refresh_date = None
@@ -26,19 +27,12 @@ class Refresh:
         self.queue_list = []
         self.skip_download = skip_download
         self.download_all = ignore_filters
-        
-        if not time_machine: time_machine = []
-        if len(time_machine):
-            if len(time_machine) == 2:
-                self.refresh_date = time_machine[0]
-                self.max_refresh_date = time_machine[1]
-                logger.info(":: Time Machine active: "
-                            f"{datetime.strftime(self.max_refresh_date, '%b %d, %Y')}"
-                            f" - {datetime.strftime(self.refresh_date, '%b %d, %Y')}!")
-            else:
-                self.refresh_date = time_machine[0]
-                logger.info(f":: Time Machine active: {datetime.strftime(self.refresh_date, '%b %d, %Y')}!")
+        self.seen = self.db.get_artist_releases()
+
+        if time_machine:
+            self.refresh_date = time_machine
             self.time_machine = True
+            logger.info(f":: Time Machine active: {datetime.strftime(self.refresh_date, '%b %d, %Y')}!")
             config.set('by_release_date', False)
 
     def debugger(self, message: str, payload = None):
@@ -47,14 +41,14 @@ class Refresh:
                 payload = ""
             logger.debug(f"DEBUG_MODE: {message} {str(payload)}")
 
-    def remove_existing_releases(self, payload: dict) -> list:
+    def remove_existing_releases(self, payload: dict, seen: dict) -> list:
         """
         Return list of releases that have not been stored in the database
         """
         new_releases = []
 
         if payload.get('artist_id'):
-            seen_releases = self.db.get_artist_releases()
+            seen_releases = seen
             if seen_releases:
                 seen_releases = [v for x in seen_releases for k, v in x.items()]
                 new_releases = [x for x in payload['releases'] if type(x) == dict for k, v in x.items() if
@@ -121,7 +115,7 @@ class Refresh:
                     continue
             
             self.queue_release(release)
-            
+
     def append_database_release(self, new_release: dict):
         self.new_releases.append(new_release)
                 
@@ -132,8 +126,7 @@ class Refresh:
             if release['title'] == release_title:
                 if release['explicit_lyrics'] == 1:
                     return release['id']
-        
-    
+
     def release_too_old(self, release_date: str):
         release_date_dt = dates.str_to_datetime_obj(release_date)
         if self.time_machine:
@@ -147,8 +140,7 @@ class Refresh:
         elif config.release_by_date():
             if release_date_dt < (self.refresh_date - timedelta(config.release_max_age())):
                 return True
-                
-                
+
     def is_future_release(self, release_date: str):
         """ Return 1 if release date is in future, otherwise return 0 """
         
@@ -199,7 +191,11 @@ class Refresh:
         if len(playlists) or len(artists):
             return {'artists': artists, 'playlists': playlists}
 
-    # @performance.timeit
+    def prep_payload(self, p):
+        if len(p):
+            p['releases'] = self.remove_existing_releases(p, self.seen)
+            self.filter_artist_releases(p)
+
     def run(self, artists: list = None, playlists: list = None):
         if artists:
             self.debugger("ManualRefresh", artists)
@@ -227,12 +223,13 @@ class Refresh:
                     return logger.warning("No artists found to refresh")
                 api_result = self.get_release_data({'artists': monitored_artists, 'playlists': monitored_playlists})
 
-        artist_processor = tqdm(api_result['artists'], total=len(api_result['artists']), desc="Checking for new releases...",
-                                ascii=" #", bar_format=ui.TQDM_FORMAT)
-        for payload in artist_processor:
-            if len(payload):
-                payload['releases'] = self.remove_existing_releases(payload)
-                self.filter_artist_releases(payload)
+        if len(api_result):
+            with ThreadPoolExecutor(max_workers=50) as ex:
+                result = list(tqdm(ex.map(self.prep_payload, api_result['artists']),
+                                   total=len(api_result['artists']),
+                                   desc=f"Scanning release data for new releases...",
+                                   ascii=" #",
+                                   bar_format=ui.TQDM_FORMAT))
 
         for payload in api_result['playlists']:
             if len(payload):
@@ -289,7 +286,6 @@ class Refresh:
         print(f"+ Pending future releases: {future:,}")
         print("")
 
-    # @performance.timeit
     def get_release_data(self, to_refresh: dict) -> dict:
         """
         Generate a list of dictionaries containing artist (DB) and release (API)

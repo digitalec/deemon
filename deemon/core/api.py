@@ -86,7 +86,6 @@ class PlatformAPI:
         
     def get_album(self, query: int) -> dict:
         """Return a dictionary from API containing album info"""
-        
 
     def get_extra_release_info(self, query: dict):
         album = {'id': query['album_id'], 'label': None}
@@ -100,7 +99,6 @@ class PlatformAPI:
                 album['label'] = album_details['label']
         
         return album
-        
 
     def get_artist_albums(self, query: dict, limit: int = -1):
         """
@@ -112,7 +110,7 @@ class PlatformAPI:
                 result = self.api.get_artist_discography(art_id=query['artist_id'], limit=limit)['data']
             except deezer.errors.GWAPIError as e:
                 if "UNKNOWN" in str(e):
-                    logger.error(f"   [!] Artist discography is not available for "
+                    logger.warning(f"   [!] Artist discography is not available for "
                                  f"{query['artist_name']} ({query['artist_id']})")
                 else:
                     logger.error(f"An error occured while attempting to get the discography for "
@@ -158,12 +156,14 @@ class PlatformAPI:
         query['releases'] = api_result
         return query
 
-    def get_playlist(self, query: int):
+    @staticmethod
+    def get_playlist(query: int):
         api_result = Deezer().api.get_playlist(query)
         return {'id': query, 'title': api_result['title'],
                 'link': f"https://deezer.com/playlist/{str(api_result['id'])}"}
 
-    def get_playlist_tracks(self, query: dict):
+    @staticmethod
+    def get_playlist_tracks(query: dict):
         track_list = []
         api_result = Deezer().api.get_playlist(query['id'])
         for track in api_result['tracks']['data']:

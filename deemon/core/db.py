@@ -132,6 +132,7 @@ class Database(object):
                    "PRIMARY KEY('id' AUTOINCREMENT))")
 
         self.query("CREATE UNIQUE INDEX 'idx_property' ON 'deemon' ('property')")
+        self.query("CREATE INDEX 'artist' ON 'releases' ('artist_id', 'profile_id')")
         self.query(f"INSERT INTO 'deemon' ('property', 'value') VALUES ('version', '{__dbversion__}')")
         self.query("INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('latest_ver', '')")
         self.query("INSERT INTO 'deemon' ('property', 'value') VALUES ('last_update_check', 0)")
@@ -279,7 +280,12 @@ class Database(object):
             self.query("ALTER TABLE releases ADD COLUMN record_type INTEGER")
             self.query("INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('version', '3.4')")
             self.commit()
-            logger.debug(f"Database upgraded to version 3.4")
+
+        if current_ver < parse_version("3.5"):
+            self.query("CREATE INDEX 'artist' ON 'releases' ('artist_id', 'profile_id')")
+            self.query("INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('version', '3.5')")
+            self.commit()
+            logger.debug(f"Database upgraded to version 3.5")
 
     def query(self, query, values=None):
         if values is None:
