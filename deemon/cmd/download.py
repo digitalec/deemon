@@ -292,7 +292,6 @@ class Download:
                     continue
             return False, False
 
-
         logger.info("[!] Queueing releases, this might take awhile...")
 
         if self.release_from or self.release_to:
@@ -307,7 +306,7 @@ class Download:
                 logger.info(":: Getting releases that were released before "
                             f"{dates.ui_date(self.release_to)}")
 
-        if not artist or artist_id or album_id or url:
+        if all(not x for x in [artist, artist_id, album_id, url, input_file]):
             artist_id = self.db.get_all_monitored_artist_ids()
 
         if artist:
