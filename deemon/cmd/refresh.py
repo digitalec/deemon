@@ -173,10 +173,9 @@ class Refresh:
                 if payload['refreshed'] == 0:
                     continue
                 
-                queue_obj = QueueItem(playlist=payload, bitrate=payload['bitrate'],
-                                        download_path=payload['download_path'])
-                self.debugger("QueuePlaylistItem", queue_obj)
-                self.queue_list.append(queue_obj)
+            queue_obj = QueueItem(playlist=payload, bitrate=payload['bitrate'], download_path=payload['download_path'])
+            self.debugger("QueuePlaylistItem", queue_obj)
+            self.queue_list.append(queue_obj)
 
     def waiting_for_refresh(self):
         playlists = self.db.get_unrefreshed_playlists()
@@ -229,7 +228,8 @@ class Refresh:
 
         for payload in api_result['playlists']:
             if len(payload):
-                payload['tracks'] = self.remove_existing_releases(payload)
+                self.seen = self.db.get_playlist_tracks(payload['id'])
+                payload['tracks'] = self.remove_existing_releases(payload, self.seen)
                 self.filter_playlist_releases(payload)
 
         if self.skip_download:
