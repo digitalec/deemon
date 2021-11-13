@@ -127,9 +127,7 @@ class Refresh:
         if config.release_by_date():
             if release_date_dt < (self.refresh_date - timedelta(config.release_max_age())):
                 return True
-        else:
-            if release_date_dt < self.refresh_date:
-                return True
+            
 
     @staticmethod
     def is_future_release(release_date: str):
