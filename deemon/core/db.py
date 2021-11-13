@@ -182,7 +182,7 @@ class Database(object):
                    "'future_release' INTEGER DEFAULT 0,"
                    "'trans_id' INTEGER,"
                    "unique(album_id, profile_id))")
-            self.query("INSERT INTO releases_tmp(artist_id, artist_name, "
+            self.query("INSERT OR REPLACE INTO releases_tmp(artist_id, artist_name, "
                        "album_id, album_name, album_release, album_added, "
                        "explicit, label, record_type, profile_id, "
                        "future_release, trans_id) SELECT artist_id, "
