@@ -107,7 +107,7 @@ class Database(object):
                    "'profile_id' INTEGER DEFAULT 1,"
                    "'future_release' INTEGER DEFAULT 0,"
                    "'trans_id' INTEGER,"
-                   "unique(album_id, profile_id)")
+                   "unique(album_id, profile_id))")
 
         self.query("CREATE TABLE 'deemon' ("
                    "'property' TEXT,"
