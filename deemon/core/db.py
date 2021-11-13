@@ -161,48 +161,13 @@ class Database(object):
             return
 
         logger.debug("DATABASE UPGRADE IN PROGRESS!")
-
-        if current_ver < parse_version("3.1"):
-            logger.error(f"Unsupported upgrade path. You must be on at least version 2.0 before upgrading to {__version__}.")
-            exit()
-
-        if current_ver < parse_version("3.2"):
-            self.query("CREATE TABLE playlists_tmp ("
-                       "'id' INTEGER UNIQUE,"
-                       "'title' TEXT,"
-                       "'url' TEXT,"
-                       "'bitrate' TEXT,"
-                       "'alerts' INTEGER,"
-                       "'profile_id' INTEGER DEFAULT 1,"
-                       "'download_path' TEXT,"
-                       "'refreshed' INTEGER DEFAULT 0,"
-                       "'trans_id' INTEGER)")
-            self.query("INSERT INTO playlists_tmp SELECT * FROM playlists")
-            self.query("DROP TABLE playlists")
-            self.query("ALTER TABLE playlists_tmp RENAME TO playlists")
-            self.query("INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('version', '3.2')")
-            self.commit()
-
-        if current_ver < parse_version("3.3"):
-            try:
-                self.query("ALTER TABLE releases ADD COLUMN explicit INTEGER")
-            except sqlite3.OperationalError as e:
-                logger.debug(f"Unable to create 'explicit' column in releases table: {e}")
-            self.query("INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('version', '3.3')")
-            self.commit()
         
-        if current_ver < parse_version("3.4"):
-            self.query("ALTER TABLE releases ADD COLUMN label TEXT")
-            self.query("ALTER TABLE releases ADD COLUMN record_type INTEGER")
-            self.query("INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('version', '3.4')")
-            self.commit()
-
         if current_ver < parse_version("3.5"):
-            self.query("CREATE INDEX 'artist' ON 'releases' ('artist_id', 'profile_id')")
-            self.query("INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('version', '3.5')")
-            self.commit()
+            logger.error("Due to database changes, you must be on at least "
+                         f"v2.5 before upgrading to v{__version__}.")
+            exit()
             
-        if current_ver < parse_version("3.5.1"):
+        if current_ver < parse_version("3.5.2"):
             self.query("CREATE TABLE releases_tmp ("
                    "'artist_id' INTEGER,"
                    "'artist_name' TEXT,"
@@ -217,12 +182,18 @@ class Database(object):
                    "'future_release' INTEGER DEFAULT 0,"
                    "'trans_id' INTEGER,"
                    "unique(album_id, profile_id))")
-            self.query("INSERT INTO releases_tmp SELECT * FROM releases")
+            self.query("INSERT INTO releases_tmp(artist_id, artist_name, "
+                       "album_id, album_name, album_release, album_added, "
+                       "explicit, label, record_type, profile_id, "
+                       "future_release, trans_id) SELECT artist_id, "
+                       "artist_name, album_id, album_name, album_release, "
+                       "album_added, explicit, label, record_type, "
+                       "profile_id, future_release, trans_id FROM releases")
             self.query("DROP TABLE releases")
             self.query("ALTER TABLE releases_tmp RENAME TO releases")
-            self.query("INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('version', '3.5.1')")
+            self.query("INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('version', '3.5.2')")
             self.commit()
-            logger.debug(f"Database upgraded to version 3.5.1")
+            logger.debug(f"Database upgraded to version 3.5.2")
 
     def query(self, query, values=None):
         if values is None:
