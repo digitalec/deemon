@@ -134,7 +134,6 @@ class Refresh:
         """ Return 1 if release date is in future, otherwise return 0 """
         release_date_dt = dates.str_to_datetime_obj(release_date)
         if release_date_dt > datetime.now():
-            logger.debug(f"{release_date_dt} is in the future")
             return 1
         else:
             return 0

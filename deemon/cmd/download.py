@@ -69,6 +69,7 @@ class QueueItem:
 def get_deemix_bitrate(bitrate: str):
     for bitrate_id, bitrate_name in config.allowed_values('bitrate').items():
         if bitrate_name.lower() == bitrate.lower():
+            logger.debug(f"Setting deemix bitrate to {str(bitrate_id)}")
             return bitrate_id
 
 

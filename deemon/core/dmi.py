@@ -65,7 +65,7 @@ class DeemixInterface:
     
     
     def deezer_acct_type(self):
-        user_session = self.dz.get_session()
+        user_session = self.dz.get_session()['current_user']
     
         if user_session.get('can_stream_lossless'):
             logger.debug("Deezer account connected and supports lossless")
@@ -82,17 +82,7 @@ class DeemixInterface:
             print("FAILED")
             logger.debug(f"ARL Failed: {arl}")
             return False
-        user_session = self.dz.get_session()
-        
-        if user_session.get('can_stream_lossless'):
-            logger.debug("Deezer account connected and supports lossless")
-            config.set('deezer_quality', 'lossless', validate=False)
-        elif user_session.get('can_stream_hq'):
-            logger.debug("Deezer account connected and supports high quality")
-            config.set('deezer_quality', 'hq', validate=False)
-        else:
-            logger.debug("Deezer account connected but only supports 128k")
-            config.set('deezer_quality', 'lq', validate=False)
+        self.deezer_acct_type()
             
         print("OK")
         logger.debug("ARL is valid")
