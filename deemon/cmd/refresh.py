@@ -50,7 +50,7 @@ class Refresh:
         if payload.get('artist_id'):
             seen_releases = seen
             if seen_releases:
-                seen_releases = [v for x in seen_releases for k, v in x.items()]
+                seen_releases = [v for x in seen_releases for k, v in x.items() if not x.get('future_release', 0)]
                 new_releases = [x for x in payload['releases'] if type(x) == dict for k, v in x.items() if
                                 k == "id" and v not in seen_releases]
                 return new_releases
@@ -134,7 +134,6 @@ class Refresh:
     @staticmethod
     def is_future_release(release_date: str):
         """ Return 1 if release date is in future, otherwise return 0 """
-        
         release_date_dt = dates.str_to_datetime_obj(release_date)
         if release_date_dt > datetime.now():
             logger.debug(f"{release_date_dt} is in the future")

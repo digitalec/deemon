@@ -6,7 +6,7 @@ from pathlib import Path
 
 from packaging.version import parse as parse_version
 
-from deemon import __dbversion__
+from deemon import __dbversion__, __version__
 from deemon.core.config import Config as config
 from deemon.utils import startup, performance
 
@@ -106,7 +106,8 @@ class Database(object):
                    "'record_type' INTEGER,"
                    "'profile_id' INTEGER DEFAULT 1,"
                    "'future_release' INTEGER DEFAULT 0,"
-                   "'trans_id' INTEGER)")
+                   "'trans_id' INTEGER,"
+                   "unique(album_id, profile_id)")
 
         self.query("CREATE TABLE 'deemon' ("
                    "'property' TEXT,"
@@ -160,95 +161,10 @@ class Database(object):
             return
 
         logger.debug("DATABASE UPGRADE IN PROGRESS!")
-        # Upgrade database v1.0 to v1.1
-        if current_ver < parse_version("1.1"):
-            sql_playlists = ("CREATE TABLE IF NOT EXISTS 'playlists' "
-                             "('id' INTEGER UNIQUE, 'title' TEXT, 'url' TEXT)")
-
-            sql_playlist_tracks = ("CREATE TABLE IF NOT EXISTS 'playlist_tracks' "
-                                   "('track_id' INTEGER, 'playlist_id' INTEGER, 'artist_id' INTEGER, "
-                                   "'artist_name' TEXT, 'track_name' TEXT, 'track_added' TEXT)")
-            self.query(sql_playlists)
-            self.query(sql_playlist_tracks)
-            self.query("INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('version', '1.1')")
-            self.commit()
-
-        # Upgrade database v1.1 to v1.3
-        if current_ver < parse_version("1.3"):
-            sql_playlists_1 = "ALTER TABLE playlists ADD COLUMN bitrate TEXT"
-            sql_playlists_2 = "ALTER TABLE playlists ADD COLUMN alerts INTEGER"
-            sql_updatever = "INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('version', '1.3')"
-            self.query(sql_playlists_1)
-            self.query(sql_playlists_2)
-            self.query(sql_updatever)
-            self.commit()
-
-        if current_ver < parse_version("2.1"):
-            self.query("INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('last_update_check', 0)")
-            self.query("INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('version', '2.1')")
-            self.commit()
-
-        if current_ver < parse_version("2.2"):
-            self.query("ALTER TABLE monitor ADD COLUMN download_path TEXT")
-            self.query("ALTER TABLE playlists ADD COLUMN download_path TEXT")
-            self.query("INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('version', '2.2')")
-            self.commit()
-
-        # Upgrade database to v3
-        if current_ver < parse_version("3.0"):
-            self.query("CREATE TABLE 'profiles' ("
-                       "'id' INTEGER,"
-                       "'name' TEXT,"
-                       "'email' TEXT,"
-                       "'alerts' INTEGER,"
-                       "'bitrate' TEXT,"
-                       "'record_type' TEXT,"
-                       "'plex_baseurl' TEXT,"
-                       "'plex_token' TEXT,"
-                       "'plex_library' TEXT,"
-                       "'download_path' TEXT,"
-                       "PRIMARY KEY('id' AUTOINCREMENT))")
-            self.query("INSERT INTO 'profiles' ('name') VALUES ('default')")
-            self.query("ALTER TABLE monitor ADD COLUMN profile_id INTEGER DEFAULT 1")
-            self.query("ALTER TABLE releases ADD COLUMN profile_id INTEGER DEFAULT 1")
-            self.query("ALTER TABLE playlists ADD COLUMN profile_id INTEGER DEFAULT 1")
-            self.query("ALTER TABLE playlist_tracks ADD COLUMN profile_id INTEGER DEFAULT 1")
-            self.query("CREATE TABLE monitor_tmp ("
-                       "'artist_id' INTEGER,"
-                       "'artist_name' TEXT,"
-                       "'bitrate' TEXT,"
-                       "'record_type' TEXT,"
-                       "'alerts' INTEGER,"
-                       "'download_path' TEXT,"
-                       "'profile_id' INTEGER DEFAULT 1)")
-            self.query("INSERT INTO monitor_tmp SELECT * FROM monitor")
-            self.query("DROP TABLE monitor")
-            self.query("ALTER TABLE monitor_tmp RENAME TO monitor")
-            self.query("INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('latest_ver', '')")
-            self.query("INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('version', '3.0')")
-            self.commit()
 
         if current_ver < parse_version("3.1"):
-            self.query("CREATE TABLE transactions ("
-                       "'id' INTEGER,"
-                       "'timestamp' INTEGER,"
-                       "'profile_id' INTEGER DEFAULT 1,"
-                       "PRIMARY KEY('id' AUTOINCREMENT))")
-            self.query("ALTER TABLE monitor ADD COLUMN trans_id INTEGER")
-            self.query("ALTER TABLE monitor ADD COLUMN refreshed INTEGER DEFAULT 0")
-            self.query("ALTER TABLE playlists ADD COLUMN trans_id INTEGER")
-            self.query("ALTER TABLE playlists ADD COLUMN refreshed INTEGER DEFAULT 0")
-            self.query("ALTER TABLE releases ADD COLUMN trans_id")
-            self.query("ALTER TABLE playlist_tracks ADD COLUMN trans_id")
-            self.query("UPDATE monitor SET bitrate = '128' WHERE bitrate = '1'")
-            self.query("UPDATE monitor SET bitrate = '320' WHERE bitrate = '3'")
-            self.query("UPDATE monitor SET bitrate = 'FLAC' WHERE bitrate = '9'")
-            self.query("UPDATE playlists SET bitrate = '128' WHERE bitrate = '1'")
-            self.query("UPDATE playlists SET bitrate = '320' WHERE bitrate = '3'")
-            self.query("UPDATE playlists SET bitrate = 'FLAC' WHERE bitrate = '9'")
-            self.query("INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('version', '3.1')")
-            self.query("INSERT INTO 'deemon' ('property', 'value') VALUES ('release_channel', 'stable')")
-            self.commit()
+            logger.error(f"Unsupported upgrade path. You must be on at least version 2.0 before upgrading to {__version__}.")
+            exit()
 
         if current_ver < parse_version("3.2"):
             self.query("CREATE TABLE playlists_tmp ("
@@ -285,7 +201,28 @@ class Database(object):
             self.query("CREATE INDEX 'artist' ON 'releases' ('artist_id', 'profile_id')")
             self.query("INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('version', '3.5')")
             self.commit()
-            logger.debug(f"Database upgraded to version 3.5")
+            
+        if current_ver < parse_version("3.5.1"):
+            self.query("CREATE TABLE releases_tmp ("
+                   "'artist_id' INTEGER,"
+                   "'artist_name' TEXT,"
+                   "'album_id' INTEGER,"
+                   "'album_name' TEXT,"
+                   "'album_release' TEXT,"
+                   "'album_added' INTEGER,"
+                   "'explicit' INTEGER,"
+                   "'label' TEXT,"
+                   "'record_type' INTEGER,"
+                   "'profile_id' INTEGER DEFAULT 1,"
+                   "'future_release' INTEGER DEFAULT 0,"
+                   "'trans_id' INTEGER,"
+                   "unique(album_id, profile_id))")
+            self.query("INSERT INTO releases_tmp SELECT * FROM releases")
+            self.query("DROP TABLE releases")
+            self.query("ALTER TABLE releases_tmp RENAME TO releases")
+            self.query("INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('version', '3.5.1')")
+            self.commit()
+            logger.debug(f"Database upgraded to version 3.5.1")
 
     def query(self, query, values=None):
         if values is None:
@@ -350,9 +287,9 @@ class Database(object):
     def get_artist_releases(self, artist_id=None):
         sql_values = {'artist_id': artist_id, 'profile_id': config.profile_id()}
         if artist_id:
-            query = "SELECT album_id FROM 'releases' WHERE artist_id = :artist_id AND profile_id = :profile_id"
+            query = "SELECT album_id, future_release FROM 'releases' WHERE artist_id = :artist_id AND profile_id = :profile_id"
         else:
-            query = "SELECT album_id FROM 'releases' WHERE profile_id = :profile_id"
+            query = "SELECT album_id, future_release FROM 'releases' WHERE profile_id = :profile_id"
         return self.query(query, sql_values).fetchall()
 
     def get_future_releases(self):
@@ -413,7 +350,7 @@ class Database(object):
 
     def add_new_releases(self, values):
         self.new_transaction()
-        sql = (f"INSERT INTO releases ('artist_id', 'artist_name', 'album_id', 'album_name', 'album_release', "
+        sql = (f"INSERT OR REPLACE INTO releases ('artist_id', 'artist_name', 'album_id', 'album_name', 'album_release', "
                f"'album_added', 'future_release', 'explicit', 'record_type', 'profile_id', 'trans_id') "
                f"VALUES (:artist_id, :artist_name, :id, :title, :release_date, {int(time.time())}, :future, "
                f":explicit_lyrics, :record_type, {config.profile_id()}, {config.transaction_id()})")
