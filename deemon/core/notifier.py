@@ -63,11 +63,11 @@ class Notify:
         msg = MIMEMultipart('mixed')
         msg['To'] = config.smtp_recipient()
         msg['From'] = formataddr(('deemon', config.smtp_sender()))
-        msg['Subject'] = self.subject
         # part1 = MIMEText(self.plaintext(), 'plain')
         part2 = MIMEText(self.html_new_releases(), 'html')
         # msg.attach(part1)
         msg.attach(part2)
+        msg['Subject'] = self.subject
 
         return msg
 
@@ -138,6 +138,8 @@ class Notify:
 
         self.releases = sorted(self.releases, key=lambda x: x['release_date'], reverse=True)
 
+        new_release_count = 0
+        
         for release in self.releases:
 
             if all_new_releases != "":
@@ -147,37 +149,57 @@ class Notify:
             release_date_str = datetime.strftime(release_date_ts, "%A, %B %d").replace(" 0", " ")
 
             new_release_list_header = f"""
-                <p style="font-size: 14px; line-height: 140%;">
-                    <strong>
-                        <span style="font-size: 16px; line-height: 22.4px;">{release_date_str}</span>
-                    </strong>
-                </p>
-                <ul>
+			<div class="album date">
+				<span class="album date badge">
+					{release_date_str}
+				</span>
+			</div>
             """
 
             new_release_list_item = ""
 
             for album in release["releases"]:
+                new_release_count += 1
+                if album['record_type'].lower() == "ep":
+                    record_type = "EP"
+                else:
+                    record_type = album['record_type'].title()
+                    
                 new_release_list_item += f"""
-                        <li style="font-size: 14px; line-height: 19.6px;">
-                            <span style="font-size: 16px; line-height: 22.4px;">
-                                {album['artist']} - {album['album']}
-                            </span>
-                        </li>
+            <div class="album body">
+				<div class="albumart">
+					<img src="{album['cover']}">
+				</div>
+				<div class="albuminfo">
+					<div class="albumtitle">
+						<a href="{album['url']}">{album['album']}</a>
+					</div>
+					<div>
+						<div class="artistname">{album['artist']}</div>
+						<span>{record_type} | {album['track_num']} track(s)</span>
+					</div>
+				</div>
+			</div>
                 """
 
             all_new_releases += new_release_list_header + new_release_list_item
 
+        if new_release_count > 1:
+            self.subject = f"{str(new_release_count)} new releases found!"
+        else:
+            self.subject = f"1 new release found!"
+        
         index = pkg_resources.resource_filename('deemon', 'assets/index.html')
         with open(index, 'r') as f:
             html_output = f.read()
 
             if config.update_available():
-                html_output = html_output.replace("{UPDATE_MESSAGE}", "A new update is available!")
+                html_output = html_output.replace("{UPDATE_MESSAGE}", f"Update to v{config.update_available()} is now available!")
             else:
                 html_output = html_output.replace("{UPDATE_MESSAGE}", "")
                 html_output = html_output.replace("{VIEW_UPDATE_MESSAGE}", "display:none;")
 
+            html_output = html_output.replace("{NEW_RELEASE_COUNT}", str(new_release_count))
             html_output = html_output.replace("{NEW_RELEASE_LIST}", all_new_releases)
             html_output = html_output.replace("{DEEMON_VER}", app_version)
             html_output = html_output.replace("{PY_VER}", py_version)

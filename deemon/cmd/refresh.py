@@ -249,6 +249,7 @@ class Refresh:
             dl = Download()
             dl.download_queue(self.queue_list)
 
+
         if len(self.new_playlist_releases) or len(self.new_releases):
             if len(self.new_playlist_releases):
                 logger.debug("Updating playlist releases in database...")
@@ -329,7 +330,30 @@ class Refresh:
             for key in days:
                 if key == "release_date":
                     if release['release_date'] in days[key]:
-                        days["releases"].append({'artist': release['artist_name'], 'album': release['title']})
+                        days["releases"].append(
+                            {
+                                'artist': release['artist_name'],
+                                'album': release['title'],
+                                'cover': release['cover_big'],
+                                'url': release['link'],
+                                'track_num': release['nb_tracks'],
+                                'record_type': release['record_type'],
+                            }
+                        )
                         return
 
-        self.new_releases_alert.append({'release_date': release['release_date'], 'releases': [{'artist': release['artist_name'], 'album': release['title']}]})
+        self.new_releases_alert.append(
+            {
+                'release_date': release['release_date'], 
+                'releases': [
+                    {
+                        'artist': release['artist_name'],
+                        'album': release['title'],
+                        'cover': release['cover_big'],
+                        'url': release['link'],
+                        'track_num': release['nb_tracks'],
+                        'record_type': release['record_type'],
+                    }
+                ]
+            }
+        )

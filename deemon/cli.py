@@ -93,7 +93,7 @@ def run(whats_new, verbose, profile):
 
     new_version = db.get_latest_ver()
     if parse_version(new_version) > parse_version(__version__):
-        config.set('update_available', 1, False)
+        config.set('update_available', new_version, False)
         print("*" * 50)
         logger.info(f"* New version is available: v{__version__} -> v{new_version}")
         if config.release_channel() == "beta":

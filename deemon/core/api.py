@@ -140,6 +140,9 @@ class PlatformAPI:
                         logger.warning(f"   [!] Found release without release date, assuming today: "
                                        f"{query['artist_name']} - {r['ALB_TITLE']}")
                         release_date = datetime.strftime(datetime.today(), "%Y-%m-%d")
+                    
+                    cover_art = f"https://e-cdns-images.dzcdn.net/images/cover/{r['ALB_PICTURE']}/500x500-00000-80-0-0.jpg"
+                    album_url = f"https://www.deezer.com/album/{r['ALB_ID']}"
 
                     api_result.append(
                         {
@@ -147,7 +150,10 @@ class PlatformAPI:
                             'title': r['ALB_TITLE'],
                             'release_date': release_date,
                             'explicit_lyrics': r['EXPLICIT_ALBUM_CONTENT']['EXPLICIT_LYRICS_STATUS'],
-                            'record_type': r['TYPE']
+                            'record_type': r['TYPE'],
+                            'cover_big': cover_art,
+                            'link': album_url,
+                            'nb_tracks': r['NUMBER_TRACK'],
                          }
                     )
         else:
