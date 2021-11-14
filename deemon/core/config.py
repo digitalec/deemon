@@ -20,6 +20,7 @@ DEFAULT_CONFIG = {
     "check_update": 1,
     "debug_mode": False,
     "release_channel": "stable",
+    "experimental_api": False,
     "query_limit": 5,
     "rollback_view_limit": 10,
     "prompt_duplicates": False,
@@ -378,6 +379,10 @@ class Config(object):
     @staticmethod
     def check_account_status() -> bool:
         return Config._CONFIG.get('deemix').get('check_account_status')
+    
+    @staticmethod
+    def experimental_api() -> bool:
+        return Config._CONFIG.get('experimental_api')
 
     @staticmethod
     def find_position(d, property):

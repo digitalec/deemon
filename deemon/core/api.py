@@ -12,10 +12,10 @@ logger = logging.getLogger(__name__)
 
 class PlatformAPI:
 
-    def __init__(self, platform: str = "deezer-api"):
+    def __init__(self):
         self.max_threads = 2
-        self.platform = platform
         self.dz = Deezer()
+        self.platform = self.get_platform()
         self.logged_in = self.dz.login_via_arl(config.arl())
         self.account_type = self.get_account_type()
         self.api = self.set_platform()
@@ -25,6 +25,11 @@ class PlatformAPI:
             if not payload:
                 payload = ""
             logger.debug(f"DEBUG_MODE: {message} {str(payload)}")
+            
+    def get_platform(self):
+        if config.experimental_api():
+            return "deezer-gw"
+        return "deezer-api"
 
     def set_platform(self):
         logger.debug(f"Deezer account type: {self.account_type}")

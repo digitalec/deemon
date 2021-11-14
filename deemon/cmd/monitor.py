@@ -28,7 +28,7 @@ class Monitor:
         self.time_machine = None
         self.dl = None
         self.db = Database()
-        self.api = PlatformAPI("deezer-gw")
+        self.api = PlatformAPI()
         self.artist_not_found = []
 
     def set_config(self, bitrate: str, alerts: bool, record_type: str, download_path: Path):

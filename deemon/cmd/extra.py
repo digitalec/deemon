@@ -19,7 +19,7 @@ def debugger(message: str, payload = None):
 
 def main():
     db = dbase.Database()
-    api = PlatformAPI("deezer-gw")
+    api = PlatformAPI()
     releases = db.get_artist_releases()
     if not len(releases):
         return logger.warning("No releases found in local database")

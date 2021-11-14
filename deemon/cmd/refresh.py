@@ -17,7 +17,7 @@ class Refresh:
         self.db = db.Database()
         self.refresh_date = datetime.now()
         self.max_refresh_date = None
-        self.api = api.PlatformAPI("deezer-gw")
+        self.api = api.PlatformAPI()
         self.new_releases = []
         self.new_releases_alert = []
         self.new_playlist_releases = []
@@ -332,7 +332,7 @@ class Refresh:
                                 'album': release['title'],
                                 'cover': release['cover_big'],
                                 'url': release['link'],
-                                'track_num': release['nb_tracks'],
+                                'track_num': release.get('nb_tracks', None),
                                 'record_type': release['record_type'],
                             }
                         )
@@ -347,7 +347,7 @@ class Refresh:
                         'album': release['title'],
                         'cover': release['cover_big'],
                         'url': release['link'],
-                        'track_num': release['nb_tracks'],
+                        'track_num': release.get('nb_tracks', None),
                         'record_type': release['record_type'],
                     }
                 ]
