@@ -164,7 +164,12 @@ class Notify:
                     record_type = "EP"
                 else:
                     record_type = album['record_type'].title()
-                    
+            
+                if not album['track_num']:
+                    album_info = record_type
+                else:
+                    album_info = f"{record_type} | {album['track_num']} track(s)"
+            
                 new_release_list_item += f"""
             <div class="album body">
 				<div class="albumart">
@@ -176,7 +181,7 @@ class Notify:
 					</div>
 					<div>
 						<div class="artistname">{album['artist']}</div>
-						<span>{record_type} | {album['track_num']} track(s)</span>
+						<span>{album_info}</span>
 					</div>
 				</div>
 			</div>
