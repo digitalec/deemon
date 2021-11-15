@@ -36,8 +36,7 @@ def ui_date(d: datetime):
 
 def get_timestamp(d: str) -> str:
     dt_obj = str_to_datetime_obj(d)
-    logger.debug(f"Converting \"{d}\" -> \"{str(dt_obj)}\" to timestamp")
-    timestamp = dt_obj.strftime('%s')
+    timestamp = int(dt_obj.timestamp())
     return timestamp
 
 def str_to_datetime_obj(d: str) -> datetime:
