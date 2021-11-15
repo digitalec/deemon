@@ -41,6 +41,7 @@ class PlatformAPI:
             return self.dz.api
         
     def get_account_type(self):
+        self.dz.login_via_arl(config.arl())
         if self.dz.get_session()['current_user'].get('can_stream_lossless'):
             return "hifi"
         elif self.dz.get_session()['current_user'].get('can_stream_hq'):
@@ -112,7 +113,7 @@ class PlatformAPI:
                                  f"{query['artist_name']} ({query['artist_id']})")
                 else:
                     logger.error(f"An error occured while attempting to get the discography for "
-                                 f"{query['artist_id']} ({query['artist_id']})")
+                                 f"{query['artist_name']} ({query['artist_id']})")
                 query['releases'] = []
                 return query
             api_result = []
