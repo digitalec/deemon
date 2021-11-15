@@ -29,10 +29,16 @@ class Refresh:
         self.seen = None
 
         if time_machine:
-            self.refresh_date = time_machine
             self.time_machine = True
-            logger.info(f":: Time Machine active: {datetime.strftime(self.refresh_date, '%b %d, %Y')}!")
+            logger.info(f":: Time Machine active: {datetime.strftime(time_machine, '%b %d, %Y')}!")
             config.set('by_release_date', False)
+            monitored_artists = self.db.get_all_monitored_artist_ids()
+            monitored_playlists = self.db.get_all_monitored_playlist_ids()
+            artist_ids = [{'id': artist, 'tm_date': time_machine.strftime('%s')} for artist in monitored_artists]
+            playlist_ids = [{'id': playlist['id']} for playlist in monitored_playlists]
+            self.db.remove_specific_releases(artist_ids)
+            self.db.remove_specific_playlist_tracks(playlist_ids)
+            self.db.commit()
 
     @staticmethod
     def debugger(message: str, payload = None):
@@ -77,6 +83,7 @@ class Refresh:
         for release in payload['releases']:
             release['artist_id'] = payload['artist_id']
             release['artist_name'] = payload['artist_name']
+            release['album_release_ts'] = dates.get_timestamp(release['release_date'])
             release['future'] = self.is_future_release(release['release_date'])
             
             if release['explicit_lyrics'] != 1:
@@ -284,12 +291,6 @@ class Refresh:
         Generate a list of dictionaries containing artist (DB) and release (API)
         information.
         """
-        if self.time_machine:
-            logger.debug("Time machine has been detected; clearing future releases...")
-            artist_ids = [{'id': artist['artist_id']} for artist in to_refresh['artists']]
-            playlist_ids = [{'id': playlist['id']} for playlist in to_refresh['playlists']]
-            self.db.remove_specific_releases(artist_ids)
-            self.db.remove_specific_playlist_tracks(playlist_ids)
 
         api_result = {'artists': [], 'playlists': []}
 
