@@ -16,7 +16,6 @@ class PlatformAPI:
         self.max_threads = 2
         self.dz = Deezer()
         self.platform = self.get_platform()
-        self.logged_in = self.dz.login_via_arl(config.arl())
         self.account_type = self.get_account_type()
         self.api = self.set_platform()
 
@@ -34,16 +33,10 @@ class PlatformAPI:
     def set_platform(self):
         logger.debug(f"Deezer account type: {self.account_type}")
         if self.platform == "deezer-gw":
-            if self.logged_in:
                 self.max_threads = 50
                 logger.debug("Logged in to GW API, max_threads set "
                              f"to {self.max_threads}")
                 return self.dz.gw
-            else:
-                logger.warning("   [!] Falling back to standard API (expired "
-                               "ARL?)")
-                self.platform = "deezer-api"
-                return self.dz.api
         else:
             return self.dz.api
         
