@@ -65,7 +65,9 @@ docker run --name deemon \
 ```json
 {
     "check_update": 1,
+    "debug_mode": false,
     "release_channel": "stable",
+    "experimental_api": false,
     "query_limit": 5,
     "rollback_view_limit": 10,
     "prompt_duplicates": false,
@@ -83,7 +85,8 @@ docker run --name deemon \
     },
     "deemix": {
         "path": "",
-        "arl": ""
+        "arl": "",
+        "check_account_status": true
     },
     "smtp_settings": {
         "server": "",
