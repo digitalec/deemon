@@ -198,6 +198,7 @@ class Database(object):
         if current_ver < parse_version("3.6"):
             self.query("ALTER TABLE releases ADD COLUMN album_release_ts INTEGER")
             self.query("INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('version', '3.6')")
+            logger.info("Database upgrade in progress, please wait...")
             to_convert = self.query("SELECT album_id, album_release, profile_id FROM releases WHERE album_release_ts IS NULL").fetchall()
             for row in to_convert:
                 row['album_release_ts'] = dates.get_timestamp(row['album_release'])

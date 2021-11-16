@@ -21,16 +21,15 @@ class Refresh:
         self.new_releases = []
         self.new_releases_alert = []
         self.new_playlist_releases = []
-        self.time_machine = False
+        self.time_machine = time_machine
         self.total_new_releases = 0
         self.queue_list = []
         self.skip_download = skip_download
         self.download_all = ignore_filters
         self.seen = None
 
-        if time_machine:
-            self.time_machine = True
-            logger.info(f":: Time Machine active: {datetime.strftime(time_machine, '%b %d, %Y')}!")
+        if self.time_machine:
+            logger.info(f":: Time Machine active: {datetime.strftime(self.time_machine, '%b %d, %Y')}!")
             config.set('by_release_date', False)
             monitored_artists = self.db.get_all_monitored_artist_ids()
             monitored_playlists = self.db.get_all_monitored_playlist_ids()
@@ -131,8 +130,13 @@ class Refresh:
 
     def release_too_old(self, release_date: str):
         release_date_dt = dates.str_to_datetime_obj(release_date)
+        if self.time_machine:
+            if release_date_dt <= self.time_machine:
+                self.debugger(f"Release date \"{release_date}\" is older than TIME_MACHINE ({str(dates.ui_date(self.time_machine))})")
+                return True
         if config.release_by_date():
             if release_date_dt < (self.refresh_date - timedelta(config.release_max_age())):
+                self.debugger(f"Release date \"{release_date}\" is older than RELEASE_MAX_AGE ({config.release_max_age()} day(s))")
                 return True
             
 
