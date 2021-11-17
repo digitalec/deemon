@@ -33,7 +33,6 @@ class Refresh:
             config.set('by_release_date', False)
             self.db.remove_specific_releases({'tm_date': str(self.time_machine)})
             self.db.commit()
-            exit()
 
     @staticmethod
     def debugger(message: str, payload = None):

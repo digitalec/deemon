@@ -34,7 +34,7 @@ class PlatformAPI:
         logger.debug(f"Deezer account type: {self.account_type}")
         if self.platform == "deezer-gw":
                 self.max_threads = 50
-                logger.debug("Logged in to GW API, max_threads set "
+                logger.debug("Using GW API, max_threads set "
                              f"to {self.max_threads}")
                 return self.dz.gw
         else:
