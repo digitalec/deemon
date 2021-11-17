@@ -106,6 +106,7 @@ class PlatformAPI:
         """
         Return a list of dictionaries from API containing
         """
+        compilation = False
         self.debugger("RefreshArtist", query['artist_name'])
         if self.platform == "deezer-gw":
             try:
@@ -132,12 +133,12 @@ class PlatformAPI:
                     else:
                         r['TYPE'] = "album"
 
-                    if r['DIGITAL_RELEASE_DATE'] != "0000-00-00":
-                        release_date = r['DIGITAL_RELEASE_DATE']
-                    elif r['ORIGINAL_RELEASE_DATE'] != "0000-00-00":
+                    if r['ORIGINAL_RELEASE_DATE'] != "0000-00-00":
                         release_date = r['ORIGINAL_RELEASE_DATE']
                     elif r['PHYSICAL_RELEASE_DATE'] != "0000-00-00":
                         release_date = r['PHYSICAL_RELEASE_DATE']
+                    elif r['DIGITAL_RELEASE_DATE'] != "0000-00-00":
+                        release_date = r['DIGITAL_RELEASE_DATE']
                     else:
                         # In the event of an unknown release date, set it to today's date
                         # See album ID: 417403
@@ -147,7 +148,7 @@ class PlatformAPI:
                     
                     cover_art = f"https://e-cdns-images.dzcdn.net/images/cover/{r['ALB_PICTURE']}/500x500-00000-80-0-0.jpg"
                     album_url = f"https://www.deezer.com/album/{r['ALB_ID']}"
-
+                    
                     api_result.append(
                         {
                             'id': int(r['ALB_ID']),
