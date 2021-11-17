@@ -11,13 +11,26 @@ logger = logging.getLogger(__name__)
 
 
 class PlatformAPI:
+    
+    TOKEN = None
 
     def __init__(self):
         self.max_threads = 2
         self.dz = Deezer()
+        
+        # Make our session threadsafe
+        PlatformAPI.TOKEN = self.dz.gw.get_user_data()['checkForm']
+        self.dz.gw._get_token = self._get_token
+        
         self.platform = self.get_platform()
         self.account_type = self.get_account_type()
         self.api = self.set_platform()
+        
+    def _get_token(self):
+        """Overrides deezer.gw._get_token()
+        Returns API token to use across entire session
+        """
+        return PlatformAPI.TOKEN
 
     def debugger(self, message: str, payload = None):
         if config.debug_mode():
