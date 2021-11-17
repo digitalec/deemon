@@ -107,7 +107,6 @@ class Database(object):
                    "'profile_id' INTEGER DEFAULT 1,"
                    "'future_release' INTEGER DEFAULT 0,"
                    "'trans_id' INTEGER,"
-                   "'album_release_ts' INTEGER,"
                    "unique(album_id, profile_id))")
 
         self.query("CREATE TABLE 'deemon' ("
@@ -194,17 +193,11 @@ class Database(object):
             self.query("ALTER TABLE releases_tmp RENAME TO releases")
             self.query("INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('version', '3.5.2')")
             self.commit()
+            logger.debug(f"Database upgraded to version 3.5.2")
             
         if current_ver < parse_version("3.6"):
-            self.query("ALTER TABLE releases ADD COLUMN album_release_ts INTEGER")
-            self.query("INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('version', '3.6')")
-            logger.info("Database upgrade in progress, please wait...")
-            to_convert = self.query("SELECT album_id, album_release, profile_id FROM releases WHERE album_release_ts IS NULL").fetchall()
-            for row in to_convert:
-                row['album_release_ts'] = dates.get_timestamp(row['album_release'])
-            self.cursor.executemany("UPDATE releases SET album_release_ts = :album_release_ts WHERE album_id = :album_id AND profile_id = :profile_id", to_convert)
-            self.commit()
-            logger.debug(f"Database upgraded to version 3.6")
+            # album_release_ts REMOVED
+            pass
 
     def query(self, query, values=None):
         if values is None:
@@ -333,9 +326,9 @@ class Database(object):
     def add_new_releases(self, values):
         self.new_transaction()
         sql = (f"INSERT OR REPLACE INTO releases ('artist_id', 'artist_name', 'album_id', 'album_name', 'album_release', "
-               f"'album_added', 'future_release', 'explicit', 'record_type', 'profile_id', 'trans_id', 'album_release_ts') "
+               f"'album_added', 'future_release', 'explicit', 'record_type', 'profile_id', 'trans_id') "
                f"VALUES (:artist_id, :artist_name, :id, :title, :release_date, {int(time.time())}, :future, "
-               f":explicit_lyrics, :record_type, {config.profile_id()}, {config.transaction_id()}, :album_release_ts)")
+               f":explicit_lyrics, :record_type, {config.profile_id()}, {config.transaction_id()})")
         self.cursor.executemany(sql, values)
         self.set_all_artists_refreshed()
 
@@ -561,15 +554,7 @@ class Database(object):
 
     # @performance.timeit
     def remove_specific_releases(self, values):
-        self.cursor.executemany(f"DELETE FROM releases WHERE album_release_ts > :tm_date AND artist_id = :id AND profile_id = {config.profile_id()}",
-                                values)
-        self.commit()
-
-    # @performance.timeit
-    def remove_specific_playlist_tracks(self, values):
-        self.cursor.executemany(
-            f"DELETE FROM playlist_tracks WHERE playlist_id = :id AND profile_id = {config.profile_id()}", values)
-        self.commit()
+        self.query(f"DELETE FROM releases WHERE album_release > :tm_date AND profile_id = {config.profile_id()}", values)
 
     def add_extra_release_info(self, values):
         self.new_transaction()

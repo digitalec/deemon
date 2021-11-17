@@ -31,13 +31,9 @@ class Refresh:
         if self.time_machine:
             logger.info(f":: Time Machine active: {datetime.strftime(self.time_machine, '%b %d, %Y')}!")
             config.set('by_release_date', False)
-            monitored_artists = self.db.get_all_monitored_artist_ids()
-            monitored_playlists = self.db.get_all_monitored_playlist_ids()
-            artist_ids = [{'id': artist, 'tm_date': time_machine.strftime('%s')} for artist in monitored_artists]
-            playlist_ids = [{'id': playlist['id']} for playlist in monitored_playlists]
-            self.db.remove_specific_releases(artist_ids)
-            self.db.remove_specific_playlist_tracks(playlist_ids)
+            self.db.remove_specific_releases({'tm_date': str(self.time_machine)})
             self.db.commit()
+            exit()
 
     @staticmethod
     def debugger(message: str, payload = None):
@@ -82,7 +78,6 @@ class Refresh:
         for release in payload['releases']:
             release['artist_id'] = payload['artist_id']
             release['artist_name'] = payload['artist_name']
-            release['album_release_ts'] = dates.get_timestamp(release['release_date'])
             release['future'] = self.is_future_release(release['release_date'])
             
             if release['explicit_lyrics'] != 1:

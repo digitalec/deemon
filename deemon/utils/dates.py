@@ -34,11 +34,6 @@ def format_date_string(d: str):
 def ui_date(d: datetime):
     return datetime.strftime(d, '%b %d, %Y')
 
-def get_timestamp(d: str) -> str:
-    dt_obj = str_to_datetime_obj(d)
-    timestamp = int(dt_obj.timestamp())
-    return timestamp
-
 def str_to_datetime_obj(d: str) -> datetime:
     if d == "0000-00-00":
         d = "1980-01-01"
