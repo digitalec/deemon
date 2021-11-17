@@ -1,0 +1,17 @@
+name: Delete old beta releases
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: dev-drprasad/delete-older-releases@v0.2.0
+      with:
+        repo: digitalec/deemon # defaults to current repo
+        keep_latest: 5
+        delete_tag_pattern: beta # defaults to ""
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
