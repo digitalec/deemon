@@ -50,7 +50,7 @@ class PlatformAPI:
             return "free"
 
     #TODO GW API appears to ignore limit; must implement afterwards
-    def search_artist(self, query: str, limit: int = 1) -> dict:
+    def search_artist(self, query: str, limit: int = 10) -> dict:
         """
         Return a list of dictionaries from API containing {'id': int, 'name': str}
         """
