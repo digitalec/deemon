@@ -137,10 +137,14 @@ class PlatformAPI:
                 return query
             api_result = []
             for r in result:
+                # Remove ID check to get compilations
                 if r['ART_ID'] == str(query['artist_id']) and r['ARTISTS_ALBUMS_IS_OFFICIAL']:
                     # TYPE 0 - single, TYPE 1 - album, TYPE 2 - compilation, TYPE 3 - ep
                     if r['TYPE'] == '0':
                         r['TYPE'] = "single"
+                    elif r['TYPE'] == '2':
+                        logger.info(f"Compilation for {r['ART_NAME']} detected but ignored for now")
+                        continue
                     elif r['TYPE'] == '3':
                         r['TYPE'] = "ep"
                     else:
