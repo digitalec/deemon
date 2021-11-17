@@ -31,7 +31,6 @@ class PlatformAPI:
         return "deezer-api"
 
     def set_platform(self):
-        logger.debug(f"Deezer account type: {self.account_type}")
         if self.platform == "deezer-gw":
                 self.max_threads = 50
                 logger.debug("Using GW API, max_threads set "
@@ -41,12 +40,16 @@ class PlatformAPI:
             return self.dz.api
         
     def get_account_type(self):
-        self.dz.login_via_arl(config.arl())
-        if self.dz.get_session()['current_user'].get('can_stream_lossless'):
+        temp_dz = Deezer()
+        temp_dz.login_via_arl(config.arl())
+        if temp_dz.get_session()['current_user'].get('can_stream_lossless'):
+            logger.debug(f"Deezer account type is \"Hi-Fi\"")
             return "hifi"
-        elif self.dz.get_session()['current_user'].get('can_stream_hq'):
+        elif temp_dz.get_session()['current_user'].get('can_stream_hq'):
+            logger.debug(f"Deezer account type is \"Premium\"")
             return "premium"
         else:
+            logger.debug(f"Deezer account type is \"Free\"")
             return "free"
 
     #TODO GW API appears to ignore limit; must implement afterwards
@@ -109,9 +112,11 @@ class PlatformAPI:
                 result = self.api.get_artist_discography(art_id=query['artist_id'], limit=limit)['data']
             except deezer.errors.GWAPIError as e:
                 if "UNKNOWN" in str(e):
+                    logger.debug(e)
                     logger.warning(f"   [!] Artist discography is not available for "
                                  f"{query['artist_name']} ({query['artist_id']})")
                 else:
+                    logger.debug(e)
                     logger.error(f"An error occured while attempting to get the discography for "
                                  f"{query['artist_name']} ({query['artist_id']})")
                 query['releases'] = []
@@ -137,7 +142,7 @@ class PlatformAPI:
                         # In the event of an unknown release date, set it to today's date
                         # See album ID: 417403
                         logger.warning(f"   [!] Found release without release date, assuming today: "
-                                       f"{query['artist_name']} - {r['ALB_TITLE']}")
+                                        f"{query['artist_name']} - {r['ALB_TITLE']}")
                         release_date = datetime.strftime(datetime.today(), "%Y-%m-%d")
                     
                     cover_art = f"https://e-cdns-images.dzcdn.net/images/cover/{r['ALB_PICTURE']}/500x500-00000-80-0-0.jpg"
@@ -153,7 +158,7 @@ class PlatformAPI:
                             'cover_big': cover_art,
                             'link': album_url,
                             'nb_tracks': r['NUMBER_TRACK'],
-                         }
+                            }
                     )
         else:
             api_result = self.api.get_artist_albums(artist_id=query['artist_id'], limit=limit)['data']
