@@ -11,7 +11,7 @@ jobs:
     - uses: dev-drprasad/delete-older-releases@v0.2.0
       with:
         repo: digitalec/deemon # defaults to current repo
-        keep_latest: 5
+        keep_latest: 0
         delete_tag_pattern: b # defaults to ""
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
