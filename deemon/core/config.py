@@ -20,7 +20,7 @@ DEFAULT_CONFIG = {
     "check_update": 1,
     "debug_mode": False,
     "release_channel": "stable",
-    "experimental_api": False,
+    "experimental_api": True,
     "query_limit": 5,
     "rollback_view_limit": 10,
     "prompt_duplicates": False,
