@@ -56,7 +56,7 @@ class QueueItem:
                 self.url = f"https://www.deezer.com/album/{album['id']}"
 
         if track:
-            self.artist_name = track["artist"]
+            self.artist_name = track["artist"]["name"]
             self.track_id = track["id"]
             self.track_title = track["title"]
             self.url = track["link"]
@@ -220,7 +220,7 @@ class Download:
                         filtered_albums.append(album)
             return filtered_albums
 
-        def get_api_result(artist=None, artist_id=None, album_id=None):
+        def get_api_result(artist=None, artist_id=None, album_id=None, track_id=None):
             if artist:
                 try:
                     return self.dz.api.search_artist(artist, limit=1)["data"][0]  # TODO handle incorrect artist
@@ -236,6 +236,12 @@ class Download:
                     return self.dz.api.get_album(album_id)
                 except (deezer.api.DataException, IndexError):
                     logger.error(f"Album ID {album_id} not found.")
+            if track_id:
+                try:
+                    return self.dz.api.get_track(track_id)
+                except (deezer.api.DataException, IndexError):
+                    logger.error(f"Track ID {track_id} not found.")
+
 
         def queue_filtered_releases(api_object):
             filtered = filter_artist_by_record_type(api_object)
@@ -277,12 +283,22 @@ class Download:
             if album_id_result and not queue_item_exists(album_id_result['id']):
                 self.queue_list.append(QueueItem(album=album_id_result))
 
+        def process_track_by_id(id):
+            logger.debug("Processing track by name")
+            track_id_result = get_api_result(track_id=id)
+            if not track_id_result:
+                return
+            logger.debug(f"Requested track: {id}, "
+                         f"Found: {track_id_result['artist']['name']} - {track_id_result['title']}")
+            if track_id_result and not queue_item_exists(id):
+                self.queue_list.append(QueueItem(track=track_id_result))
+
         def process_playlist_by_id(id):
             playlist_api = self.dz.api.get_playlist(id)
             self.queue_list.append(QueueItem(playlist=playlist_api))
 
         def extract_id_from_url(url):
-            id_group = ['artist', 'album', 'playlist']
+            id_group = ['artist', 'album', 'track', 'playlist']
             for group in id_group:
                 id_type = group
                 try:
@@ -346,6 +362,8 @@ class Download:
                     process_album_by_id(eid)
                 elif egroup == "playlist":
                     process_playlist_by_id(eid)
+                elif egroup == "track":
+                    process_track_by_id(eid)
 
         if self.duplicate_id_count > 0:
             logger.info(f"Cleaned up {self.duplicate_id_count} duplicate release(s). See log for additional info.")
