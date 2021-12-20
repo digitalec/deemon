@@ -25,6 +25,7 @@ DEFAULT_CONFIG = {
     "rollback_view_limit": 10,
     "prompt_duplicates": False,
     "prompt_no_matches": True,
+    "compilations": False,
     "new_releases": {
         "by_release_date": True,
         "release_max_age": 90
@@ -383,6 +384,10 @@ class Config(object):
     @staticmethod
     def experimental_api() -> bool:
         return Config._CONFIG.get('experimental_api')
+
+    @staticmethod
+    def compilations() -> bool:
+        return Config._CONFIG.get('compilations')
 
     @staticmethod
     def find_position(d, property):

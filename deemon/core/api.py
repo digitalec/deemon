@@ -143,8 +143,12 @@ class PlatformAPI:
                     if r['TYPE'] == '0':
                         r['TYPE'] = "single"
                     elif r['TYPE'] == '2':
-                        logger.info(f"Compilation for {r['ART_NAME']} detected but ignored for now")
-                        continue
+                        if not config.compilations():
+                            logger.info(f"Compilation for {r['ART_NAME']} detected but are disabled in config")
+                            continue
+                        else:
+                            logger.info(f"Compilation detected: {r['ALB_TITLE']}")
+                            r['TYPE'] = "album"
                     elif r['TYPE'] == '3':
                         r['TYPE'] = "ep"
                     else:
