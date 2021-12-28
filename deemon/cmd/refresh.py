@@ -165,15 +165,16 @@ class Refresh:
 
     def filter_playlist_releases(self, payload: dict):
         self.debugger(f"Filtering {len(payload['tracks'])} tracks for playlist {payload['title']}")
+
         if len(payload['tracks']):
             for track in payload['tracks']:
                 new_track = track.copy()
                 new_track['playlist_id'] = payload['id']
                 self.new_playlist_releases.append(new_track)
-                
-                if payload['refreshed'] == 0:
-                    continue
-                
+
+            if payload['refreshed'] == 0:
+                return
+
             queue_obj = QueueItem(playlist=payload, bitrate=payload['bitrate'], download_path=payload['download_path'])
             self.debugger("QueuePlaylistItem", queue_obj)
             self.queue_list.append(queue_obj)
