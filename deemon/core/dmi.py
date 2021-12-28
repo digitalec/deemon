@@ -9,8 +9,8 @@ from deemix.settings import load as LoadSettings
 from deemix.types.DownloadObjects import Collection
 from deezer import Deezer
 from deezer.api import APIError
-from deezer.gw import GWAPIError, LyricsStatus
-from deezer.utils import map_user_playlist
+from deezer.gw import GWAPIError
+from deezer.utils import map_user_playlist, LyricsStatus
 
 from deemon.core import notifier
 from deemon.core.config import Config as config
