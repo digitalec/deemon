@@ -138,7 +138,7 @@ class PlatformAPI:
             api_result = []
             for r in result:
                 # Remove ID check to get compilations
-                if r['ART_ID'] == str(query['artist_id']) and r['ARTISTS_ALBUMS_IS_OFFICIAL']:
+                if (r['ART_ID'] == str(query['artist_id']) and r['ARTISTS_ALBUMS_IS_OFFICIAL']) or (r['ART_ID'] == str(query['artist_id']) and config.unofficial_releases()):
                     # TYPE 0 - single, TYPE 1 - album, TYPE 2 - compilation, TYPE 3 - ep
                     if r['TYPE'] == '0':
                         r['TYPE'] = "single"

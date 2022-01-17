@@ -20,12 +20,10 @@ DEFAULT_CONFIG = {
     "check_update": 1,
     "debug_mode": False,
     "release_channel": "stable",
-    "experimental_api": True,
     "query_limit": 5,
     "rollback_view_limit": 10,
     "prompt_duplicates": False,
     "prompt_no_matches": True,
-    "compilations": False,
     "new_releases": {
         "by_release_date": True,
         "release_max_age": 90
@@ -53,6 +51,11 @@ DEFAULT_CONFIG = {
         "base_url": "",
         "token": "",
         "library": ""
+    },
+    "experimental": {
+        "experimental_api": True,
+        "verify_official_release": False,
+        "compilations": False,
     }
 }
 
@@ -128,6 +131,7 @@ class Config(object):
                     return [k]
 
         def update_config_layout(user_config, reference_config):
+            """ Used to move existing values to new property names/locations """
             nonlocal modified
             migration_map = [
                 {'check_update': 'check_update'},
@@ -383,11 +387,15 @@ class Config(object):
     
     @staticmethod
     def experimental_api() -> bool:
-        return Config._CONFIG.get('experimental_api')
+        return Config._CONFIG['experimental']['experimental_api']
 
     @staticmethod
     def compilations() -> bool:
-        return Config._CONFIG.get('compilations')
+        return Config._CONFIG['experimental']['compilations']
+
+    @staticmethod
+    def unofficial_releases() -> bool:
+        return Config._CONFIG['experimental']['verify_official_release']
 
     @staticmethod
     def find_position(d, property):
