@@ -54,8 +54,9 @@ DEFAULT_CONFIG = {
     },
     "experimental": {
         "experimental_api": True,
-        "verify_official_release": False,
-        "compilations": False,
+        "allow_unofficial_releases": False,
+        "allow_compilations": False,
+        "allow_featured_in": False,
     }
 }
 
@@ -390,12 +391,16 @@ class Config(object):
         return Config._CONFIG['experimental']['experimental_api']
 
     @staticmethod
-    def compilations() -> bool:
-        return Config._CONFIG['experimental']['compilations']
+    def allow_compilations() -> bool:
+        return Config._CONFIG['experimental']['allow_compilations']
+
+    @staticmethod
+    def allow_featured_in() -> bool:
+        return Config._CONFIG['experimental']['allow_featured_in']
 
     @staticmethod
     def unofficial_releases() -> bool:
-        return Config._CONFIG['experimental']['verify_official_release']
+        return Config._CONFIG['experimental']['allow_unofficial_releases']
 
     @staticmethod
     def find_position(d, property):

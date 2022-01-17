@@ -138,12 +138,16 @@ class PlatformAPI:
             api_result = []
             for r in result:
                 # Remove ID check to get compilations
-                if (r['ART_ID'] == str(query['artist_id']) and r['ARTISTS_ALBUMS_IS_OFFICIAL']) or (r['ART_ID'] == str(query['artist_id']) and config.unofficial_releases()):
+                if (r['ART_ID'] == str(query['artist_id']) and r['ARTISTS_ALBUMS_IS_OFFICIAL']) or (r['ART_ID'] == str(query['artist_id']) and config.unofficial_releases()) or config.allow_compilations():
                     # TYPE 0 - single, TYPE 1 - album, TYPE 2 - compilation, TYPE 3 - ep
                     if r['TYPE'] == '0':
                         r['TYPE'] = "single"
+                    elif r['TYPE'] == '1' and r['ART_ID'] != str(query['artist_id']):
+                        if not config.allow_featured_in():
+                            logger.info(f"{r['ART_NAME']} detected on 'Featured In' release but are disabled in config")
+                            continue
                     elif r['TYPE'] == '2':
-                        if not config.compilations():
+                        if not config.allow_compilations():
                             logger.info(f"Compilation for {r['ART_NAME']} detected but are disabled in config")
                             continue
                         else:
