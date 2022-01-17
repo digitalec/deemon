@@ -175,7 +175,7 @@ def download_command(artist, artist_id, album_id, url, file, bitrate,
 @click.option('-u', '--url', is_flag=True, help='Monitor artist by URL')
 @click.option('-R', '--remove', is_flag=True, help='Stop monitoring an artist')
 @click.option('-s', '--search', 'search_flag', is_flag=True, help='Show similar artist results to choose from')
-@click.option('-T', '--time-machine', multiple=True, type=str, metavar="YYYY-MM-DD", help="Refresh newly added artists on this date")
+@click.option('-T', '--time-machine', type=str, metavar="YYYY-MM-DD", help="Refresh newly added artists on this date")
 @click.option('-t', '--record-type', metavar="TYPE", type=str, help='Specify record types to download')
 def monitor_command(artist, im, playlist, bitrate, record_type, alerts, artist_id,
                     dl, remove, url, download_path, search_flag, time_machine):
@@ -196,14 +196,11 @@ def monitor_command(artist, im, playlist, bitrate, record_type, alerts, artist_i
             return logger.error("Invalid download path provided")
 
     if time_machine:
-        time_machine_dates = [x for x in time_machine]
-        time_machine = []
-        for d in time_machine_dates:
-            validated = validate.validate_date(d)
-            if not validated:
-                return logger.error("Date for time machine is invalid")
-            time_machine.append(validated)
-        monitor.time_machine = time_machine
+        validated = validate.validate_date(time_machine)
+        if validated:
+            monitor.time_machine = validated
+        else:
+            return logger.error("Date for time machine is invalid")
     
     if not alerts:
         alerts = None

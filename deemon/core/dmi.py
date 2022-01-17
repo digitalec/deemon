@@ -9,8 +9,8 @@ from deemix.settings import load as LoadSettings
 from deemix.types.DownloadObjects import Collection
 from deezer import Deezer
 from deezer.api import APIError
-from deezer.gw import GWAPIError, LyricsStatus
-from deezer.utils import map_user_playlist
+from deezer.gw import GWAPIError
+from deezer.utils import map_user_playlist, LyricsStatus, map_track
 
 from deemon.core import notifier
 from deemon.core.config import Config as config
@@ -62,8 +62,7 @@ class DeemixInterface:
                     Downloader(self.dz, obj, self.dx_settings).start()
             else:
                 Downloader(self.dz, download_object, self.dx_settings).start()
-    
-    
+
     def deezer_acct_type(self):
         user_session = self.dz.get_session()['current_user']
     
@@ -122,8 +121,7 @@ class DeemixInterface:
 
     def generatePlaylistItem(self, dz, link_id, bitrate, playlistAPI=None, playlistTracksAPI=None):
         if not playlistAPI:
-            if not str(link_id).isdecimal():
-                raise InvalidID(f"https://deezer.com/playlist/{link_id}")
+            if not str(link_id).isdecimal(): raise InvalidID(f"https://deezer.com/playlist/{link_id}")
             # Get essential playlist info
             try:
                 playlistAPI = dz.api.get_playlist(link_id)
@@ -150,21 +148,25 @@ class DeemixInterface:
         playlistAPI['nb_tracks'] = totalSize
         collection = []
         for pos, trackAPI in enumerate(playlistTracksAPI, start=1):
-            # Check if release has been seen already and skip it
+            #
+            # BEGIN DEEMON PATCH
+            #
             vals = {'track_id': trackAPI['SNG_ID'], 'playlist_id': playlistAPI['id']}
             sql = "SELECT * FROM 'playlist_tracks' WHERE track_id = :track_id AND playlist_id = :playlist_id"
             result = self.db.query(sql, vals).fetchone()
             if result:
                 continue
-            if trackAPI.get('EXPLICIT_TRACK_CONTENT', {}).get('EXPLICIT_LYRICS_STATUS', LyricsStatus.UNKNOWN) in [
-                LyricsStatus.EXPLICIT, LyricsStatus.PARTIALLY_EXPLICIT]:
+            #
+            # END DEEMON PATCH
+            #
+            trackAPI = map_track(trackAPI)
+            if trackAPI['explicit_lyrics']:
                 playlistAPI['explicit'] = True
-            trackAPI['POSITION'] = pos
-            trackAPI['SIZE'] = totalSize
+            if 'track_token' in trackAPI: del trackAPI['track_token']
+            trackAPI['position'] = pos
             collection.append(trackAPI)
 
-        if 'explicit' not in playlistAPI:
-            playlistAPI['explicit'] = False
+        if 'explicit' not in playlistAPI: playlistAPI['explicit'] = False
 
         return Collection({
             'type': 'playlist',
@@ -176,11 +178,10 @@ class DeemixInterface:
             'explicit': playlistAPI['explicit'],
             'size': totalSize,
             'collection': {
-                'tracks_gw': collection,
+                'tracks': collection,
                 'playlistAPI': playlistAPI
             }
         })
-
 
 class GenerationError(Exception):
     def __init__(self, link, message, errid=None):
