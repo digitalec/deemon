@@ -21,7 +21,6 @@ class QueueItem:
     def __init__(self, artist=None, album=None, track=None, playlist=None,
                  bitrate: str = None, download_path: str = None,
                  release_full: dict = None):
-        self.api = api.PlatformAPI()
         self.artist_name = None
         self.album_id = None
         self.album_title = None
