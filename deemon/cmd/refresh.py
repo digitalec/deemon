@@ -244,7 +244,7 @@ class Refresh:
                 if self.api.account_type == "free" and config.bitrate() != "128":
                     notification = notifier.Notify()
                     notification.expired_arl()
-                    return logger.error("   [X] Deezer account only allows low"
+                    return logger.error("   [X] ARL expired? Deezer account only allows low"
                                         " quality. If you wish to download "
                                         "anyway, set `check_account_status` "
                                         "to False in the config.")
