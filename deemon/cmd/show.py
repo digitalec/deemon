@@ -160,8 +160,12 @@ class Show:
             else:
                 db_result = self.truncate_long_artists(db_result)
 
-                size = os.get_terminal_size()
-                max_cols = (int(size.columns / 30))
+                try:
+                    size = os.get_terminal_size()
+                    max_cols = (int(size.columns / 30))
+                except:
+                    max_cols = 5
+                    
                 if max_cols > 5:
                     max_cols = 5
 
