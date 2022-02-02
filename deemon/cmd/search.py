@@ -358,6 +358,7 @@ class Search:
 
                 if selected_index in range(len(track_list)):
                     selected_item = track_list[selected_index]
+                    selected_item['record_type'] = 'track'
                     self.send_to_queue(selected_item)
                     continue
                 else:
@@ -424,7 +425,6 @@ class Search:
 
     @staticmethod
     def clear():
-        return True
         from os import system, name
         if name == 'nt':
             _ = system('cls')
@@ -446,7 +446,6 @@ class Search:
         self.status_message = "Downloads complete"
 
     def send_to_queue(self, item):
-        print(item)
         if item['record_type'] in ['album', 'ep', 'single']:
             album = {
                 'id': item['id'],
