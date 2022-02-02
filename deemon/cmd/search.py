@@ -451,11 +451,12 @@ class Search:
             self.queue_list.append(download.QueueItem(album=album))
 
         elif item['type'] == 'track':
-            track = {'id': item['id'], 'title': item['title'], 'link': item['link'], 'artist': self.artist}
+            track = {'id': item['id'], 'title': item['title'], 'link': item['link'], 'artist': {'name': self.artist}}
             for i, q in enumerate(self.queue_list):
                 if q.track_id == track['id']:
                     del self.queue_list[i]
                     return
+
             self.queue_list.append(download.QueueItem(track=track))
 
         elif item.get('name'):
