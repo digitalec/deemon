@@ -128,6 +128,8 @@ class Monitor:
         pbar = tqdm(api_result, total=len(api_result), desc="Setting up playlists for monitoring...", ascii=" #",
                     bar_format=ui.TQDM_FORMAT)
         for i, playlist in enumerate(pbar):
+            if not playlist:
+                continue
             if playlist['id'] in existing:
                 logger.info(f"   Already monitoring {playlist['title']}, skipping...")
             else:

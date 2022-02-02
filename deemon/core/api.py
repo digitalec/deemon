@@ -186,9 +186,14 @@ class PlatformAPI:
 
     @staticmethod
     def get_playlist(query: int):
-        api_result = Deezer().api.get_playlist(query)
-        return {'id': query, 'title': api_result['title'],
-                'link': f"https://deezer.com/playlist/{str(api_result['id'])}"}
+        try:
+            api_result = Deezer().api.get_playlist(query)
+            return {'id': query, 'title': api_result['title'],
+                    'link': f"https://deezer.com/playlist/{str(api_result['id'])}"}
+        except deezer.errors.PermissionException:
+            logger.warning(f"   [!] Playlist ID {query} is private")
+        except deezer.errors.DataException:
+            logger.warning(f"   [!] Playlist ID {query} was not found")
 
     @staticmethod
     def get_playlist_tracks(query: dict):
