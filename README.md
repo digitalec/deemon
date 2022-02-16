@@ -32,21 +32,13 @@ $ python3 -m deemon
 ```
 
 ### Docker
+
+**Docker support will be removed in the next major release. It is recommended to use a python virtual environment
+instead ([see below](#installation-in-a-python-virtual-environment-venv)).**
+
 Docker support has been added for `amd64`, `arm64` and `armv7` architectures. It is recommended to save your `docker run` command as a script to execute via cron/Task Scheduler.
 
 **Note:** Inside deemon's `config.json`, download_location **must** be set to `/downloads` until I can integrate this myself.
-
-**Example: Monitoring a directory of artists**
-```
-docker run --name deemon \
-       --rm \
-       -v /path/to/deemon/config:/config \
-       -v /path/to/music:/downloads \
-       -v /path/to/deemix/config:/deemix  \
-       -v /path/to/monitor:/import \
-       ghcr.io/digitalec/deemon:latest \
-       python3 -m deemon import /import
-```
 
 **Example: Monitoring a file of artists**
 ```
@@ -57,48 +49,33 @@ docker run --name deemon \
        -v /path/to/deemix/config:/deemix  \
        -v /file/to/monitor:/artists.txt \
        ghcr.io/digitalec/deemon:latest \
-       python3 -m deemon import /artists.txt
+       python3 -m deemon monitor --import /artists.txt
 ```
 
+### Installation in a Python Virtual Environment (venv)
 
-### Default Configuration:
-```json
-{
-    "check_update": 1,
-    "debug_mode": false,
-    "release_channel": "stable",
-    "experimental_api": false,
-    "query_limit": 5,
-    "rollback_view_limit": 10,
-    "prompt_duplicates": false,
-    "prompt_no_matches": true,
-    "new_releases": {
-        "by_release_date": true,
-        "release_max_age": 90
-    },
-    "global": {
-        "bitrate": "320",
-        "alerts": false,
-        "record_type": "all",
-        "download_path": "",
-        "email": ""
-    },
-    "deemix": {
-        "path": "",
-        "arl": "",
-        "check_account_status": true
-    },
-    "smtp_settings": {
-        "server": "",
-        "port": 465,
-        "username": "",
-        "password": "",
-        "from_addr": ""
-    },
-    "plex": {
-        "base_url": "",
-        "token": "",
-        "library": ""
-    }
-}
+If you wish to install deemon and it's dependencies in a sandbox-style environment, I would recommend using venv.
+
+Create a venv and install deemon
+```commandline
+$ python -m venv venv
+$ source ./venv/bin/activate
+$ pip install deemon
 ```
+
+When you are finished, close the terminal or exit our venv:
+```commandline
+$ deactivate
+```
+
+Next time you want to run deemon, activate the venv first:
+```commandline
+$ source ./venv/bin/activate
+$ deemon refresh
+```
+
+If you are moving to venv from the Docker container, be sure to update your cron/Task Scheduler scripts.
+
+### Default Configuration
+If you need to generate a new default configuration, please rename or delete your current `config.json`. The
+configuration will be generated the next time you run deemon.
