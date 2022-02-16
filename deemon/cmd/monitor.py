@@ -29,7 +29,6 @@ class Monitor:
         self.dl = None
         self.db = Database()
         self.api = PlatformAPI()
-        self.artist_not_found = []
 
     def set_config(self, bitrate: str, alerts: bool, record_type: str, download_path: Path):
         self.bitrate = bitrate
@@ -80,8 +79,8 @@ class Monitor:
                 self.duplicates += 1
                 return [matches[0]]
         elif not len(matches):
-            logger.debug(f"No matches were found for artist \"{api_result['query']}\"")
-            if config.prompt_no_matches():
+            logger.debug(f"   [!] No matches were found for artist \"{api_result['query']}\"")
+            if config.prompt_no_matches() and len(api_result['results']):
                 logger.debug("Waiting for user input...")
                 prompt = self.prompt_search(name, api_result['results'])
                 if prompt:
@@ -91,7 +90,7 @@ class Monitor:
                     logger.info(f"No selection made, skipping {name}...")
                     return []
             else:
-                self.artist_not_found.append(name)
+                logger.info(f"   [!] Artist {name} not found")
                 return []
 
     def prompt_search(self, value, api_result):
