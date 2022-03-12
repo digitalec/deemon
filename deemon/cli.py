@@ -80,7 +80,7 @@ def run(whats_new, verbose, profile):
             # If release_channel has changed, check for latest release
             logger.debug(f"Release channel changed to '{config.release_channel()}'")
             db.set_release_channel()
-            last_checked = 1
+            last_checked = 0
         if time.time() >= next_check or last_checked == 0:
             logger.info(f"Checking for updates ({config.release_channel()})...")
             config.set('update_available', 0, False)
