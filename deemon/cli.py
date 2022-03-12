@@ -99,8 +99,6 @@ def run(whats_new, verbose, profile):
                 logger.info("* To upgrade, run `pip install --upgrade deemon`")
             print("*" * 50)
             print("")
-    else:
-        print("YOU USED HELP!")
 
     config.set("start_time", int(time.time()), False)
 
