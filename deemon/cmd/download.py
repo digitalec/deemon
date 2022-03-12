@@ -30,12 +30,14 @@ class QueueItem:
         self.playlist_title = None
         self.bitrate = bitrate or config.bitrate()
         self.download_path = download_path or config.download_path()
+        self.release_type = None
         
         if release_full:
             self.artist_name = release_full['artist_name']
             self.album_id = release_full['id']
             self.album_title = release_full['title']
             self.url = f"https://www.deezer.com/album/{self.album_id}"
+            self.release_type = release_full['record_type']
 
         if artist:
             try:

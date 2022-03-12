@@ -148,6 +148,7 @@ class PlatformAPI:
                         else:
                             logger.debug(f"Featured In detected for artist {query['artist_name']}: {r['ALB_TITLE']}")
                             r['TYPE'] = "album"
+                            # TODO set unique r['TYPE'] for FEATURED IN
                     elif r['TYPE'] == '2':
                         if not config.allow_compilations():
                             logger.debug(f"Compilation for {query['artist_name']} detected but are disabled in config")
@@ -155,6 +156,7 @@ class PlatformAPI:
                         else:
                             logger.debug(f"Compilation detected for artist {query['artist_name']}: {r['ALB_TITLE']}")
                             r['TYPE'] = "album"
+                            # TODO set unique r['TYPE'] for COMPILATIONS
                     elif r['TYPE'] == '3':
                         r['TYPE'] = "ep"
                     else:
