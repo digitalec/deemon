@@ -262,7 +262,7 @@ class Search:
                 monitor = mon.Monitor()
                 monitor.set_config(None, None, record_type, None)
                 monitor.set_options(stop, False, False)
-                monitor.artist_ids([artist['artist_id']])
+                monitor.artist_ids([artist['id']])
             elif prompt == "f":
                 if len(filtered_choices) > 0:
                     for item in filtered_choices:
