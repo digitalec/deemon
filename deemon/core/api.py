@@ -143,14 +143,17 @@ class PlatformAPI:
                         r['TYPE'] = "single"
                     elif r['TYPE'] == '1' and r['ART_ID'] != str(query['artist_id']):
                         if not config.allow_featured_in():
-                            logger.info(f"{r['ART_NAME']} detected on 'Featured In' release but are disabled in config")
-                            continue
-                    elif r['TYPE'] == '2':
-                        if not config.allow_compilations():
-                            logger.info(f"Compilation for {r['ART_NAME']} detected but are disabled in config")
+                            logger.debug(f"Featured In for {query['artist_name']} detected but are disabled in config")
                             continue
                         else:
-                            logger.info(f"Compilation detected: {r['ALB_TITLE']}")
+                            logger.debug(f"Featured In detected for artist {query['artist_name']}: {r['ALB_TITLE']}")
+                            r['TYPE'] = "album"
+                    elif r['TYPE'] == '2':
+                        if not config.allow_compilations():
+                            logger.debug(f"Compilation for {query['artist_name']} detected but are disabled in config")
+                            continue
+                        else:
+                            logger.debug(f"Compilation detected for artist {query['artist_name']}: {r['ALB_TITLE']}")
                             r['TYPE'] = "album"
                     elif r['TYPE'] == '3':
                         r['TYPE'] = "ep"
