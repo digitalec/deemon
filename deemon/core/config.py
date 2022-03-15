@@ -27,6 +27,9 @@ DEFAULT_CONFIG = {
     "new_releases": {
         "by_release_date": True,
         "release_max_age": 90
+        "include_unofficial": False,
+        "include_compilations": False,
+        "include_featured_in": False,
     },
     "global": {
         "bitrate": "320",
@@ -54,9 +57,6 @@ DEFAULT_CONFIG = {
     },
     "experimental": {
         "experimental_api": True,
-        "allow_unofficial_releases": False,
-        "allow_compilations": False,
-        "allow_featured_in": False,
     }
 }
 
@@ -392,15 +392,15 @@ class Config(object):
 
     @staticmethod
     def allow_compilations() -> bool:
-        return Config._CONFIG['experimental']['allow_compilations']
+        return Config._CONFIG['new_releases']['include_compilations']
 
     @staticmethod
     def allow_featured_in() -> bool:
-        return Config._CONFIG['experimental']['allow_featured_in']
+        return Config._CONFIG['new_releases']['include_featured_in']
 
     @staticmethod
-    def unofficial_releases() -> bool:
-        return Config._CONFIG['experimental']['allow_unofficial_releases']
+    def allow_unofficial() -> bool:
+        return Config._CONFIG['new_releases']['include_unofficial']
 
     @staticmethod
     def find_position(d, property):
