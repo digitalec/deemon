@@ -129,7 +129,7 @@ class Refresh:
             if release_date_dt <= self.time_machine:
                 self.debugger(f"Release date \"{release_date}\" is older than TIME_MACHINE ({str(dates.ui_date(self.time_machine))})")
                 return True
-        if config.release_by_date():
+        if config.release_max_age():
             if release_date_dt < (self.refresh_date - timedelta(config.release_max_age())):
                 self.debugger(f"Release date \"{release_date}\" is older than RELEASE_MAX_AGE ({config.release_max_age()} day(s))")
                 return True

@@ -25,8 +25,7 @@ DEFAULT_CONFIG = {
     "prompt_duplicates": False,
     "prompt_no_matches": True,
     "new_releases": {
-        "by_release_date": True,
-        "release_max_age": 90
+        "release_max_age": 90,
         "include_unofficial": False,
         "include_compilations": False,
         "include_featured_in": False,
@@ -151,7 +150,6 @@ class Config(object):
                 {'alerts': 'alerts'},
                 {'record_type': 'record_type'},
                 {'download_path': 'download_path'},
-                {'release_by_date': 'by_release_date'},
                 {'release_max_days': 'release_max_age'},
                 {'ranked_duplicates': 'prompt_duplicates'}
             ]
@@ -293,10 +291,6 @@ class Config(object):
     @staticmethod
     def arl() -> str:
         return Config._CONFIG.get('deemix').get('arl')
-
-    @staticmethod
-    def release_by_date() -> bool:
-        return Config._CONFIG.get('new_releases').get('by_release_date')
 
     @staticmethod
     def release_max_age() -> int:
