@@ -145,6 +145,11 @@ class Config(object):
                     user_config['new_releases']['include_featured_in'] = True
                     modified += 1
 
+            if user_config.get('new_releases'):
+                if not user_config['new_releases'].get('by_release_date'):
+                    user_config['new_releases']['release_max_age'] = 0
+                    modified += 1
+
             migration_map = [
                 {'check_update': 'check_update'},
                 {'plex_baseurl': 'base_url'},
