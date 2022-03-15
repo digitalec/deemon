@@ -133,6 +133,18 @@ class Config(object):
         def update_config_layout(user_config, reference_config):
             """ Used to move existing values to new property names/locations """
             nonlocal modified
+
+            if user_config.get('experimental'):
+                if user_config['experimental'].get('allow_unofficial_releases'):
+                    user_config['new_releases']['include_unofficial'] = True
+                    modified += 1
+                if user_config['experimental'].get('allow_compilations'):
+                    user_config['new_releases']['include_compilations'] = True
+                    modified += 1
+                if user_config['experimental'].get('allow_featured_in'):
+                    user_config['new_releases']['include_featured_in'] = True
+                    modified += 1
+
             migration_map = [
                 {'check_update': 'check_update'},
                 {'plex_baseurl': 'base_url'},
