@@ -146,7 +146,7 @@ class Config(object):
                     modified += 1
 
             if user_config.get('new_releases'):
-                if not user_config['new_releases'].get('by_release_date'):
+                if not user_config['new_releases'].get('by_release_date', True):
                     user_config['new_releases']['release_max_age'] = 0
                     modified += 1
 
