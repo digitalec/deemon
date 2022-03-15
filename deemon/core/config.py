@@ -24,6 +24,7 @@ DEFAULT_CONFIG = {
     "rollback_view_limit": 10,
     "prompt_duplicates": False,
     "prompt_no_matches": True,
+    "fast_api": True,
     "new_releases": {
         "release_max_age": 90,
         "include_unofficial": False,
@@ -53,9 +54,6 @@ DEFAULT_CONFIG = {
         "base_url": "",
         "token": "",
         "library": ""
-    },
-    "experimental": {
-        "experimental_api": True,
     }
 }
 
@@ -398,8 +396,8 @@ class Config(object):
         return Config._CONFIG.get('deemix').get('check_account_status')
     
     @staticmethod
-    def experimental_api() -> bool:
-        return Config._CONFIG['experimental']['experimental_api']
+    def fast_api() -> bool:
+        return Config._CONFIG['fast_api']
 
     @staticmethod
     def allow_compilations() -> bool:

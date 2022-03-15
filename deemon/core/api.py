@@ -39,7 +39,7 @@ class PlatformAPI:
             logger.debug(f"DEBUG_MODE: {message} {str(payload)}")
             
     def get_platform(self):
-        if config.experimental_api():
+        if config.fast_api():
             return "deezer-gw"
         return "deezer-api"
 
