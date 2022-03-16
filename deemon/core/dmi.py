@@ -96,7 +96,10 @@ class DeemixInterface:
             if self.verify_arl(config.arl()):
                 return True
             else:
+                logger.error("Unable to login using ARL found in deemon config")
                 failed_logins += 1
+        else:
+            logger.debug("ARL was not found in deemon config, checking if deemix has it...")
 
         if self.config_dir.is_dir():
             if Path(self.config_dir / '.arl').is_file():
@@ -107,17 +110,19 @@ class DeemixInterface:
                     if self.verify_arl(arl_from_file):
                         return True
                     else:
+                        logger.error("Unable to login using ARL found in deemix config directory")
                         failed_logins += 1
             else:
-                logger.error(f"ARL not found in {self.config_dir}")
-                return False
+                logger.debug(f"ARL not found in {self.config_dir}")
         else:
             logger.error(f"ARL directory {self.config_dir} was not found")
-            return False
 
         if failed_logins > 1:
             notification = notifier.Notify()
             notification.expired_arl()
+        else:
+            logger.error("No ARL was found, aborting...")
+            return False
 
     def generatePlaylistItem(self, dz, link_id, bitrate, playlistAPI=None, playlistTracksAPI=None):
         if not playlistAPI:

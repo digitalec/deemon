@@ -134,6 +134,7 @@ class Download:
             self.queue_list = queue_list
 
         if not self.di.login():
+            logger.error("Failed to login, aborting download...")
             return False
 
         if self.queue_list:

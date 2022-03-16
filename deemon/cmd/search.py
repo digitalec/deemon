@@ -441,9 +441,12 @@ class Search:
         self.clear()
         dl = download.Download()
         dl.queue_list = self.queue_list
-        dl.download_queue()
+        download_result = dl.download_queue()
         self.queue_list.clear()
-        self.status_message = "Downloads complete"
+        if download_result:
+            self.status_message = "Downloads complete"
+        else:
+            self.status_message = "Downloads failed, please check logs"
 
     def send_to_queue(self, item):
         if item['record_type'] in ['album', 'ep', 'single']:
