@@ -9,7 +9,7 @@ import plexapi.exceptions
 from plexapi.server import PlexServer
 
 from deemon import utils
-from deemon.core import dmi, db
+from deemon.core import dmi, db, api
 from deemon.core.config import Config as config
 from deemon.utils import ui, validate, startup, dates
 
@@ -30,12 +30,14 @@ class QueueItem:
         self.playlist_title = None
         self.bitrate = bitrate or config.bitrate()
         self.download_path = download_path or config.download_path()
+        self.release_type = None
         
         if release_full:
             self.artist_name = release_full['artist_name']
             self.album_id = release_full['id']
             self.album_title = release_full['title']
             self.url = f"https://www.deezer.com/album/{self.album_id}"
+            self.release_type = release_full['record_type']
 
         if artist:
             try:
@@ -102,6 +104,7 @@ class Download:
 
     def __init__(self):
         super().__init__()
+        self.api = api.PlatformAPI()
         self.dz = deezer.Deezer()
         self.di = dmi.DeemixInterface()
         self.queue_list = []
@@ -202,9 +205,9 @@ class Download:
     def download(self, artist, artist_id, album_id, url, input_file, auto=True, from_date: str = None):
 
         def filter_artist_by_record_type(artist):
-            album_api = self.dz.api.get_artist_albums(artist['id'])['data']
+            album_api = self.api.get_artist_albums(query={'artist_name': '', 'artist_id': artist['id']})
             filtered_albums = []
-            for album in album_api:
+            for album in album_api['releases']:
                 if (album['record_type'] == config.record_type()) or config.record_type() == "all":
                     album_date = dates.str_to_datetime_obj(album['release_date'])
                     if self.release_from and self.release_to:
@@ -223,17 +226,17 @@ class Download:
         def get_api_result(artist=None, artist_id=None, album_id=None, track_id=None):
             if artist:
                 try:
-                    return self.dz.api.search_artist(artist, limit=1)["data"][0]  # TODO handle incorrect artist
+                    return self.api.search_artist(artist, limit=1)['results'][0]
                 except (deezer.api.DataException, IndexError):
                     logger.error(f"Artist {artist} not found.")
             if artist_id:
                 try:
-                    return self.dz.api.get_artist(artist_id)
+                    return self.api.get_artist_by_id(artist_id)
                 except (deezer.api.DataException, IndexError):
                     logger.error(f"Artist ID {artist_id} not found.")
             if album_id:
                 try:
-                    return self.dz.api.get_album(album_id)
+                    return self.api.get_album(album_id)
                 except (deezer.api.DataException, IndexError):
                     logger.error(f"Album ID {album_id} not found.")
             if track_id:
@@ -294,7 +297,7 @@ class Download:
                 self.queue_list.append(QueueItem(track=track_id_result))
 
         def process_playlist_by_id(id):
-            playlist_api = self.dz.api.get_playlist(id)
+            playlist_api = self.api.get_playlist(id)
             self.queue_list.append(QueueItem(playlist=playlist_api))
 
         def extract_id_from_url(url):

@@ -39,7 +39,7 @@ class PlatformAPI:
             logger.debug(f"DEBUG_MODE: {message} {str(payload)}")
             
     def get_platform(self):
-        if config.experimental_api():
+        if config.fast_api():
             return "deezer-gw"
         return "deezer-api"
 
@@ -119,7 +119,6 @@ class PlatformAPI:
         """
         Return a list of dictionaries from API containing
         """
-        compilation = False
         self.debugger("RefreshArtist", query['artist_name'])
         if self.platform == "deezer-gw":
             try:
@@ -138,13 +137,26 @@ class PlatformAPI:
             api_result = []
             for r in result:
                 # Remove ID check to get compilations
-                if r['ART_ID'] == str(query['artist_id']) and r['ARTISTS_ALBUMS_IS_OFFICIAL']:
+                if (r['ART_ID'] == str(query['artist_id']) and r['ARTISTS_ALBUMS_IS_OFFICIAL']) or (r['ART_ID'] == str(query['artist_id']) and config.allow_unofficial()) or config.allow_compilations():
                     # TYPE 0 - single, TYPE 1 - album, TYPE 2 - compilation, TYPE 3 - ep
                     if r['TYPE'] == '0':
                         r['TYPE'] = "single"
+                    elif r['TYPE'] == '1' and r['ART_ID'] != str(query['artist_id']):
+                        if not config.allow_featured_in():
+                            logger.debug(f"Featured In for {query['artist_name']} detected but are disabled in config")
+                            continue
+                        else:
+                            logger.debug(f"Featured In detected for artist {query['artist_name']}: {r['ALB_TITLE']}")
+                            r['TYPE'] = "album"
+                            # TODO set unique r['TYPE'] for FEATURED IN
                     elif r['TYPE'] == '2':
-                        logger.info(f"Compilation for {r['ART_NAME']} detected but ignored for now")
-                        continue
+                        if not config.allow_compilations():
+                            logger.debug(f"Compilation for {query['artist_name']} detected but are disabled in config")
+                            continue
+                        else:
+                            logger.debug(f"Compilation detected for artist {query['artist_name']}: {r['ALB_TITLE']}")
+                            r['TYPE'] = "album"
+                            # TODO set unique r['TYPE'] for COMPILATIONS
                     elif r['TYPE'] == '3':
                         r['TYPE'] = "ep"
                     else:
@@ -160,7 +172,7 @@ class PlatformAPI:
                         # In the event of an unknown release date, set it to today's date
                         # See album ID: 417403
                         logger.warning(f"   [!] Found release without release date, assuming today: "
-                                        f"{query['artist_name']} - {r['ALB_TITLE']}")
+                                        f"{query['name']} - {r['ALB_TITLE']}")
                         release_date = datetime.strftime(datetime.today(), "%Y-%m-%d")
                     
                     cover_art = f"https://e-cdns-images.dzcdn.net/images/cover/{r['ALB_PICTURE']}/500x500-00000-80-0-0.jpg"

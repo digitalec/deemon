@@ -129,7 +129,7 @@ class Refresh:
             if release_date_dt <= self.time_machine:
                 self.debugger(f"Release date \"{release_date}\" is older than TIME_MACHINE ({str(dates.ui_date(self.time_machine))})")
                 return True
-        if config.release_by_date():
+        if config.release_max_age():
             if release_date_dt < (self.refresh_date - timedelta(config.release_max_age())):
                 self.debugger(f"Release date \"{release_date}\" is older than RELEASE_MAX_AGE ({config.release_max_age()} day(s))")
                 return True
@@ -245,7 +245,7 @@ class Refresh:
                 if self.api.account_type == "free" and config.bitrate() != "128":
                     notification = notifier.Notify()
                     notification.expired_arl()
-                    return logger.error("   [X] Deezer account only allows low"
+                    return logger.error("   [X] ARL expired? Deezer account only allows low"
                                         " quality. If you wish to download "
                                         "anyway, set `check_account_status` "
                                         "to False in the config.")

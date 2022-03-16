@@ -18,7 +18,7 @@ class Show:
 
     def monitoring(self, artist: bool = True, query: str = None, export_csv: bool = False,
                    save_path: Union[str, Path] = None, filter: str = None, hide_header: bool = False,
-                   is_id: bool = False):
+                   is_id: bool = False, backup: Union[str, Path] = None):
 
         def csv_output(line: str):
             if save_path:
@@ -27,6 +27,12 @@ class Show:
                 print(line)
 
         output_to_file = []
+
+        if backup:
+            export_csv = True
+            filter = "id"
+            hide_header = True
+            save_path = backup
 
         if artist:
             if query:
@@ -160,8 +166,12 @@ class Show:
             else:
                 db_result = self.truncate_long_artists(db_result)
 
-                size = os.get_terminal_size()
-                max_cols = (int(size.columns / 30))
+                try:
+                    size = os.get_terminal_size()
+                    max_cols = (int(size.columns / 30))
+                except:
+                    max_cols = 5
+                    
                 if max_cols > 5:
                     max_cols = 5
 

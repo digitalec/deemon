@@ -5,7 +5,7 @@ from deezer import Deezer
 
 from deemon.cmd import download
 from deemon.cmd import monitor as mon
-from deemon.core import db
+from deemon.core import db, api
 from deemon.core.config import Config as config
 from deemon.utils import dates
 
@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 
 class Search:
     def __init__(self):
+        self.api = api.PlatformAPI()
         self.artist_id: int = None
         self.artist: str = None
         self.choices: list = []
@@ -21,7 +22,7 @@ class Search:
         self.queue_list = []
         self.select_mode = False
         self.explicit_only = False
-        self.user_search_query: str = None
+        self.search_results: str = None
 
         self.sort: str = "release_date"
         self.filter: str = None
@@ -91,14 +92,13 @@ class Search:
                     continue
                 if search_query == "":
                     continue
-            artist_search_result = self.dz.api.search_artist(search_query, limit=config.query_limit())['data']
-            if len(artist_search_result) == 0:
+            self.search_results = self.api.search_artist(search_query, config.query_limit())
+            if len(self.search_results['results']) == 0:
                 self.status_message = "No results found for: " + search_query
                 continue
 
-            artist_selected = self.artist_menu(search_query, artist_search_result, quick_search)
+            artist_selected = self.artist_menu(self.search_results['query'], self.search_results['results'], quick_search)
             if artist_selected:
-                self.user_search_query = search_query
                 return [artist_selected]
             elif quick_search:
                 return
@@ -208,7 +208,10 @@ class Search:
 
     def album_menu(self, artist: dict):
         exit_album_menu: bool = False
-        artist_albums = self.dz.api.get_artist_albums(artist['id'])['data']
+        # Rewrite DICT to follow old format used by get_artist_albums
+        artist_tmp = {'artist_id': artist['id'], 'artist_name': artist['name']}
+
+        artist_albums = self.api.get_artist_albums(artist_tmp)['releases']
         while exit_album_menu is False:
             self.clear()
             self.album_menu_header(artist['name'])
@@ -355,6 +358,7 @@ class Search:
 
                 if selected_index in range(len(track_list)):
                     selected_item = track_list[selected_index]
+                    selected_item['record_type'] = 'track'
                     self.send_to_queue(selected_item)
                     continue
                 else:
@@ -442,16 +446,29 @@ class Search:
         self.status_message = "Downloads complete"
 
     def send_to_queue(self, item):
-        if item['type'] == 'album':
-            album = {'id': item['id'], 'title': item['title'], 'link': item['link'], 'artist': {'name': self.artist}}
+        if item['record_type'] in ['album', 'ep', 'single']:
+            album = {
+                'id': item['id'],
+                'title': item['title'],
+                'link': item['link'],
+                'artist': {
+                    'name': self.artist
+                }
+            }
             for i, q in enumerate(self.queue_list):
                 if q.album_id == album['id']:
                     del self.queue_list[i]
                     return
             self.queue_list.append(download.QueueItem(album=album))
-
-        elif item['type'] == 'track':
-            track = {'id': item['id'], 'title': item['title'], 'link': item['link'], 'artist': {'name': self.artist}}
+        elif item['record_type'] == 'track':
+            track = {
+                'id': item['id'],
+                'title': item['title'],
+                'link': item['link'],
+                'artist': {
+                    'name': self.artist
+                }
+            }
             for i, q in enumerate(self.queue_list):
                 if q.track_id == track['id']:
                     del self.queue_list[i]

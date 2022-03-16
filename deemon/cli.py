@@ -279,14 +279,15 @@ def show_command():
 @click.option('-f', '--filter', type=str, help='Specify filter for CSV output')
 @click.option('-H', '--hide-header', is_flag=True, help='Hide header on CSV output')
 @click.option('-i', '--artist-id', is_flag=True, help='Show artist info by artist ID')
-def show_artists(artist, artist_id, csv, export, filter, hide_header):
+@click.option('-b', '--backup', type=Path, help='Backup artist IDs to CSV, same as -cHf id -e ...')
+def show_artists(artist, artist_id, csv, export, filter, hide_header, backup):
     """Show artist info monitored by profile"""
     if artist:
         artist = ' '.join([x for x in artist])
 
     show = Show()
     show.monitoring(artist=True, query=artist, export_csv=csv, save_path=export, filter=filter, hide_header=hide_header,
-                    is_id=artist_id)
+                    is_id=artist_id, backup=backup)
 
 
 @show_command.command(name="playlists")

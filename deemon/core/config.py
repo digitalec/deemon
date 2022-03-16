@@ -20,14 +20,16 @@ DEFAULT_CONFIG = {
     "check_update": 1,
     "debug_mode": False,
     "release_channel": "stable",
-    "experimental_api": True,
     "query_limit": 5,
     "rollback_view_limit": 10,
     "prompt_duplicates": False,
     "prompt_no_matches": True,
+    "fast_api": True,
     "new_releases": {
-        "by_release_date": True,
-        "release_max_age": 90
+        "release_max_age": 90,
+        "include_unofficial": False,
+        "include_compilations": False,
+        "include_featured_in": False,
     },
     "global": {
         "bitrate": "320",
@@ -127,7 +129,25 @@ class Config(object):
                     return [k]
 
         def update_config_layout(user_config, reference_config):
+            """ Used to move existing values to new property names/locations """
             nonlocal modified
+
+            if user_config.get('experimental'):
+                if user_config['experimental'].get('allow_unofficial_releases'):
+                    user_config['new_releases']['include_unofficial'] = True
+                    modified += 1
+                if user_config['experimental'].get('allow_compilations'):
+                    user_config['new_releases']['include_compilations'] = True
+                    modified += 1
+                if user_config['experimental'].get('allow_featured_in'):
+                    user_config['new_releases']['include_featured_in'] = True
+                    modified += 1
+
+            if user_config.get('new_releases'):
+                if not user_config['new_releases'].get('by_release_date', True):
+                    user_config['new_releases']['release_max_age'] = 0
+                    modified += 1
+
             migration_map = [
                 {'check_update': 'check_update'},
                 {'plex_baseurl': 'base_url'},
@@ -145,7 +165,6 @@ class Config(object):
                 {'alerts': 'alerts'},
                 {'record_type': 'record_type'},
                 {'download_path': 'download_path'},
-                {'release_by_date': 'by_release_date'},
                 {'release_max_days': 'release_max_age'},
                 {'ranked_duplicates': 'prompt_duplicates'}
             ]
@@ -289,10 +308,6 @@ class Config(object):
         return Config._CONFIG.get('deemix').get('arl')
 
     @staticmethod
-    def release_by_date() -> bool:
-        return Config._CONFIG.get('new_releases').get('by_release_date')
-
-    @staticmethod
     def release_max_age() -> int:
         return Config._CONFIG.get('new_releases').get('release_max_age')
 
@@ -381,8 +396,20 @@ class Config(object):
         return Config._CONFIG.get('deemix').get('check_account_status')
     
     @staticmethod
-    def experimental_api() -> bool:
-        return Config._CONFIG.get('experimental_api')
+    def fast_api() -> bool:
+        return Config._CONFIG['fast_api']
+
+    @staticmethod
+    def allow_compilations() -> bool:
+        return Config._CONFIG['new_releases']['include_compilations']
+
+    @staticmethod
+    def allow_featured_in() -> bool:
+        return Config._CONFIG['new_releases']['include_featured_in']
+
+    @staticmethod
+    def allow_unofficial() -> bool:
+        return Config._CONFIG['new_releases']['include_unofficial']
 
     @staticmethod
     def find_position(d, property):
