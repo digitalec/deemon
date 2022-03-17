@@ -1,54 +1,53 @@
 import json
+import yaml
 import logging
-from copy import deepcopy
 from pathlib import Path
-from typing import Optional
 
-from deemon.core.exceptions import ValueNotAllowed, UnknownValue, PropertyTypeMismatch
-from deemon.utils import startup
-
-logger = logging.getLogger(__name__)
+from deemon.utils import paths
+from deemon.core.exceptions import UnknownValue, PropertyTypeMismatch
 
 ALLOWED_VALUES = {
     'bitrate': {1: "128", 3: "320", 9: "FLAC"},
     'alerts': [True, False],
-    'record_type': ['all', 'album', 'ep', 'single'],
+    'record_types': ['album', 'ep', 'single', 'unofficial', 'comps', 'feat'],
     'release_channel': ['stable', 'beta']
 }
 
 DEFAULT_CONFIG = {
-    "check_update": 1,
-    "debug_mode": False,
-    "release_channel": "stable",
-    "query_limit": 5,
-    "rollback_view_limit": 10,
-    "prompt_duplicates": False,
-    "prompt_no_matches": True,
-    "fast_api": True,
-    "new_releases": {
-        "release_max_age": 90,
-        "include_unofficial": False,
-        "include_compilations": False,
-        "include_featured_in": False,
+    "app": {
+        "check_update": 1,
+        "debug_mode": False,
+        "release_channel": "stable",
+        "max_search_results": 5,
+        "rollback_view_limit": 10,
+        "prompt_duplicates": False,
+        "prompt_no_matches": True,
+        "max_release_age": 90,
+        "fast_api": True,
     },
-    "global": {
-        "bitrate": "320",
-        "alerts": False,
-        "record_type": "all",
+    "defaults": {
+        "profile": 1,
         "download_path": "",
-        "email": ""
+        "bitrate": "320",
+        "record_types": [
+            'album',
+            'ep',
+            'single'
+        ],
+    },
+    "alerts": {
+        "enabled": False,
+        "recipient_email": "",
+        "smtp_server": "",
+        "smtp_port": 465,
+        "smtp_username": "",
+        "smtp_password": "",
+        "smtp_from_address": "",
     },
     "deemix": {
         "path": "",
         "arl": "",
         "check_account_status": True
-    },
-    "smtp_settings": {
-        "server": "",
-        "port": 465,
-        "username": "",
-        "password": "",
-        "from_addr": ""
     },
     "plex": {
         "base_url": "",
@@ -57,54 +56,54 @@ DEFAULT_CONFIG = {
     }
 }
 
+logger = logging.getLogger(__name__)
+
 
 class Config(object):
-    _CONFIG_FILE: Optional[Path] = startup.get_config()
-    _CONFIG: Optional[dict] = None
 
-    def __init__(self):
-        if not Config._CONFIG_FILE.exists():
-            self.__create_default_config()
+    _CONFIG_PATH = None
+    _CONFIG_FILE = None
+    CONFIG = None
 
-        if Config._CONFIG is None:
-            with open(Config._CONFIG_FILE, 'r') as f:
-                try:
-                    Config._CONFIG = json.load(f)
-                except json.decoder.JSONDecodeError as e:
-                    logger.exception(f"An error occured while reading from config: {e}")
-                    raise
+    def __init__(self, config_path=None):
 
-            if self.validate() > 0:
-                self.__write_modified_config()
+        if Config.CONFIG:
+            return
 
-            if not self.arl():
-                logger.debug("Attempting to locate deemix's .arl file")
-                arl_file = startup.get_appdata_root() / 'deemix' / '.arl'
-                if Path(arl_file).is_file():
-                    with open(arl_file) as f:
-                        arl_from_file = f.readline().replace("\n", "")
-                        self.set('arl', arl_from_file)
-                        logger.debug("Successfully loaded ARL")
+        if not config_path:
+            Config._CONFIG_PATH = paths.get_appdata_dir()
+        else:
+            Config._CONFIG_PATH = Path(config_path)
 
-            if len(self.arl()) > 0 and len(self.arl()) != 192:
-                logger.warning(f"   [!] Possible invalid ARL detected (length: {len(self.arl())}). ARL should "
-                               "be 192 characters")
+        paths.init_appdata_dir(Config._CONFIG_PATH)
+        Config._CONFIG_FILE = Path(Config._CONFIG_PATH / "config.yaml")
 
-            # Set default for runtime settings
-            self.set('profile_id', 1, validate=False)
+        if Path(Config._CONFIG_PATH / "config.json").exists() and not Config._CONFIG_FILE.exists():
+            logger.debug("Migrating deemon configuration to new format, please wait...")
+            self.__write_config(DEFAULT_CONFIG)
+            self.migrate_config()
+
+        if not Path(Config._CONFIG_FILE).exists():
+            logger.debug("No configuration file exists, generating default config...")
+            with open(Config._CONFIG_FILE, 'w') as f:
+                self.__write_config(DEFAULT_CONFIG)
+
+        with open(Config._CONFIG_FILE, 'r') as f:
+            logger.debug(f"Reading config file: {Config._CONFIG_FILE}")
+            Config.CONFIG = yaml.safe_load(f)
+
+        if self.validate_config() > 0:
+            self.__write_config(Config.CONFIG)
+
+        Config.CONFIG['runtime'] = {}
 
     @staticmethod
-    def __create_default_config():
+    def __write_config(c):
         with open(Config._CONFIG_FILE, 'w') as f:
-            json.dump(DEFAULT_CONFIG, f, indent=4)
+            yaml.dump(c, f, sort_keys=False, indent=4)
 
     @staticmethod
-    def __write_modified_config():
-        with open(Config._CONFIG_FILE, 'w') as f:
-            json.dump(Config._CONFIG, f, indent=4)
-
-    @staticmethod
-    def validate():
+    def validate_config():
         modified = 0
 
         def process_config(dict1, dict2):
@@ -127,71 +126,6 @@ class Config(object):
                         return [k] + next
                 elif k == key:
                     return [k]
-
-        def update_config_layout(user_config, reference_config):
-            """ Used to move existing values to new property names/locations """
-            nonlocal modified
-
-            if user_config.get('experimental'):
-                if user_config['experimental'].get('allow_unofficial_releases'):
-                    user_config['new_releases']['include_unofficial'] = True
-                    modified += 1
-                if user_config['experimental'].get('allow_compilations'):
-                    user_config['new_releases']['include_compilations'] = True
-                    modified += 1
-                if user_config['experimental'].get('allow_featured_in'):
-                    user_config['new_releases']['include_featured_in'] = True
-                    modified += 1
-
-            if user_config.get('new_releases'):
-                if not user_config['new_releases'].get('by_release_date', True):
-                    user_config['new_releases']['release_max_age'] = 0
-                    modified += 1
-
-            migration_map = [
-                {'check_update': 'check_update'},
-                {'plex_baseurl': 'base_url'},
-                {'plex_token': 'token'},
-                {'plex_library': 'library'},
-                {'deemix_path': 'path'},
-                {'arl': 'arl'},
-                {'smtp_recipient': 'email'},
-                {'smtp_server': 'server'},
-                {'smtp_user': 'username'},
-                {'smtp_pass': 'password'},
-                {'smtp_port': 'port'},
-                {'smtp_sender': 'from_addr'},
-                {'bitrate': 'bitrate'},
-                {'alerts': 'alerts'},
-                {'record_type': 'record_type'},
-                {'download_path': 'download_path'},
-                {'release_max_days': 'release_max_age'},
-                {'ranked_duplicates': 'prompt_duplicates'}
-            ]
-            for mlist in migration_map:
-
-                for old, new in mlist.items():
-                    user_config_tmp = deepcopy(user_config)
-                    user_config_copy = user_config
-                    if not user_config.get(old):
-                        continue
-
-                    old_position = find_position(user_config, old) or [old]
-                    new_position = find_position(reference_config, new) or [new]
-
-                    for i in old_position[:-1]:
-                        user_config_tmp = user_config_tmp.setdefault(i, {})
-
-                    for i in new_position[:-1]:
-                        user_config_copy = user_config_copy.setdefault(i, {})
-
-                    if user_config_tmp != user_config_copy:
-                        logger.debug("Migrating " + ':'.join([str(x) for x in old_position]) + " -> " + ':'.join(
-                            [str(x) for x in new_position]))
-                        user_config_copy[new_position[-1]] = user_config_tmp[old_position[-1]]
-                        modified += 1
-
-            return user_config
 
         def test_values(dict1, dict2):
             nonlocal modified
@@ -222,6 +156,11 @@ class Config(object):
                                 else:
                                     raise UnknownValue(
                                         f"Unknown value in config - '{key}': {value} (type: {type(value).__name__})")
+                            elif isinstance(ALLOWED_VALUES[key], list):
+                                if isinstance(dict1[key], list):
+                                    for v in dict1[key]:
+                                        if v not in ALLOWED_VALUES[key]:
+                                            raise UnknownValue(f"Unknown value in config for {key}: {v}")
                             elif not isinstance(dict1[key], type(dict2[key])):
                                 if isinstance(dict2[key], bool):
                                     if dict1[key] == 1:
@@ -269,236 +208,98 @@ class Config(object):
                             modified += 1
 
         logger.debug("Loading configuration, please wait...")
-        add_new_options(DEFAULT_CONFIG, Config._CONFIG)
-        migrated_config = update_config_layout(Config._CONFIG, DEFAULT_CONFIG)
-        Config._CONFIG = process_config(migrated_config, DEFAULT_CONFIG)
-        test_values(Config._CONFIG, DEFAULT_CONFIG)
+        add_new_options(DEFAULT_CONFIG, Config.CONFIG)
+        Config.CONFIG = process_config(Config.CONFIG, DEFAULT_CONFIG)
+        test_values(Config.CONFIG, DEFAULT_CONFIG)
         return modified
 
-    @staticmethod
-    def get_config_file() -> Path:
-        return Config._CONFIG_FILE
+    def migrate_config(self):
 
-    @staticmethod
-    def get_config() -> dict:
-        return Config._CONFIG
+        with open(Path(Config._CONFIG_PATH / 'config.json'), 'r') as f:
+            old_config = json.load(f)
 
-    @staticmethod
-    def plex_baseurl() -> str:
-        return Config._CONFIG.get('plex').get('base_url')
+            with open(Path(Config._CONFIG_PATH / 'config.yaml'), 'r+') as fi:
+                new_config = yaml.safe_load(fi)
 
-    @staticmethod
-    def plex_token() -> str:
-        return Config._CONFIG.get('plex').get('token')
+                # App
+                if old_config.get('check_update'):
+                    new_config['app']['check_update'] = old_config['check_update']
+                if old_config.get('debug_mode'):
+                    new_config['app']['debug_mode'] = old_config['debug_mode']
+                if old_config.get('release_channel'):
+                    new_config['app']['release_channel'] = old_config['release_channel']
+                if old_config.get('experimental_api'):
+                    new_config['app']['fast_api'] = old_config['experimental_api']
+                if old_config.get('fast_api'):
+                    new_config['app']['fast_api'] = old_config['fast_api']
+                if old_config.get('query_limit'):
+                    new_config['app']['max_search_results'] = old_config['query_limit']
+                if old_config.get('rollback_view_limit'):
+                    new_config['app']['rollback_view_limit'] = old_config['rollback_view_limit']
+                if old_config.get('prompt_duplicates'):
+                    new_config['app']['prompt_duplicates'] = old_config['prompt_duplicates']
+                if old_config.get('prompt_no_matches'):
+                    new_config['app']['prompt_no_matches'] = old_config['prompt_no_matches']
+                if 'by_release_date' in old_config.get('new_releases', {}):
+                    if old_config['new_releases']['by_release_date']:
+                        new_config['app']['max_release_age'] = old_config['new_releases']['release_max_age']
+                    else:
+                        new_config['app']['max_release_age'] = 0
+                else:
+                    new_config['app']['max_release_age'] = old_config['new_releases']['release_max_age']
 
-    @staticmethod
-    def plex_library() -> str:
-        return Config._CONFIG.get('plex').get('library')
+                # Default
+                if old_config.get('global', {}).get('bitrate'):
+                    new_config['defaults']['bitrate'] = old_config['global']['bitrate']
+                if old_config.get('global', {}).get('record_type'):
+                    if old_config['global']['record_type'] == "all":
+                        new_config['defaults']['record_types'] = ['album', 'ep', 'single']
+                    elif old_config['global']['record_type'] in ['album', 'ep', 'single']:
+                        new_config['defaults']['record_types'] = [old_config['global']['record_type']]
+                    if old_config.get('new_releases'):
+                        if old_config['new_releases'].get('include_unofficial'):
+                            new_config['defaults']['record_types'].append('unofficial')
+                        if old_config['new_releases'].get('include_compilations'):
+                            new_config['defaults']['record_types'].append('comps')
+                        if old_config['new_releases'].get('include_featured_in'):
+                            new_config['defaults']['record_types'].append('feat')
+                if old_config.get('global', {}).get('download_path'):
+                    new_config['defaults']['download_path'] = old_config['global']['download_path']
+                if old_config.get('global', {}).get('alerts'):
+                    new_config['alerts']['enabled'] = True
+                else:
+                    new_config['alerts']['enabled'] = False
+                if old_config.get('global', {}).get('email'):
+                    new_config['alerts']['recipient_email'] = old_config['global']['email']
+                if old_config.get('deemix', {}).get('path'):
+                    new_config['deemix']['path'] = old_config['deemix']['path']
+                if old_config.get('deemix', {}).get('arl'):
+                    new_config['deemix']['arl'] = old_config['deemix']['arl']
+                if old_config.get('deemix', {}).get('check_account_status'):
+                    new_config['deemix']['check_account_status'] = old_config['deemix']['check_account_status']
+                if old_config.get('smtp_settings', {}).get('server'):
+                    new_config['alerts']['smtp_server'] = old_config['smtp_settings']['server']
+                if old_config.get('smtp_settings', {}).get('port'):
+                    new_config['alerts']['smtp_port'] = old_config['smtp_settings']['port']
+                if old_config.get('smtp_settings', {}).get('username'):
+                    new_config['alerts']['smtp_username'] = old_config['smtp_settings']['username']
+                if old_config.get('smtp_settings', {}).get('password'):
+                    new_config['alerts']['smtp_password'] = old_config['smtp_settings']['password']
+                if old_config.get('smtp_settings', {}).get('from_addr'):
+                    new_config['alerts']['smtp_from_address'] = old_config['smtp_settings']['from_addr']
+                if old_config.get('plex', {}).get('base_url'):
+                    new_config['plex']['base_url'] = old_config['plex']['base_url']
+                if old_config.get('plex', {}).get('token'):
+                    new_config['plex']['token'] = old_config['plex']['token']
+                if old_config.get('plex', {}).get('library'):
+                    new_config['plex']['library'] = old_config['plex']['library']
+                if old_config.get('experimental', {}).get('experimental_api'):
+                    new_config['experimental']['fast_api'] = old_config['experimental']['experimental_api']
+                if old_config.get('experimental', {}).get('allow_unofficial_releases'):
+                    new_config['experimental']['allow_unofficial_releases'] = old_config['experimental']['allow_unofficial_releases']
+                if old_config.get('experimental', {}).get('allow_compilations'):
+                    new_config['experimental']['allow_compilations'] = old_config['experimental']['allow_compilations']
+                if old_config.get('experimental', {}).get('allow_featured_in'):
+                    new_config['experimental']['allow_featured_in'] = old_config['experimental']['allow_featured_in']
 
-    @staticmethod
-    def download_path() -> str:
-        return Config._CONFIG.get('global').get('download_path')
-
-    @staticmethod
-    def deemix_path() -> str:
-        return Config._CONFIG.get('deemix').get('path')
-
-    @staticmethod
-    def arl() -> str:
-        return Config._CONFIG.get('deemix').get('arl')
-
-    @staticmethod
-    def release_max_age() -> int:
-        return Config._CONFIG.get('new_releases').get('release_max_age')
-
-    @staticmethod
-    def bitrate() -> str:
-        return Config._CONFIG.get('global').get('bitrate')
-
-    @staticmethod
-    def alerts() -> bool:
-        return Config._CONFIG.get('global').get('alerts')
-
-    @staticmethod
-    def record_type() -> str:
-        return Config._CONFIG.get('global').get('record_type')
-
-    @staticmethod
-    def smtp_server() -> str:
-        return Config._CONFIG.get('smtp_settings').get('server')
-
-    @staticmethod
-    def smtp_port() -> int:
-        return Config._CONFIG.get('smtp_settings').get('port')
-
-    @staticmethod
-    def smtp_user() -> str:
-        return Config._CONFIG.get('smtp_settings').get('username')
-
-    @staticmethod
-    def smtp_pass() -> str:
-        return Config._CONFIG.get('smtp_settings').get('password')
-
-    @staticmethod
-    def smtp_sender() -> str:
-        return Config._CONFIG.get('smtp_settings').get('from_addr')
-
-    @staticmethod
-    def smtp_recipient() -> list:
-        return Config._CONFIG.get('global').get('email')
-
-    @staticmethod
-    def check_update() -> int:
-        return Config._CONFIG.get('check_update')
-
-    @staticmethod
-    def debug_mode() -> bool:
-        return Config._CONFIG.get('debug_mode')
-
-    @staticmethod
-    def profile_id() -> int:
-        return Config._CONFIG.get('profile_id')
-
-    @staticmethod
-    def update_available() -> int:
-        return Config._CONFIG.get('update_available')
-
-    @staticmethod
-    def query_limit() -> int:
-        return Config._CONFIG.get('query_limit')
-
-    @staticmethod
-    def prompt_duplicates() -> int:
-        return Config._CONFIG.get('prompt_duplicates')
-
-    @staticmethod
-    def prompt_no_matches() -> bool:
-        return Config._CONFIG.get('prompt_no_matches')
-
-    @staticmethod
-    def allowed_values(prop):
-        return ALLOWED_VALUES.get(prop)
-
-    @staticmethod
-    def release_channel() -> str:
-        return Config._CONFIG.get('release_channel')
-
-    @staticmethod
-    def rollback_view_limit() -> int:
-        return Config._CONFIG.get('rollback_view_limit')
-
-    @staticmethod
-    def transaction_id() -> int:
-        return Config._CONFIG.get('tid')
-    
-    @staticmethod
-    def check_account_status() -> bool:
-        return Config._CONFIG.get('deemix').get('check_account_status')
-    
-    @staticmethod
-    def fast_api() -> bool:
-        return Config._CONFIG['fast_api']
-
-    @staticmethod
-    def allow_compilations() -> bool:
-        return Config._CONFIG['new_releases']['include_compilations']
-
-    @staticmethod
-    def allow_featured_in() -> bool:
-        return Config._CONFIG['new_releases']['include_featured_in']
-
-    @staticmethod
-    def allow_unofficial() -> bool:
-        return Config._CONFIG['new_releases']['include_unofficial']
-
-    @staticmethod
-    def find_position(d, property):
-        for k, v in d.items():
-            if isinstance(v, dict):
-                next = Config.find_position(v, property)
-                if next:
-                    return [k] + next
-            elif k == property:
-                return [k]
-
-    @staticmethod
-    def get(property):
-        return Config._CONFIG.get(property)
-
-    @staticmethod
-    def set(property, value, validate=True):
-        if not validate:
-            Config._CONFIG[property] = value
-        if Config._CONFIG.get(property):
-            if property in ALLOWED_VALUES:
-                if value.lower() == "true" or value == "1":
-                    value = True
-                elif value.lower() == "false" or value == "0":
-                    value = ""
-                if value in ALLOWED_VALUES[property]:
-                    Config._CONFIG[property] = value
-                    return
-                raise ValueNotAllowed(f"Property {property} requires one of "
-                                      f"{', '.join(ALLOWED_VALUES[property])}, not {value}.")
-
-            if isinstance(value, type(Config._CONFIG[property])):
-                Config._CONFIG[property] = value
-                return
-            else:
-                raise PropertyTypeMismatch(f"Type mismatch while setting {property} "
-                                           f"to {value} (type: {type(value).__name__})")
-
-        else:
-            property_path = Config.find_position(Config._CONFIG, property)
-            tmpConfig = Config._CONFIG
-            for k in property_path[:-1]:
-                tmpConfig = tmpConfig.setdefault(k, {})
-            if property in ALLOWED_VALUES:
-                if isinstance(value, str):
-                    if value.lower() == "true" or value == "1":
-                        value = True
-                    elif value.lower() == "false" or value == "0":
-                        value = False
-                if isinstance(ALLOWED_VALUES[property], dict):
-                    if value in [str(x.lower()) for x in ALLOWED_VALUES[property].values()]:
-                        tmpConfig[property_path[-1]] = value
-                        return
-                if value in ALLOWED_VALUES[property]:
-                    tmpConfig[property_path[-1]] = value
-                    return
-                raise ValueNotAllowed(f"Value for {property} is invalid: {value} (type: {type(value).__name__})")
-
-            if isinstance(value, type(tmpConfig[property])):
-                tmpConfig[property] = value
-                return
-            else:
-                raise PropertyTypeMismatch(f"Type mismatch while setting {property} "
-                                           f"to {value} (type: {type(value).__name__})")
-
-
-class LoadProfile(object):
-    def __init__(self, profile: dict):
-        logger.debug(f"Loaded config for profile {str(profile['id'])} ({str(profile['name'])})")
-        # Rename keys to match config
-        profile["profile_id"] = profile.pop("id")
-        profile["base_url"] = profile.pop("plex_baseurl")
-        profile["token"] = profile.pop("plex_token")
-        profile["library"] = profile.pop("plex_library")
-
-        # Append to config for debug output; Remove profile name from dict
-        Config.set("profile_name", profile.pop("name"), validate=False)
-
-        for key, value in profile.items():
-            if value is None:
-                continue
-            Config.set(key, value)
-
-        for key, value in Config.get_config().items():
-            if isinstance(value, dict):
-                for k, v in value.items():
-                    if key in ['smtp_settings'] or k in ['arl', 'email', 'token']:
-                        if v:
-                            v = "********"
-                    logger.debug(f"> {key}/{k}: {v}")
-            else:
-                logger.debug(f"> {key}: {value}")
+                self.__write_config(new_config)
