@@ -6,7 +6,7 @@ from pathlib import Path
 
 from packaging.version import parse as parse_version
 
-from deemon import __dbversion__, __version__
+from deemon import DB_VERSION, VERSION
 from deemon.core.config import Config as config
 from deemon.utils import startup, performance, dates
 
@@ -134,7 +134,7 @@ class Database(object):
 
         self.query("CREATE UNIQUE INDEX 'idx_property' ON 'deemon' ('property')")
         self.query("CREATE INDEX 'artist' ON 'releases' ('artist_id', 'profile_id')")
-        self.query(f"INSERT INTO 'deemon' ('property', 'value') VALUES ('version', '{__dbversion__}')")
+        self.query(f"INSERT INTO 'deemon' ('property', 'value') VALUES ('version', '{DB_VERSION}')")
         self.query("INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('latest_ver', '')")
         self.query("INSERT INTO 'deemon' ('property', 'value') VALUES ('last_update_check', 0)")
         self.query("INSERT INTO 'deemon' ('property', 'value') VALUES ('release_channel', 'stable')")
@@ -155,7 +155,7 @@ class Database(object):
 
     def do_upgrade(self):
         current_ver = parse_version(self.get_db_version())
-        app_db_version = parse_version(__dbversion__)
+        app_db_version = parse_version(DB_VERSION)
 
         if current_ver == app_db_version:
             return
@@ -164,7 +164,7 @@ class Database(object):
         
         if current_ver < parse_version("3.5"):
             logger.error("Due to database changes, you must be on at least "
-                         f"v2.5 before upgrading to v{__version__}.")
+                         f"v2.5 before upgrading to v{VERSION}.")
             exit()
             
         if current_ver < parse_version("3.5.2"):

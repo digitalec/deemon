@@ -11,7 +11,7 @@ from email.utils import formataddr
 
 import pkg_resources
 
-from deemon import __version__
+from deemon import VERSION
 from deemon.core.config import Config as config
 
 logger = logging.getLogger(__name__)
@@ -125,7 +125,7 @@ class Notify:
 
     def html_new_releases(self):
 
-        app_version = f"deemon {__version__}"
+        app_version = f"deemon {VERSION}"
         py_version = f"python {platform.python_version()}"
         sys_version = f"{platform.system()} {platform.release()}"
 

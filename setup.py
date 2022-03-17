@@ -1,6 +1,6 @@
 from pathlib import Path
 from setuptools import setup, find_packages
-from deemon import __version__
+from deemon import VERSION
 
 with open('requirements.txt') as f:
     required = f.read().splitlines()
@@ -11,7 +11,7 @@ DESCRIPTION = "Monitor new releases by a specified list of artists and auto down
 
 setup(
     name="deemon",
-    version=__version__,
+    version=VERSION,
     author="digitalec",
     description=DESCRIPTION,
     long_description=README,

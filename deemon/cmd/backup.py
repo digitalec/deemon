@@ -7,7 +7,7 @@ from pathlib import Path
 from packaging.version import parse as parse_version
 from tqdm import tqdm
 
-from deemon import __version__
+from deemon import VERSION
 from deemon.utils import startup, dates
 
 logger = logging.getLogger(__name__)
@@ -22,7 +22,7 @@ def run(include_logs: bool = False):
         if item.name in includes:
             return item
 
-    backup_tar = dates.generate_date_filename("backup-" + __version__ + "-") + ".tar"
+    backup_tar = dates.generate_date_filename("backup-" + VERSION + "-") + ".tar"
     backup_path = startup.get_backup_dir()
 
     with tarfile.open(backup_path / backup_tar, "w") as tar:
@@ -91,7 +91,7 @@ def restore():
                 progress.set_description_str("Restore complete")
 
     def is_newer_backup(version: str):
-        if parse_version(version) > parse_version(__version__):
+        if parse_version(version) > parse_version(VERSION):
             return True
 
     def display_backup_list(available_backups: list):
