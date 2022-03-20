@@ -31,7 +31,7 @@ def setup_logger(log_level='DEBUG', log_file=None):
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
 
-    deemon_logger = logging.getLogger("mercury")
+    deemon_logger = logging.getLogger("deemon")
     deemon_logger.setLevel(logging.DEBUG)
 
     # TODO REMOVE
