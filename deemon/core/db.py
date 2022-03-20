@@ -7,11 +7,11 @@ from pathlib import Path
 from packaging.version import parse as parse_version
 
 from deemon import DB_VERSION, VERSION
-from deemon.core.config import Config as config
+from deemon.core.config import Config
 from deemon.utils import startup, performance, dates
 
 logger = logging.getLogger(__name__)
-
+config = Config().CONFIG
 
 class Database(object):
 
@@ -206,41 +206,41 @@ class Database(object):
 
     def reset_future(self, album_id):
         logger.debug("Clearing future_release flag from " + str(album_id))
-        values = {'album_id': album_id, 'profile_id': config.profile_id()}
+        values = {'album_id': album_id, 'profile_id': config['defaults']['profile']}
         sql = "UPDATE 'releases' SET future_release = 0 WHERE album_id = :album_id AND profile_id = :profile_id"
         self.query(sql, values)
 
     def get_all_monitored_artists(self):
-        vals = {'profile_id': config.profile_id()}
+        vals = {'profile_id': config['defaults']['profile']}
         return self.query(f"SELECT * FROM monitor WHERE profile_id = :profile_id "
                           f"ORDER BY artist_name COLLATE NOCASE ASC", vals).fetchall()
 
     def get_monitored_artist_by_id(self, artist_id: int):
-        values = {'id': artist_id, 'profile_id': config.profile_id()}
+        values = {'id': artist_id, 'profile_id': config['defaults']['profile']}
         return self.query(f"SELECT * FROM monitor WHERE artist_id = :id AND profile_id = :profile_id",
                           values).fetchone()
 
     def get_monitored_artist_by_name(self, name: str):
-        values = {'name': name, 'profile_id': config.profile_id()}
+        values = {'name': name, 'profile_id': config['defaults']['profile']}
         return self.query(f"SELECT * FROM monitor WHERE artist_name = :name COLLATE NOCASE "
                           f"AND profile_id = :profile_id", values).fetchone()
 
     def get_all_monitored_playlist_ids(self):
-        vals = {'profile_id': config.profile_id()}
+        vals = {'profile_id': config['defaults']['profile']}
         query = self.query("SELECT id FROM playlists WHERE profile_id = :profile_id", vals).fetchall()
         return [v for x in query for v in x.values()]
 
     def get_all_monitored_playlists(self):
-        vals = {'profile_id': config.profile_id()}
+        vals = {'profile_id': config['defaults']['profile']}
         return self.query("SELECT * FROM playlists WHERE profile_id = :profile_id "
                           "ORDER BY title COLLATE NOCASE ASC", vals).fetchall()
 
     def get_monitored_playlist_by_id(self, playlist_id):
-        values = {'id': playlist_id, 'profile_id': config.profile_id()}
+        values = {'id': playlist_id, 'profile_id': config['defaults']['profile']}
         return self.query("SELECT * FROM playlists WHERE id = :id AND profile_id = :profile_id", values).fetchone()
 
     def get_monitored_playlist_by_name(self, title):
-        values = {'title': title, 'profile_id': config.profile_id()}
+        values = {'title': title, 'profile_id': config['defaults']['profile']}
         return self.query("SELECT * FROM playlists WHERE title = :title COLLATE NOCASE "
                           "AND profile_id = :profile_id", values).fetchone()
 
@@ -249,8 +249,8 @@ class Database(object):
         vals = {
             'artist_id': artist['id'], 'artist_name': artist['name'], 'bitrate': artist_config['bitrate'],
             'record_type': artist_config['record_type'], 'alerts': artist_config['alerts'],
-            'download_path': artist_config['download_path'], 'profile_id': config.profile_id(),
-            'trans_id': config.transaction_id()
+            'download_path': artist_config['download_path'], 'profile_id': config['defaults']['profile'],
+            'trans_id': config['runtime']['transaction_id']
         }
         query = ("INSERT INTO monitor "
                  "(artist_id, artist_name, bitrate, record_type, alerts, download_path, profile_id, trans_id) "
@@ -260,7 +260,7 @@ class Database(object):
         self.commit()
 
     def get_artist_releases(self, artist_id=None):
-        sql_values = {'artist_id': artist_id, 'profile_id': config.profile_id()}
+        sql_values = {'artist_id': artist_id, 'profile_id': config['defaults']['profile']}
         if artist_id:
             query = "SELECT album_id, future_release FROM 'releases' WHERE artist_id = :artist_id AND profile_id = :profile_id"
         else:
@@ -268,17 +268,17 @@ class Database(object):
         return self.query(query, sql_values).fetchall()
 
     def get_future_releases(self):
-        vals = {'profile_id': config.profile_id()}
+        vals = {'profile_id': config['defaults']['profile']}
         return self.query("SELECT * FROM releases "
                           "WHERE future_release = 1 AND profile_id = :profile_id", vals).fetchall()
 
     def get_playlist_tracks(self, playlist_id):
-        sql_values = {'playlist_id': playlist_id, 'profile_id': config.profile_id()}
+        sql_values = {'playlist_id': playlist_id, 'profile_id': config['defaults']['profile']}
         query = "SELECT * FROM 'playlist_tracks' WHERE playlist_id = :playlist_id AND profile_id = :profile_id"
         return self.query(query, sql_values).fetchall()
 
     def get_track_from_playlist(self, playlist_id, track_id):
-        values = {'pid': playlist_id, 'tid': track_id, 'profile_id': config.profile_id()}
+        values = {'pid': playlist_id, 'tid': track_id, 'profile_id': config['defaults']['profile']}
         query = "SELECT * FROM 'playlist_tracks' WHERE track_id = :tid AND playlist_id = :pid AND profile_id = :profile_id"
         result = self.query(query, values).fetchone()
         if result:
@@ -288,8 +288,8 @@ class Database(object):
         self.new_transaction()
         values = {'id': api_result['id'], 'title': api_result['title'], 'url': api_result['link'],
                   'bitrate': api_result['bitrate'], 'alerts': api_result['alerts'],
-                  'download_path': api_result['download_path'], 'profile_id': config.profile_id(),
-                  'trans_id': config.transaction_id()}
+                  'download_path': api_result['download_path'], 'profile_id': config['defaults']['profile'],
+                  'trans_id': config['runtime']['transaction_id']}
         query = ("INSERT INTO playlists ('id', 'title', 'url', 'bitrate', 'alerts', 'download_path',"
                  "'profile_id', 'trans_id') "
                  "VALUES (:id, :title, :url, :bitrate, :alerts, :download_path, :profile_id, :trans_id)")
@@ -297,19 +297,19 @@ class Database(object):
         self.commit()
 
     def remove_monitored_artist(self, id: int = None):
-        values = {'id': id, 'profile_id': config.profile_id()}
+        values = {'id': id, 'profile_id': config['defaults']['profile']}
         self.query("DELETE FROM monitor WHERE artist_id = :id AND profile_id = :profile_id", values)
         self.query("DELETE FROM releases WHERE artist_id = :id AND profile_id = :profile_id", values)
         self.commit()
 
     def remove_monitored_playlists(self, id: int = None):
-        values = {'id': id, 'profile_id': config.profile_id()}
+        values = {'id': id, 'profile_id': config['defaults']['profile']}
         self.query("DELETE FROM playlists WHERE id = :id AND profile_id = :profile_id", values)
         self.query("DELETE FROM playlist_tracks WHERE playlist_id = :id AND profile_id = :profile_id", values)
         self.commit()
 
     def get_specified_artist(self, artist):
-        values = {'artist': artist, 'profile_id': config.profile_id()}
+        values = {'artist': artist, 'profile_id': config['defaults']['profile']}
         if type(artist) is int:
             return self.query("SELECT * FROM monitor WHERE artist_id = :artist "
                               "AND profile_id = :profile_id", values).fetchone()
@@ -328,7 +328,7 @@ class Database(object):
         sql = (f"INSERT OR REPLACE INTO releases ('artist_id', 'artist_name', 'album_id', 'album_name', 'album_release', "
                f"'album_added', 'future_release', 'explicit', 'record_type', 'profile_id', 'trans_id') "
                f"VALUES (:artist_id, :artist_name, :id, :title, :release_date, {int(time.time())}, :future, "
-               f":explicit_lyrics, :record_type, {config.profile_id()}, {config.transaction_id()})")
+               f":explicit_lyrics, :record_type, {config['defaults']['profile']}, {config['runtime']['transaction_id']})")
         self.cursor.executemany(sql, values)
         self.set_all_artists_refreshed()
 
@@ -336,19 +336,19 @@ class Database(object):
         self.new_transaction()
         sql = (f"INSERT INTO playlist_tracks ('artist_id', 'artist_name', 'track_id', 'track_name', 'playlist_id', "
                f"'track_added', 'profile_id', 'trans_id') VALUES (:artist_id, :artist_name, :id, :title, :playlist_id, "
-               f"{int(time.time())}, {config.profile_id()}, {config.transaction_id()})")
+               f"{int(time.time())}, {config['defaults']['profile']}, {config['runtime']['transaction_id']})")
         self.cursor.executemany(sql, values)
         self.set_all_playlists_refreshed()
 
     def show_new_releases(self, from_date_ts, now_ts):
         today_date = datetime.utcfromtimestamp(now_ts).strftime('%Y-%m-%d')
         from_date = datetime.utcfromtimestamp(from_date_ts).strftime('%Y-%m-%d')
-        values = {'from': from_date, 'today': today_date, 'profile_id': config.profile_id()}
+        values = {'from': from_date, 'today': today_date, 'profile_id': config['defaults']['profile']}
         sql = "SELECT * FROM 'releases' WHERE album_release >= :from AND album_release <= :today AND profile_id = :profile_id"
         return self.query(sql, values).fetchall()
 
     def get_album_by_id(self, album_id):
-        values = {'id': album_id, 'profile_id': config.profile_id()}
+        values = {'id': album_id, 'profile_id': config['defaults']['profile']}
         sql = "SELECT * FROM 'releases' WHERE album_id = :id AND profile_id = :profile_id"
         return self.query(sql, values).fetchone()
 
@@ -369,8 +369,8 @@ class Database(object):
     def add_playlist_track(self, playlist, track):
         self.new_transaction()
         values = {'pid': playlist['id'], 'tid': track['id'], 'tname': track['title'], 'aid': track['artist']['id'],
-                  'aname': track['artist']['name'], 'time': int(time.time()), 'profile_id': config.profile_id(),
-                  'trans_id': config.transaction_id()}
+                  'aname': track['artist']['name'], 'time': int(time.time()), 'profile_id': config['defaults']['profile'],
+                  'trans_id': config['runtime']['transaction_id']}
         query = ("INSERT INTO 'playlist_tracks' "
                  "('track_id', 'playlist_id', 'artist_id', 'artist_name', 'track_name', 'track_added', 'profile_id',"
                  "'trans_id') VALUES (:tid, :pid, :aid, :aname, :tname, :time, :profile_id, :trans_id)")
@@ -425,20 +425,20 @@ class Database(object):
         return tid['seq'] + 1
 
     def new_transaction(self):
-        check_exists = self.query(f"SELECT * FROM transactions WHERE id = {config.transaction_id()}").fetchone()
+        check_exists = self.query(f"SELECT * FROM transactions WHERE id = {config['runtime']['transaction_id']}").fetchone()
         if not check_exists:
             current_time = int(time.time())
-            vals = {'timestamp': current_time, 'profile_id': config.profile_id()}
+            vals = {'timestamp': current_time, 'profile_id': config['defaults']['profile']}
             self.query(f"INSERT INTO transactions ('timestamp', 'profile_id') "
                        f"VALUES (:timestamp, :profile_id)", vals)
             self.commit()
 
     def rollback_last_refresh(self, rollback: int):
-        vals = {'rollback': rollback, 'profile_id': config.profile_id()}
+        vals = {'rollback': rollback, 'profile_id': config['defaults']['profile']}
         transactions = self.query("SELECT id FROM transactions WHERE profile_id = :profile_id "
                                   f"ORDER BY id DESC LIMIT {rollback}", vals).fetchall()
         for t in transactions:
-            vals = {'id': t['id'], 'profile_id': config.profile_id()}
+            vals = {'id': t['id'], 'profile_id': config['defaults']['profile']}
             self.query(f"DELETE FROM monitor WHERE trans_id = :id AND profile_id = :profile_id", vals)
             self.query(f"DELETE FROM releases WHERE trans_id = :id AND profile_id = :profile_id", vals)
             self.query(f"DELETE FROM playlist_tracks WHERE trans_id = :id AND profile_id = :profile_id", vals)
@@ -446,7 +446,7 @@ class Database(object):
             self.commit()
 
     def rollback_refresh(self, rollback: int):
-        vals = {'rollback': rollback, 'profile_id': config.profile_id()}
+        vals = {'rollback': rollback, 'profile_id': config['defaults']['profile']}
         self.query(f"DELETE FROM monitor WHERE trans_id = {rollback} AND profile_id = :profile_id", vals)
         self.query(f"DELETE FROM releases WHERE trans_id = {rollback} AND profile_id = :profile_id", vals)
         self.query(f"DELETE FROM playlist_tracks WHERE trans_id = {rollback} AND profile_id = :profile_id", vals)
@@ -454,11 +454,11 @@ class Database(object):
         self.commit()
 
     def set_artist_refreshed(self, id):
-        vals = {'id': id, 'profile_id': config.profile_id()}
+        vals = {'id': id, 'profile_id': config['defaults']['profile']}
         return self.query("UPDATE monitor SET refreshed = 1 WHERE artist_id = :id AND profile_id = :profile_id", vals)
 
     def set_playlist_refreshed(self, id):
-        vals = {'id': id, 'profile_id': config.profile_id()}
+        vals = {'id': id, 'profile_id': config['defaults']['profile']}
         return self.query("UPDATE playlists SET refreshed = 1 WHERE id = :id AND profile_id = :profile_id", vals)
 
     def set_latest_version(self, version):
@@ -471,16 +471,16 @@ class Database(object):
 
     def set_release_channel(self):
         self.query(f"INSERT OR REPLACE INTO deemon (property, value) "
-                   f"VALUES ('release_channel', '{config.release_channel()}')")
+                   f"VALUES ('release_channel', '{config['app']['release_channel']}')")
         return self.commit()
 
     def get_transactions(self):
-        vals = {'profile_id': config.profile_id(), 'trans_limit': config.rollback_view_limit()}
+        vals = {'profile_id': config['defaults']['profile'], 'trans_limit': config['app']['rollback_view_limit']}
         transaction_list = self.query("SELECT id, timestamp FROM transactions WHERE profile_id = :profile_id "
                                       "ORDER BY id DESC LIMIT :trans_limit", vals).fetchall()
         results = []
         for tid in transaction_list:
-            vals = {'tid': tid['id'], 'profile_id': config.profile_id()}
+            vals = {'tid': tid['id'], 'profile_id': config['defaults']['profile']}
             transaction = {}
             transaction['id'] = tid['id']
             transaction['timestamp'] = tid['timestamp']
@@ -504,23 +504,23 @@ class Database(object):
         return results
 
     def get_all_monitored_artist_ids(self):
-        values = {"profile_id": config.profile_id()}
+        values = {"profile_id": config['defaults']['profile']}
         query = self.query("SELECT artist_id FROM monitor WHERE profile_id = :profile_id", values).fetchall()
         return [v for x in query for v in x.values()]
 
     @performance.timeit
     def get_monitored(self):
-        values = {"profile_id": config.profile_id()}
+        values = {"profile_id": config['defaults']['profile']}
         query = self.query("SELECT artist_id, artist_name FROM monitor WHERE profile_id = :profile_id",
                            values).fetchall()
         return query
 
     def get_unrefreshed_artists(self):
-        values = {"profile_id": config.profile_id()}
+        values = {"profile_id": config['defaults']['profile']}
         return self.query("SELECT * FROM monitor WHERE profile_id = :profile_id AND refreshed = 0", values).fetchall()
 
     def get_unrefreshed_playlists(self):
-        values = {"profile_id": config.profile_id()}
+        values = {"profile_id": config['defaults']['profile']}
         return self.query("SELECT * FROM playlists WHERE profile_id = :profile_id AND refreshed = 0", values).fetchall()
 
     def fast_monitor(self, values):
@@ -539,25 +539,25 @@ class Database(object):
             values)
 
     def remove_by_name(self, values):
-        self.cursor.executemany(f"DELETE FROM monitor WHERE profile_id = {config.profile_id()} AND artist_name = ?",
+        self.cursor.executemany(f"DELETE FROM monitor WHERE profile_id = {config['defaults']['profile']} AND artist_name = ?",
                                 values)
-        self.cursor.executemany(f"DELETE FROM releases WHERE profile_id = {config.profile_id()} AND artist_name = ?",
+        self.cursor.executemany(f"DELETE FROM releases WHERE profile_id = {config['defaults']['profile']} AND artist_name = ?",
                                 values)
         self.commit()
 
     def remove_by_id(self, values):
-        self.cursor.executemany(f"DELETE FROM monitor WHERE profile_id = {config.profile_id()} AND artist_id = ?",
+        self.cursor.executemany(f"DELETE FROM monitor WHERE profile_id = {config['defaults']['profile']} AND artist_id = ?",
                                 values)
-        self.cursor.executemany(f"DELETE FROM releases WHERE profile_id = {config.profile_id()} AND artist_id = ?",
+        self.cursor.executemany(f"DELETE FROM releases WHERE profile_id = {config['defaults']['profile']} AND artist_id = ?",
                                 values)
         self.commit()
 
     # @performance.timeit
     def remove_specific_releases(self, values):
-        self.query(f"DELETE FROM releases WHERE album_release > :tm_date AND profile_id = {config.profile_id()}", values)
+        self.query(f"DELETE FROM releases WHERE album_release > :tm_date AND profile_id = {config['defaults']['profile']}", values)
 
     def add_extra_release_info(self, values):
         self.new_transaction()
         sql = ("UPDATE releases SET label = :label WHERE album_id = :id AND "
-               f"profile_id = {config.profile_id()}")
+               f"profile_id = {config['defaults']['profile']}")
         self.cursor.executemany(sql, values)

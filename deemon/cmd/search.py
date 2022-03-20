@@ -6,11 +6,11 @@ from deezer import Deezer
 from deemon.cmd import download
 from deemon.cmd import monitor as mon
 from deemon.core import db, api
-from deemon.core.config import Config as config
+from deemon.core.config import Config
 from deemon.utils import dates
 
 logger = logging.getLogger(__name__)
-
+config = Config().CONFIG
 
 class Search:
     def __init__(self):
@@ -92,7 +92,7 @@ class Search:
                     continue
                 if search_query == "":
                     continue
-            self.search_results = self.api.search_artist(search_query, config.query_limit())
+            self.search_results = self.api.search_artist(search_query, config['app']['query_limit'])
             if len(self.search_results['results']) == 0:
                 self.status_message = "No results found for: " + search_query
                 continue
@@ -257,7 +257,7 @@ class Search:
                     stop = True
                 else:
                     stop = False
-                record_type = self.filter or config.record_type()
+                record_type = self.filter or config['defaults']['record_types']
                 self.clear()
                 monitor = mon.Monitor()
                 monitor.set_config(None, None, record_type, None)

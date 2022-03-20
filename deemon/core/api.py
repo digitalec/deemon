@@ -5,10 +5,11 @@ from datetime import datetime
 import deezer.errors
 from deezer import Deezer
 
-from deemon.core.config import Config as config
+from deemon.core.config import Config
 
 logger = logging.getLogger(__name__)
 
+config = Config().CONFIG
 
 class PlatformAPI:
     
@@ -39,7 +40,7 @@ class PlatformAPI:
             logger.debug(f"DEBUG_MODE: {message} {str(payload)}")
             
     def get_platform(self):
-        if config.fast_api():
+        if config['app']['fast_api']:
             return "deezer-gw"
         return "deezer-api"
 
@@ -54,7 +55,7 @@ class PlatformAPI:
         
     def get_account_type(self):
         temp_dz = Deezer()
-        temp_dz.login_via_arl(config.arl())
+        temp_dz.login_via_arl(config['deemix']['arl'])
         if temp_dz.get_session()['current_user'].get('can_stream_lossless'):
             logger.debug(f"Deezer account type is \"Hi-Fi\"")
             return "hifi"
