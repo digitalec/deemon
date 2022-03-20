@@ -5,13 +5,7 @@ from pathlib import Path
 
 from deemon.utils import paths
 from deemon.core.exceptions import UnknownValue, PropertyTypeMismatch
-
-ALLOWED_VALUES = {
-    'bitrate': {1: "128", 3: "320", 9: "FLAC"},
-    'alerts': [True, False],
-    'record_types': ['album', 'ep', 'single', 'unofficial', 'comps', 'feat'],
-    'release_channel': ['stable', 'beta']
-}
+from deemon.utils.constants import ALLOWED_VALUES, SENSITIVE_KEYS
 
 DEFAULT_CONFIG = {
     "app": {
@@ -94,7 +88,24 @@ class Config(object):
         if self.validate_config() > 0:
             self.__write_config(Config.CONFIG)
 
-        Config.CONFIG['runtime'] = {}
+        self.logger.debug("Configuration loaded:")
+        for key, value in Config.CONFIG.items():
+            if isinstance(value, dict):
+                for k, v in value.items():
+                    if k in SENSITIVE_KEYS:
+                        if v:
+                            v = "********"
+                    self.logger.debug(f"  {key}/{k}: {v}")
+            else:
+                self.logger.debug(f"  {key}: {value}")
+
+        Config.CONFIG['runtime'] = {
+            "artist": [],
+            "artist_id": [],
+            "playlist": [],
+            "file": [],
+            "url": [],
+        }
 
     @staticmethod
     def __write_config(c):
