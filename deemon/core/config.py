@@ -56,8 +56,6 @@ DEFAULT_CONFIG = {
     }
 }
 
-logger = logging.getLogger(__name__)
-
 
 class Config(object):
 
@@ -66,6 +64,7 @@ class Config(object):
     CONFIG = None
 
     def __init__(self, config_path=None):
+        self.logger = logging.getLogger(__name__)
 
         if Config.CONFIG:
             return
@@ -79,17 +78,17 @@ class Config(object):
         Config._CONFIG_FILE = Path(Config._CONFIG_PATH / "config.yaml")
 
         if Path(Config._CONFIG_PATH / "config.json").exists() and not Config._CONFIG_FILE.exists():
-            logger.debug("Migrating deemon configuration to new format, please wait...")
+            self.logger.debug("Migrating deemon configuration to new format, please wait...")
             self.__write_config(DEFAULT_CONFIG)
             self.migrate_config()
 
         if not Path(Config._CONFIG_FILE).exists():
-            logger.debug("No configuration file exists, generating default config...")
+            self.logger.debug("No configuration file exists, generating default config...")
             with open(Config._CONFIG_FILE, 'w') as f:
                 self.__write_config(DEFAULT_CONFIG)
 
         with open(Config._CONFIG_FILE, 'r') as f:
-            logger.debug(f"Reading config file: {Config._CONFIG_FILE}")
+            self.logger.debug(f"Reading config file: {Config._CONFIG_FILE}")
             Config.CONFIG = yaml.safe_load(f)
 
         if self.validate_config() > 0:
@@ -102,8 +101,7 @@ class Config(object):
         with open(Config._CONFIG_FILE, 'w') as f:
             yaml.dump(c, f, sort_keys=False, indent=4)
 
-    @staticmethod
-    def validate_config():
+    def validate_config(self):
         modified = 0
 
         def process_config(dict1, dict2):
@@ -196,18 +194,17 @@ class Config(object):
             nonlocal modified
             for key, value in dict1.items():
                 if key not in dict2.keys():
-                    logger.debug(f"New option added to config: {key}")
+                    self.logger.debug(f"New option added to config: {key}")
                     dict2[key] = value
                     modified += 1
                 elif isinstance(value, dict):
                     for k, v in value.items():
                         if k not in dict2[key].keys():
-                            logger.debug("New option added to config: "
+                            self.logger.debug("New option added to config: "
                                          f"{key}/{k}")
                             dict2[key][k] = v
                             modified += 1
 
-        logger.debug("Loading configuration, please wait...")
         add_new_options(DEFAULT_CONFIG, Config.CONFIG)
         Config.CONFIG = process_config(Config.CONFIG, DEFAULT_CONFIG)
         test_values(Config.CONFIG, DEFAULT_CONFIG)
