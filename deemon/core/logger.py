@@ -4,7 +4,7 @@ from logging.handlers import RotatingFileHandler
 import tqdm
 
 LOG_FORMATS = {
-    'DEBUG': '%(asctime)s [%(levelname)s] %(name)s: %(message)s',
+    'DEBUG': '%(asctime)s %(levelname)s [%(module)s:%(funcName)s] %(message)s',
     'INFO': '%(asctime)s [%(levelname)s] %(name)s: %(message)s',
 }
 
