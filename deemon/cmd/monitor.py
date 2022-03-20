@@ -83,6 +83,25 @@ class Monitor:
         self.record_type = record_type
         self.download_path = download_path
         self.debugger("SetConfig", {'bitrate': bitrate, 'alerts': alerts, 'type': record_type, 'path': download_path})
+def process_imports():
+    logger.info("Processing artists from file/directory")
+    import_path = config['runtime']['files']
+    for im in import_path:
+        if Path(im).is_file():
+            imported_file = dataprocessor.read_file_as_csv(im)
+            artist_list = dataprocessor.process_input_file(imported_file)
+            logger.info(f"Discovered {len(artist_list)} artist(s) from file/directory")
+            if isinstance(artist_list[0], int):
+                [config['runtime']['artist_id'].append(x) for x in artist_list]
+            else:
+                [config['runtime']['artist'].append(x) for x in artist_list]
+        elif Path(im).is_dir():
+            import_list = [x.relative_to(im).name for x in sorted(Path(im).iterdir()) if x.is_dir()]
+            if import_list:
+                [config['runtime']['artist'].append(x) for x in import_list]
+        else:
+            logger.error(f"File or directory not found: {im}")
+            return
 
     def set_options(self, remove, dl_all, search):
         self.remove = True if remove else False
@@ -95,13 +114,49 @@ class Monitor:
             if not payload:
                 payload = ""
             logger.debug(f"DEBUG_MODE: {message} {str(payload)}")
+def process_urls():
+    logger.info("Processing URL(s)")
+    for url in config['runtime']['url']:
+        url_parts = url.split("/")
+        url_type = url_parts[-2]
 
     def get_best_result(self, api_result) -> list:
         name = api_result['query']
+        try:
+            url_id = int(url_parts[-1])
+        except ValueError:
+            logger.error(f"Unsupported URL - Invalid ID: {url}")
+            continue
 
         if self.is_search:
             logger.debug("Waiting for user input...")
             prompt = self.prompt_search(name, api_result['results'])
+        if url_type not in ["artist", "playlist"]:
+            logger.error(f"Unsupported URL - Unknown Type: {url}")
+            continue
+        else:
+            logger.info(f"Found URL with type '{url_type}' and ID of '{url_id}'")
+            if url_type == "artist":
+                config['runtime']['artist_id'].append(url_id)
+            elif url_type == "playlist":
+                config['runtime']['playlist'].append(url_id)
+
+
+def get_best_result(api_result):
+    """ Filter results or prompt user for selection when
+    monitoring artist by name
+
+    Returns: dict
+    """
+    name = api_result['query']
+    matches = [r for r in api_result['results'] if r['name'].lower() == name.lower()]
+    if len(matches) == 1:
+        return matches[0]
+    elif len(matches) > 1:
+        logger.debug(f"Multiple matches were found for artist \"{api_result['query']}\"")
+        if config['app']['prompt_duplicates']:
+            logger.debug("Prompting for duplicate artist selection...")
+            prompt = prompt_search(name, matches)
             if prompt:
                 logger.debug(f"User selected {prompt}")
                 return [prompt]
@@ -156,6 +211,7 @@ class Monitor:
         for artist in pbar:
             if artist['id'] in existing:
                 logger.info(f"   - Already monitoring {artist['name']}, skipping...")
+                return prompt
             else:
                 artist.update({'bitrate': self.bitrate, 'alerts': self.alerts, 'record_type': self.record_type,
                                'download_path': self.download_path, 'profile_id': config.profile_id(),
@@ -219,6 +275,8 @@ class Monitor:
         to_process = [item for elem in to_monitor for item in elem if len(item)]
         if self.build_artist_query(to_process):
             self.call_refresh()
+                logger.info(f"No selection made, skipping {name}...")
+                return
         else:
             print("")
             logger.info("No new artists have been added, skipping refresh.")
@@ -248,14 +306,26 @@ class Monitor:
             artist_list = dataprocessor.process_input_file(imported_file)
             if isinstance(artist_list[0], int):
                 self.artist_ids(artist_list)
+            return matches[0]
+    elif not len(matches):
+        logger.debug(f"   [!] No matches were found for artist \"{api_result['query']}\"")
+        if config.prompt_no_matches() and len(api_result['results']):
+            logger.debug("Waiting for user input...")
+            prompt = prompt_search(name, api_result['results'])
+            if prompt:
+                logger.debug(f"User selected {prompt}")
+                return prompt
             else:
                 self.artists(artist_list)
         elif Path(import_path).is_dir():
             import_list = [x.relative_to(import_path).name for x in sorted(Path(import_path).iterdir()) if x.is_dir()]
             if import_list:
                 self.artists(import_list)
+                logger.info(f"No selection made, skipping {name}...")
+                return
         else:
             logger.error(f"File or directory not found: {import_path}")
+            logger.info(f"   [!] Artist {name} not found")
             return
 
     # @performance.timeit
@@ -275,6 +345,12 @@ class Monitor:
         else:
             print("")
             logger.info("No new playlists have been added, skipping refresh.")
+def prompt_search(value, api_result):
+    menu = search.Search()
+    ask_user = menu.artist_menu(value, api_result, True)
+    if ask_user:
+        return {'id': ask_user['id'], 'name': ask_user['name']}
+    return logger.debug("No artist selected, skipping...")
 
     # @performance.timeit
     def purge_artists(self, names: list = None, ids: list = None):
@@ -304,3 +380,19 @@ class Monitor:
                     logger.info(f"\nNo longer monitoring {monitored['title']}")
                 else:
                     logger.info(f"{i} is not being monitored yet")
+def get_monitor_label():
+    if config['runtime']['artist']:
+        if len(config['runtime']['artist']) > 1:
+            return "artists"
+        else:
+            return "artist"
+    elif config['runtime']['artist_id']:
+        if len(config['runtime']['artist_id']) > 1:
+            return "artist IDs"
+        else:
+            return "artist ID"
+    elif config['runtime']['playlist']:
+        if len(config['runtime']['playlist']) > 1:
+            return "playlists"
+        else:
+            return "playlist"
