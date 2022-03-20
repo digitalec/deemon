@@ -1,9 +1,22 @@
-ALLOWED_VALUES = {
-    'bitrate': {"128": 1, "320": 3, "FLAC": 9},
-    'alerts': [True, False],
-    'record_types': ['album', 'ep', 'single', 'unofficial', 'comps', 'feat'],
-    'release_channel': ['stable', 'beta']
+RECORD_TYPES = {
+    1: 'album',
+    2: 'ep',
+    4: 'single',
+    8: 'unofficial',
+    16: 'comps',
+    32: 'feat',
 }
+
+BITRATES = {
+    1: '128',
+    3: '320',
+    9: 'FLAC',
+}
+
+RELEASE_CHANNELS = [
+    'beta',
+    'stable',
+]
 
 SENSITIVE_KEYS = [
     'arl',
