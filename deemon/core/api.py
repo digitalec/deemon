@@ -89,14 +89,16 @@ class PlatformAPI:
             try:
                 result = self.api.get_artist(query)
             except deezer.errors.GWAPIError as e:
-                logger.debug(f"API error: {e}")
+                logger.info(f"An API error occurred while looking up artist ID {query}. See logs for more info.")
+                logger.debug(f"The API error for artist ID {query} was:{e}")
                 return {}
             return {'id': int(result['ART_ID']), 'name': result['ART_NAME']}
         else:
             try:
                 result = self.api.get_artist(query)
             except deezer.errors.DataException as e:
-                logger.debug(f"API error: {e}")
+                logger.info(f"An API error occurred while looking up artist ID {query}. See logs for more info.")
+                logger.debug(f"The API error for artist ID {query} was: {e}")
                 return {}
             return {'id': result['id'], 'name': result['name']}
         
