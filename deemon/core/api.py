@@ -101,9 +101,6 @@ class PlatformAPI:
                 logger.debug(f"The API error for artist ID {query} was: {e}")
                 return {}
             return {'id': result['id'], 'name': result['name']}
-        
-    def get_album(self, query: int) -> dict:
-        """Return a dictionary from API containing album info"""
 
     def get_extra_release_info(self, query: dict):
         album = {'id': query['album_id'], 'label': None}
