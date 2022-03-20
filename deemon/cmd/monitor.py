@@ -1,5 +1,5 @@
 import logging
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 from tqdm import tqdm
@@ -7,14 +7,61 @@ from tqdm import tqdm
 from deemon.cmd import search
 from deemon.cmd.refresh import Refresh
 from deemon.core.api import PlatformAPI
-from deemon.core.config import Config as config
 from deemon.core.db import Database
 from deemon.utils import dataprocessor, ui
+from deemon.core.config import Config
+from deemon.utils import dataprocessor
 
 logger = logging.getLogger(__name__)
 
+config = Config().CONFIG
+
+
+def monitor(remove=False):
+    # TODO: Need to find a home for this later
+    max_threads = 50
+    api = PlatformAPI()
+    monitor_queue = []
+    monitor_label = get_monitor_label()
+
+    if config['runtime']['file']:
+        process_imports()
+
+    if config['runtime']['url']:
+        process_urls()
+
+    futures_list = []
+    with tqdm(desc=f"Looking up {monitor_label}, please wait...", total=len(config['runtime']['artist'])) as pbar:
+        with ThreadPoolExecutor(max_workers=max_threads) as ex:
+            if config['runtime']['artist']:
+                logger.debug("Spawning threads for artist name API lookup")
+                futures_list += [ex.submit(api.search_artist, i) for i in config['runtime']['artist']]
+            elif config['runtime']['artist_id']:
+                logger.debug("Spawning threads for artist ID API lookup")
+                futures_list += [ex.submit(api.get_artist_by_id, i) for i in config['runtime']['artist_id']]
+            elif config['runtime']['playlist']:
+                monitor_label = "playlist(s)"
+                logger.debug("Spawning threads for playlist ID API lookup")
+                futures_list += [ex.submit(api.get_playlist, i) for i in config['runtime']['playlist']]
+
+            result = []
+            for future in as_completed(futures_list):
+                if future.result():
+                    result.append(future.result())
+                pbar.update(1)
+
+    for r in result:
+        if isinstance(r, dict) and r.get('query'):
+            selected_result = get_best_result(r)
+            if selected_result:
+                monitor_queue.append(selected_result)
+        else:
+            monitor_queue.append(r)
 
 class Monitor:
+    monitor_queue = sorted(monitor_queue, key=lambda i: i['name'])
+    logger.info(f"Setting up {len(monitor_queue)} {monitor_label} for monitoring")
+    logger.debug(monitor_queue)
 
     def __init__(self):
         self.bitrate = None
