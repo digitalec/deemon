@@ -5,6 +5,7 @@ from pathlib import Path
 
 import requests
 from packaging.version import parse as parse_version
+from .paths import get_appdata_dir
 
 logger = logging.getLogger(__name__)
 
