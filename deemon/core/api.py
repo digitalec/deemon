@@ -66,13 +66,21 @@ class PlatformAPI:
             return "free"
 
     #TODO GW API appears to ignore limit; must implement afterwards
-    def search_artist(self, query: str, limit: int = 5) -> dict:
+    def search_artist(self, query: str, limit: int = 5):
         """
         Return a list of dictionaries from API containing {'id': int, 'name': str}
         """
         if self.platform == "deezer-gw":
-            result = self.api.search(query=query, limit=limit)['ARTIST']['data']
             api_result = []
+            try:
+                result = self.api.search(query=query, limit=limit)['ARTIST']['data']
+            except json.decoder.JSONDecodeError:
+                logger.error(f"   [!] Empty response from API while searching for artist {query}, retrying...")
+                try:
+                    result = self.api.search(query=query, limit=limit)['ARTIST']['data']
+                except json.decoder.JSONDecodeError:
+                    logger.error(f"   [!] API still sending empty response while searching for artist {query}")
+                    return []
             for r in result:
                 api_result.append({'id': int(r['ART_ID']), 'name': r['ART_NAME']})
         else:
@@ -90,6 +98,13 @@ class PlatformAPI:
             except deezer.errors.GWAPIError as e:
                 logger.debug(f"API error: {e}")
                 return {}
+            except json.decoder.JSONDecodeError:
+                logger.error(f"   [!] Empty response from API while getting data for artist ID {query}, retrying...")
+                try:
+                    result = self.api.get_artist(query)
+                except json.decoder.JSONDecodeError:
+                    logger.error(f"   [!] API still sending empty response for artist ID {query}")
+                    return {}
             return {'id': int(result['ART_ID']), 'name': result['ART_NAME']}
         else:
             try:
@@ -107,6 +122,13 @@ class PlatformAPI:
             except deezer.errors.GWAPIError as e:
                 logger.debug(f"API error: {e}")
                 return {}
+            except json.decoder.JSONDecodeError:
+                logger.error(f"   [!] Empty response from API while getting data for album ID {query}, retrying...")
+                try:
+                    result = self.api.get_album(query)
+                except json.decoder.JSONDecodeError:
+                    logger.error(f"   [!] API still sending empty response for album ID {query}")
+                    return {}
             return {'id': int(result['ALB_ID']), 'title': result['ALB_TITLE'], 'artist': {'name': result['ART_NAME']}}
         else:
             logger.warning("Please enable the fast_api for album downloads")
@@ -144,6 +166,14 @@ class PlatformAPI:
                                  f"{query['artist_name']} ({query['artist_id']})")
                 query['releases'] = []
                 return query
+            except json.decoder.JSONDecodeError:
+                logger.error(f"   [!] Empty response from API while getting data for discography for {query['artist_name']}, retrying...")
+                try:
+                    result = self.api.get_artist_discography(art_id=query['artist_id'], limit=limit)['data']
+                except json.decoder.JSONDecodeError:
+                    logger.error(f"   [!] API still sending empty response for discography for {query['artist_name']}")
+                    query['releases'] = []
+                    return query
             api_result = []
             for r in result:
                 # Remove ID check to get compilations
@@ -210,17 +240,40 @@ class PlatformAPI:
     def get_playlist(query: int):
         try:
             api_result = Deezer().api.get_playlist(query)
-            return {'id': query, 'title': api_result['title'],
-                    'link': f"https://deezer.com/playlist/{str(api_result['id'])}"}
         except deezer.errors.PermissionException:
             logger.warning(f"   [!] Playlist ID {query} is private")
+            return
         except deezer.errors.DataException:
             logger.warning(f"   [!] Playlist ID {query} was not found")
+            return
+        except json.decoder.JSONDecodeError:
+            logger.error(f"   [!] Empty response from API while getting data for playlist ID {query}, retrying...")
+            try:
+                api_result = Deezer().api.get_playlist(query)
+            except json.decoder.JSONDecodeError:
+                logger.error(f"   [!] API still sending empty response while getting data for playlist ID {query}")
+                return
+        return {'id': query, 'title': api_result['title'],
+                'link': f"https://deezer.com/playlist/{str(api_result['id'])}"}
 
     @staticmethod
     def get_playlist_tracks(query: dict):
         track_list = []
-        api_result = Deezer().api.get_playlist(query['id'])
+        try:
+            api_result = Deezer().api.get_playlist(query['id'])
+        except deezer.errors.PermissionException:
+            logger.warning(f"   [!] Playlist ID {query} is private")
+            return
+        except deezer.errors.DataException:
+            logger.warning(f"   [!] Playlist ID {query} was not found")
+            return
+        except json.decoder.JSONDecodeError:
+            logger.error(f"   [!] Empty response from API while getting data for playlist ID {query['id']}")
+            try:
+                api_result = Deezer().api.get_playlist(query['id'])
+            except json.decoder.JSONDecodeError:
+                logger.error(f"   [!] API still sending empty response while getting data for playlist ID {query['id']}")
+                return
         for track in api_result['tracks']['data']:
             track_list.append({'id': track['id'], 'title': track['title'],
                                'artist_id': track['artist']['id'],
