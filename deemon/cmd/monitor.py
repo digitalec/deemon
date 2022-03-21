@@ -5,6 +5,7 @@ from pathlib import Path
 from tqdm import tqdm
 
 from deemon.cmd import search
+from deemon.core.db import Database
 from deemon.core.api import PlatformAPI
 from deemon.core.config import Config
 from deemon.utils import dataprocessor
@@ -14,7 +15,7 @@ logger = logging.getLogger(__name__)
 config = Config().CONFIG
 
 
-def monitor(remove=False):
+def monitor():
     # TODO: Need to find a home for this later
     max_threads = 50
     api = PlatformAPI()
@@ -55,9 +56,12 @@ def monitor(remove=False):
         else:
             monitor_queue.append(r)
 
-    monitor_queue = sorted(monitor_queue, key=lambda i: i['name'])
-    logger.info(f"Setting up {len(monitor_queue)} {monitor_label} for monitoring")
-    logger.debug(monitor_queue)
+    if len(monitor_queue):
+        monitor_queue = sorted(monitor_queue, key=lambda i: i['name'])
+        logger.info(f"Setting up {len(monitor_queue)} {monitor_label} for monitoring")
+        setup_monitoring(monitor_queue)
+    else:
+        return logger.info("No artists to setup for monitoring.")
 
 
 def process_imports():
@@ -167,6 +171,47 @@ def get_monitor_label():
             return "playlists"
         else:
             return "playlist"
+
+
+def setup_monitoring(queue):
+    db = Database()
+    artist_queue = []
+    playlist_queue = []
+
+    monitored_artists = db.get_all_monitored_artist_ids()
+    monitored_playlists = db.get_all_monitored_playlist_ids()
+
+    extras = {
+        'bitrate': config['runtime']['bitrate'],
+        'alerts': config['runtime']['alerts'],
+        'record_type': config['runtime']['record_type'],
+        'download_path': config['runtime']['download_path'],
+        'profile_id': config['runtime']['profile_id'],
+        'transaction_id': config['runtime']['transaction_id'],
+    }
+
+    [x.update(extras) for x in queue]
+
+    for item in queue:
+        if item.get('link'):
+            if item['id'] in monitored_playlists:
+                logger.info(f"   - Already monitoring playlist {item['name']} ({item['id']})")
+            else:
+                playlist_queue.append(item)
+        else:
+            if item['id'] in monitored_artists:
+                logger.info(f"   - Already monitoring artist {item['name']} ({item['id']})")
+            else:
+                artist_queue.append(item)
+
+    if len(artist_queue):
+        db.new_transaction()
+        db.fast_monitor(artist_queue)
+    elif len(playlist_queue):
+        db.new_transaction()
+        db.fast_monitor_playlist(playlist_queue)
+    db.commit()
+
 
 def remove(items: list, playlist=False):
     db = Database()
