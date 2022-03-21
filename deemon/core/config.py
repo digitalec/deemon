@@ -3,9 +3,9 @@ import yaml
 import logging
 from pathlib import Path
 
-from deemon.utils import paths
-from deemon.core.exceptions import UnknownValue, PropertyTypeMismatch
-from deemon.utils.constants import ALLOWED_VALUES, SENSITIVE_KEYS
+from deemon.utils import paths, validate
+from deemon.core.exceptions import PropertyTypeMismatch, InvalidValue
+from deemon.utils.constants import SENSITIVE_KEYS
 
 DEFAULT_CONFIG = {
     "app": {
@@ -105,6 +105,12 @@ class Config(object):
             "playlist": [],
             "file": [],
             "url": [],
+            "bitrate": None,
+            "alerts": None,
+            "record_type": None,
+            "download_path": None,
+            "transaction_id": None,
+            "profile_id": Config.CONFIG['defaults']['profile'],
         }
 
     @staticmethod
@@ -143,63 +149,17 @@ class Config(object):
                     if isinstance(dict1[key], dict):
                         test_values(dict1[key], dict2[key])
                     else:
-                        if key in ALLOWED_VALUES:
-                            if isinstance(ALLOWED_VALUES[key], dict):
-                                if key == "bitrate" and value in ["1", "3", "9"]:
-                                    if value == "1":
-                                        dict1['bitrate'] = "128"
-                                    if value == "3":
-                                        dict1['bitrate'] = "320"
-                                    if value == "9":
-                                        dict1['bitrate'] = "FLAC"
-                                    modified += 1
-                                elif value in ALLOWED_VALUES[key].keys():
-                                    dict1_tmp = dict1
-                                    pos = find_position(dict1_tmp, key)
-                                    for i in pos[:-1]:
-                                        dict1_tmp = dict1.setdefault(i, {})
-                                    dict1_tmp[key] = ALLOWED_VALUES[key][value]
-                                    modified += 1
-                                elif value in ALLOWED_VALUES[key].values():
-                                    continue
-                                else:
-                                    raise UnknownValue(
-                                        f"Unknown value in config - '{key}': {value} (type: {type(value).__name__})")
-                            elif isinstance(ALLOWED_VALUES[key], list):
-                                if isinstance(dict1[key], list):
-                                    for v in dict1[key]:
-                                        if v not in ALLOWED_VALUES[key]:
-                                            raise UnknownValue(f"Unknown value in config for {key}: {v}")
-                            elif not isinstance(dict1[key], type(dict2[key])):
-                                if isinstance(dict2[key], bool):
-                                    if dict1[key] == 1:
-                                        dict1[key] = True
-                                        modified += 1
-                                    if dict1[key] == 0:
-                                        dict1[key] = False
-                                        modified += 1
-                                else:
-                                    raise UnknownValue(
-                                        f"Unknown value in config - '{key}': {value} (type: {type(value).__name__})")
-                            else:
-                                if value in ALLOWED_VALUES[key]:
-                                    continue
-                                else:
-                                    raise UnknownValue(
-                                        f"Unknown value in config - '{key}': {value} (type: {type(value).__name__})")
+                        if key == "bitrate" and not validate.validate_bitrates(value):
+                            raise InvalidValue(f"Invalid bitrate: {value}")
+                        elif key == "record_type":
+                            invalid_rt = validate.validate_record_type(value)
+                            if len(invalid_rt):
+                                raise InvalidValue(f"Invalid record type(s): {value}")
+                        elif key == "release_channel" and not validate.validate_release_channel(value):
+                            raise InvalidValue(f"Invalid release channel: {value}")
                         elif not isinstance(dict1[key], type(dict2[key])):
-                            if isinstance(dict2[key], bool):
-                                if dict1[key] == 1:
-                                    dict1[key] = True
-                                    modified += 1
-                                if dict1[key] == 0:
-                                    dict1[key] = False
-                                    modified += 1
-                            else:
-                                raise PropertyTypeMismatch(
-                                    f"Invalid type in config - '{str(key)}' incorrectly set as {type(value).__name__}")
-                        else:
-                            pass
+                            raise PropertyTypeMismatch(f"Invalid type in config - '{str(key)}' incorrectly set "
+                                                       f"as {type(value).__name__}")
 
         def add_new_options(dict1, dict2):
             nonlocal modified

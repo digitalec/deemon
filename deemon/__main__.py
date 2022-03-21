@@ -8,7 +8,7 @@ from deemon import VERSION
 from deemon.core.config import Config
 from deemon.core.logger import setup_logger
 from deemon.utils import paths
-from deemon.utils.constants import ALLOWED_VALUES
+from deemon.utils.constants import RECORD_TYPES, BITRATES
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=f'DEEMON_DESCRIPTION', formatter_class=argparse.RawTextHelpFormatter)
@@ -43,9 +43,9 @@ if __name__ == "__main__":
     parser_c.add_argument('-m', '--monitored', action='store_true', help='download all monitored artists')
     parser_c.add_argument('-f', '--file', metavar='FILE', type=str, help='download batch of artists '
                                                                          'and/or artist IDs from file')
-    parser_c.add_argument('-b', '--bitrate', type=str.upper, choices=ALLOWED_VALUES['bitrate'], default=None,
+    parser_c.add_argument('-b', '--bitrate', type=str.upper, choices=BITRATES.values(), default=None,
                           metavar='BITRATE', help='specify bitrate')
-    parser_c.add_argument('-t', '--record-type', type=str.lower, choices=ALLOWED_VALUES['record_types'], default=None,
+    parser_c.add_argument('-t', '--record-type', type=str.lower, choices=RECORD_TYPES.values(), default=None,
                           metavar='TYPE', help='specify record type')
     parser_c.add_argument('-o', '--download-path', metavar='PATH', type=str, help='specify download path')
     parser_c.add_argument('-a', '--after', metavar='YYYY-MM-DD', help='download if released after this date')
@@ -59,7 +59,7 @@ if __name__ == "__main__":
                           help='monitor by artist ID, separated '
                                'by comma')
     parser_d.add_argument('-a', '--alerts', action='store_true', default=None, help='enable new release alerts')
-    parser_d.add_argument('-b', '--bitrate', type=str.upper, choices=ALLOWED_VALUES['bitrate'], default=None,
+    parser_d.add_argument('-b', '--bitrate', type=str.upper, choices=BITRATES.values(), default=None,
                           help='specify bitrate')
     parser_d.add_argument('-D', '--download', action='store_true', help='download releases matching record type')
     parser_d.add_argument('-o', '--download-path', type=str, help='specify download path')
@@ -69,7 +69,7 @@ if __name__ == "__main__":
                                                                                   'separated by comma')
     parser_d.add_argument('-T', '--time-machine', metavar='YYYY-MM-DD', type=str, help='releases after this date '
                                                                                        'will be downloaded')
-    parser_d.add_argument('-t', '--record-type', type=str.lower, choices=ALLOWED_VALUES['record_types'], default=None,
+    parser_d.add_argument('-t', '--record-type', type=str.lower, choices=RECORD_TYPES.values(), default=None,
                           metavar='TYPE', nargs='+', help='specify record type')
 
     # Profile command
@@ -89,7 +89,7 @@ if __name__ == "__main__":
     # Remove command
     remove_help_text = "remove an artist or playlist from monitoring"
     parser_l = subparsers.add_parser('remove', help=remove_help_text, description=remove_help_text)
-    parser_l.add_argument('name', nargs='*', type=str, help='name of artist(s) to remove from monitoring')
+    parser_l.add_argument('id', nargs='*', metavar="ID", type=str, help='remove name or ID from monitoring')
     parser_l.add_argument('-p', '--playlist', action='store_true', help='remove playlist rather than artist')
 
     # Reset command

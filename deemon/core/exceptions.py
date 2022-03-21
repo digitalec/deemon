@@ -8,3 +8,7 @@ class PropertyTypeMismatch(Exception):
 
 class UnknownValue(Exception):
     pass
+
+
+class InvalidValue(Exception):
+    pass
