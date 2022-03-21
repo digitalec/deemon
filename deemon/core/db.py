@@ -255,7 +255,7 @@ class Database(object):
         query = ("INSERT INTO monitor "
                  "(artist_id, artist_name, bitrate, record_type, alerts, download_path, profile_id, trans_id) "
                  "VALUES "
-                 "(:artist_id, :artist_name, :bitrate, :record_type, :alerts, :download_path, :profile_id, :trans_id)")
+                 "(:artist_id, :artist_name, :bitrate, :record_type, :alerts, :download_path, :profile_id, :transaction_id)")
         self.query(query, vals)
         self.commit()
 
@@ -292,7 +292,7 @@ class Database(object):
                   'trans_id': config['runtime']['transaction_id']}
         query = ("INSERT INTO playlists ('id', 'title', 'url', 'bitrate', 'alerts', 'download_path',"
                  "'profile_id', 'trans_id') "
-                 "VALUES (:id, :title, :url, :bitrate, :alerts, :download_path, :profile_id, :trans_id)")
+                 "VALUES (:id, :title, :url, :bitrate, :alerts, :download_path, :profile_id, :transaction_id)")
         self.query(query, values)
         self.commit()
 
@@ -373,7 +373,7 @@ class Database(object):
                   'trans_id': config['runtime']['transaction_id']}
         query = ("INSERT INTO 'playlist_tracks' "
                  "('track_id', 'playlist_id', 'artist_id', 'artist_name', 'track_name', 'track_added', 'profile_id',"
-                 "'trans_id') VALUES (:tid, :pid, :aid, :aname, :tname, :time, :profile_id, :trans_id)")
+                 "'trans_id') VALUES (:tid, :pid, :aid, :aname, :tname, :time, :profile_id, :transaction_id)")
         return self.query(query, values)
 
     def create_profile(self, settings: dict):
@@ -525,12 +525,12 @@ class Database(object):
 
     def fast_monitor(self, values):
         self.cursor.executemany(
-            "INSERT OR REPLACE INTO monitor (artist_id, artist_name, bitrate, record_type, alerts, profile_id, download_path, trans_id) VALUES (:id, :name, :bitrate, :record_type, :alerts, :profile_id, :download_path, :trans_id)",
+            "INSERT OR REPLACE INTO monitor (artist_id, artist_name, bitrate, record_type, alerts, profile_id, download_path, trans_id) VALUES (:id, :name, :bitrate, :record_type, :alerts, :profile_id, :download_path, :transaction_id)",
             values)
 
     def fast_monitor_playlist(self, values):
         self.cursor.executemany(
-            "INSERT OR REPLACE INTO playlists (id, title, url, bitrate, alerts, profile_id, download_path, trans_id) VALUES (:id, :title, :link, :bitrate, :alerts, :profile_id, :download_path, :trans_id)",
+            "INSERT OR REPLACE INTO playlists (id, title, url, bitrate, alerts, profile_id, download_path, trans_id) VALUES (:id, :title, :link, :bitrate, :alerts, :profile_id, :download_path, :transaction_id)",
             values)
 
     def insert_multiple(self, table, values):
