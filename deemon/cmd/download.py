@@ -278,9 +278,10 @@ class Download:
                 queue_filtered_releases(artist_id_result)
 
         def process_album_by_id(i):
-            logger.debug("Processing album by name")
+            logger.debug("Processing album by ID")
             album_id_result = get_api_result(album_id=i)
             if not album_id_result:
+                logger.debug(f"Album ID {i} was not found")
                 return
             logger.debug(f"Requested Album: {i}, "
                          f"Found: {album_id_result['artist']['name']} - {album_id_result['title']}")
