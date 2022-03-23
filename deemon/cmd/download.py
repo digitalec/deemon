@@ -1,3 +1,4 @@
+import csv
 import logging
 import os
 from pathlib import Path
@@ -10,17 +11,18 @@ from plexapi.server import PlexServer
 
 from deemon import utils
 from deemon.core import dmi, db, api
-from deemon.core.config import Config as config
+from deemon.core.config import Config
 from deemon.utils import ui, validate, startup, dates
 
 logger = logging.getLogger(__name__)
 
+config = Config().CONFIG
+
 
 class QueueItem:
-    # TODO - Accept new playlist tracks for output/alerts
-    def __init__(self, artist=None, album=None, track=None, playlist=None,
-                 bitrate: str = None, download_path: str = None,
-                 release_full: dict = None):
+
+    def __init__(self, payload):
+
         self.artist_name = None
         self.album_id = None
         self.album_title = None
@@ -28,44 +30,14 @@ class QueueItem:
         self.track_title = None
         self.url = None
         self.playlist_title = None
-        self.bitrate = bitrate or config.bitrate()
-        self.download_path = download_path or config.download_path()
+        self.bitrate = config['defaults']['bitrate']
+        self.download_path = config['defaults']['download_path']
         self.release_type = None
-        
-        if release_full:
-            self.artist_name = release_full['artist_name']
-            self.album_id = release_full['id']
-            self.album_title = release_full['title']
-            self.url = f"https://www.deezer.com/album/{self.album_id}"
-            self.release_type = release_full['record_type']
 
-        if artist:
-            try:
-                self.artist_name = artist["artist_name"]
-            except KeyError:
-                self.artist_name = artist["name"]
-            if not album and not track:
-                self.url = artist["link"]
-
-        if album:
-            if not artist:
-                self.artist_name = album["artist"]["name"]
-            self.album_id = album["id"]
-            self.album_title = album["title"]
-            try:
-                self.url = album["link"]
-            except KeyError:
-                self.url = f"https://www.deezer.com/album/{album['id']}"
-
-        if track:
-            self.artist_name = track["artist"]["name"]
-            self.track_id = track["id"]
-            self.track_title = track["title"]
-            self.url = track["link"]
-
-        if playlist:
-            self.url = playlist["url"]
-            self.playlist_title = playlist["title"]
+        for key, val in payload.items():
+            if key == 'album_id':
+                setattr(self, 'url', f'https://www.deezer.com/album/{val}')
+            setattr(self, key, val)
 
 
 def get_deemix_bitrate(bitrate: str):
