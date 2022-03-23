@@ -350,3 +350,10 @@ class Download:
             else:
                 print("")
                 logger.info("No releases found matching applied filters.")
+
+
+def load_queue_csv(queue):
+    with open(queue) as f:
+        data = csv.DictReader(f)
+        new_data = [x for x in data]
+        return new_data
