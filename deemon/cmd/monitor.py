@@ -213,31 +213,32 @@ def setup_monitoring(queue):
     db.commit()
 
 
-def remove(items: list, playlist=False):
+def remove(names: list, by_id=False, playlist=False):
     db = Database()
-    by_id = None
-    try:
-        by_id = [int(x) for x in items]
-    except ValueError:
-        pass
+
     if by_id:
-        for id in by_id:
+        try:
+            by_id = [int(x) for x in names]
+        except ValueError as e:
+            return logger.error(f"Invalid ID detected: {e}")
+
+        for item_id in by_id:
             if playlist:
-                monitored = db.get_monitored_playlist_by_id(id)
+                monitored = db.get_monitored_playlist_by_id(item_id)
                 if monitored:
                     db.remove_monitored_playlists(monitored['id'])
                     logger.info(f"No longer monitoring {monitored['title']}")
                 else:
-                    logger.info(f"Playlist ID {id} not found")
+                    logger.info(f"Playlist ID {item_id} not found")
             else:
-                monitored = db.get_monitored_artist_by_id(id)
+                monitored = db.get_monitored_artist_by_id(item_id)
                 if monitored:
                     db.remove_monitored_artist(monitored['id'])
                     logger.info(f"No longer monitoring {monitored['name']}")
                 else:
-                    logger.info(f"Artist ID {id} not found")
+                    logger.info(f"Artist ID {item_id} not found")
     else:
-        for name in items:
+        for name in names:
             if playlist:
                 monitored = db.get_monitored_playlist_by_name(name)
                 if monitored:

@@ -84,8 +84,8 @@ def cli(args):
     elif args.command == 'refresh':
         pass
     elif args.command == 'remove':
-        to_remove = dataprocessor.csv_to_list(args.id)
-        monitor.remove(to_remove, playlist=args.playlist)
+        to_remove = dataprocessor.csv_to_list(args.name)
+        monitor.remove(to_remove, by_id=args.id, playlist=args.playlist)
     elif args.command == 'reset':
         pass
     elif args.command == 'rollback':

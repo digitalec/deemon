@@ -89,7 +89,8 @@ if __name__ == "__main__":
     # Remove command
     remove_help_text = "remove an artist or playlist from monitoring"
     parser_l = subparsers.add_parser('remove', help=remove_help_text, description=remove_help_text)
-    parser_l.add_argument('id', nargs='*', metavar="ID", type=str, help='remove name or ID from monitoring')
+    parser_l.add_argument('name', nargs='*', metavar="name", type=str, help='remove name or ID from monitoring')
+    parser_l.add_argument('-i', '--id', action='store_true', help='remove by ID rather than name')
     parser_l.add_argument('-p', '--playlist', action='store_true', help='remove playlist rather than artist')
 
     # Reset command
