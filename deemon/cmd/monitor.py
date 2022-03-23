@@ -249,7 +249,7 @@ def remove(names: list, by_id=False, playlist=False):
             else:
                 monitored = db.get_monitored_artist_by_name(name)
                 if monitored:
-                    db.remove_monitored_artist(monitored['artist_id'])
-                    logger.info(f"No longer monitoring {monitored['artist_name']}")
+                    db.remove_monitored_artist(monitored['id'])
+                    logger.info(f"No longer monitoring {monitored['name']}")
                 else:
                     logger.info(f"Artist {name} not found")

@@ -8,7 +8,7 @@ from packaging.version import parse as parse_version
 
 from deemon import DB_VERSION, VERSION
 from deemon.core.config import Config
-from deemon.utils import startup, performance, dates
+from deemon.utils import startup, performance, dates, ui
 
 logger = logging.getLogger(__name__)
 config = Config().CONFIG
@@ -63,15 +63,16 @@ class Database(object):
         logger.debug("DATABASE CREATION IN PROGRESS!")
 
         self.query("CREATE TABLE monitor ("
-                   "'artist_id' INTEGER,"
-                   "'artist_name' TEXT,"
+                   "'id' INTEGER,"
+                   "'name' TEXT,"
                    "'bitrate' TEXT,"
                    "'record_type' TEXT,"
                    "'alerts' INTEGER,"
                    "'profile_id' INTEGER DEFAULT 1,"
                    "'download_path' TEXT,"
-                   "'refreshed' INTEGER DEFAULT 0,"
-                   "'trans_id' INTEGER)")
+                   "'trans_id' INTEGER,"
+                   "CONSTRAINT unique_artist UNIQUE (id, profile_id)"
+                   "ON CONFLICT IGNORE)")
 
         self.query("CREATE TABLE playlists ("
                    "'id' INTEGER UNIQUE,"
@@ -81,8 +82,9 @@ class Database(object):
                    "'alerts' INTEGER,"
                    "'profile_id' INTEGER DEFAULT 1,"
                    "'download_path' TEXT,"
-                   "'refreshed' INTEGER DEFAULT 0,"
-                   "'trans_id' INTEGER)")
+                   "'trans_id' INTEGER,"
+                   "CONSTRAINT unique_playlist UNIQUE (id, profile_id)"
+                   "ON CONFLICT IGNORE)")
 
         self.query("CREATE TABLE playlist_tracks ("
                    "'track_id' INTEGER,"
@@ -132,12 +134,33 @@ class Database(object):
                    "'profile_id' INTEGER DEFAULT 1,"
                    "PRIMARY KEY('id' AUTOINCREMENT))")
 
+        self.query("CREATE TABLE queue ("
+                   "'artist_name'	TEXT,"
+                   "'artist_id'	INTEGER,"
+                   "'album_title'	TEXT,"
+                   "'track_id'	INTEGER,"
+                   "'track_title'	TEXT,"
+                   "'url'	TEXT,"
+                   "'playlist_title'	TEXT,"
+                   "'bitrate'	TEXT,"
+                   "'download_path'	TEXT,"
+                   "'release_type'	INTEGER,"
+                   "'profile_id'	INTEGER)")
+
+        self.query("CREATE TABLE pending_refresh ("
+                   "id INTEGER NOT NULL,"
+                   "profile_id INTEGER NOT NULL,"
+                   "playlist BOOLEAN (1) NOT NULL,"
+                   "UNIQUE (id, profile_id, playlist)"
+                   " ON CONFLICT IGNORE)")
+
         self.query("CREATE UNIQUE INDEX 'idx_property' ON 'deemon' ('property')")
         self.query("CREATE INDEX 'artist' ON 'releases' ('artist_id', 'profile_id')")
         self.query(f"INSERT INTO 'deemon' ('property', 'value') VALUES ('version', '{DB_VERSION}')")
         self.query("INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('latest_ver', '')")
         self.query("INSERT INTO 'deemon' ('property', 'value') VALUES ('last_update_check', 0)")
-        self.query("INSERT INTO 'deemon' ('property', 'value') VALUES ('release_channel', 'stable')")
+        self.query(f"INSERT INTO 'deemon' ('property', 'value') "
+                   f"VALUES ('release_channel', '{config['app']['release_channel']}')")
         self.query("INSERT INTO 'profiles' ('name') VALUES ('default')")
         self.commit()
 
@@ -145,11 +168,7 @@ class Database(object):
         return self.query("SELECT value FROM deemon WHERE property = 'latest_ver'").fetchone()['value']
 
     def get_db_version(self):
-        try:
-            version = self.query(f"SELECT value FROM deemon WHERE property = 'version'").fetchone()['value']
-        except sqlite3.OperationalError:
-            version = '0.0.0'
-
+        version = self.query(f"SELECT value FROM deemon WHERE property = 'version'").fetchone()['value']
         logger.debug(f"Database version {version}")
         return version
 
@@ -160,44 +179,78 @@ class Database(object):
         if current_ver == app_db_version:
             return
 
-        logger.debug("DATABASE UPGRADE IN PROGRESS!")
-        
-        if current_ver < parse_version("3.5"):
-            logger.error("Due to database changes, you must be on at least "
-                         f"v2.5 before upgrading to v{VERSION}.")
-            exit()
-            
-        if current_ver < parse_version("3.5.2"):
-            self.query("CREATE TABLE releases_tmp ("
-                   "'artist_id' INTEGER,"
-                   "'artist_name' TEXT,"
-                   "'album_id' INTEGER,"
-                   "'album_name' TEXT,"
-                   "'album_release' TEXT,"
-                   "'album_added' INTEGER,"
-                   "'explicit' INTEGER,"
-                   "'label' TEXT,"
-                   "'record_type' INTEGER,"
-                   "'profile_id' INTEGER DEFAULT 1,"
-                   "'future_release' INTEGER DEFAULT 0,"
-                   "'trans_id' INTEGER,"
-                   "unique(album_id, profile_id))")
-            self.query("INSERT OR REPLACE INTO releases_tmp(artist_id, artist_name, "
-                       "album_id, album_name, album_release, album_added, "
-                       "explicit, label, record_type, profile_id, "
-                       "future_release, trans_id) SELECT artist_id, "
-                       "artist_name, album_id, album_name, album_release, "
-                       "album_added, explicit, label, record_type, "
-                       "profile_id, future_release, trans_id FROM releases")
-            self.query("DROP TABLE releases")
-            self.query("ALTER TABLE releases_tmp RENAME TO releases")
-            self.query("INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('version', '3.5.2')")
-            self.commit()
-            logger.debug(f"Database upgraded to version 3.5.2")
-            
+        logger.warning("DATABASE UPGRADE IN PROGRESS! PLEASE WAIT...")
+        logger.warning(f"  - Migrating version {current_ver} -> {DB_VERSION}")
+
         if current_ver < parse_version("3.6"):
-            # album_release_ts REMOVED
-            pass
+            logger.error("Unsupported upgrade path. Please upgrade to at least v2.8 first.")
+            
+        if current_ver == parse_version("3.6"):
+            logger.warning("  - Upgrading `monitor` table, this may take some time")
+            self.query("CREATE TABLE monitor_temp AS SELECT * FROM monitor")
+            self.query("DROP TABLE monitor")
+            self.query("CREATE TABLE monitor ("
+                       "'id' INTEGER,"
+                       "'name' TEXT,"
+                       "'bitrate' TEXT,"
+                       "'record_type' TEXT,"
+                       "'alerts' INTEGER,"
+                       "'profile_id' INTEGER DEFAULT 1,"
+                       "'download_path' TEXT,"
+                       "'trans_id' INTEGER,"
+                       "CONSTRAINT unique_artist UNIQUE (id, profile_id)"
+                       "ON CONFLICT IGNORE)")
+            self.query("INSERT INTO monitor ("
+                       "id, name, bitrate, record_type,"
+                       "alerts, profile_id, download_path, trans_id) "
+                       "SELECT artist_id, artist_name, bitrate, record_type,"
+                       "alerts, profile_id, download_path, trans_id FROM monitor_temp")
+            self.query("DROP TABLE monitor_temp")
+            logger.warning("  - Upgrading `playlist` table, this may take some time")
+            self.query("CREATE TABLE playlists_temp AS SELECT * FROM playlists")
+            self.query("DROP TABLE playlists")
+            self.query("CREATE TABLE playlists ("
+                       "'id' INTEGER UNIQUE,"
+                       "'title' TEXT,"
+                       "'url' TEXT,"
+                       "'bitrate' TEXT,"
+                       "'alerts' INTEGER,"
+                       "'profile_id' INTEGER DEFAULT 1,"
+                       "'download_path' TEXT,"
+                       "'trans_id' INTEGER,"
+                       "CONSTRAINT unique_playlist UNIQUE (id, profile_id)"
+                       "ON CONFLICT IGNORE)")
+            self.query("INSERT INTO playlists ("
+                       "id, title, url, bitrate, alerts,"
+                       "profile_id, download_path, trans_id) "
+                       "SELECT id, title, url, bitrate, alerts,"
+                       "profile_id, download_path, trans_id FROM playlists_temp")
+            self.query("DROP TABLE playlists_temp")
+            logger.warning("  - Creating `queue` table")
+            self.query("CREATE TABLE queue ("
+                       "'artist_name'	TEXT,"
+                       "'artist_id'	INTEGER,"
+                       "'album_title'	TEXT,"
+                       "'track_id'	INTEGER,"
+                       "'track_title'	TEXT,"
+                       "'url'	TEXT,"
+                       "'playlist_title'	TEXT,"
+                       "'bitrate'	TEXT,"
+                       "'download_path'	TEXT,"
+                       "'release_type'	INTEGER,"
+                       "'profile_id'	INTEGER)")
+            logger.warning("  - Creating `pending_refresh` table")
+            self.query("CREATE TABLE pending_refresh ("
+                       "id INTEGER NOT NULL,"
+                       "profile_id INTEGER NOT NULL,"
+                       "playlist BOOLEAN (1) NOT NULL,"
+                       "UNIQUE (id, profile_id, playlist)"
+                       " ON CONFLICT IGNORE)")
+            self.query(f"INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('version', '{DB_VERSION}')")
+            self.commit()
+            logger.warning(f"Database has been upgraded to version {DB_VERSION}")
+            print("Starting deemon, please wait...")
+            time.sleep(1)
 
     def query(self, query, values=None):
         if values is None:
@@ -213,16 +266,16 @@ class Database(object):
     def get_all_monitored_artists(self):
         vals = {'profile_id': config['defaults']['profile']}
         return self.query(f"SELECT * FROM monitor WHERE profile_id = :profile_id "
-                          f"ORDER BY artist_name COLLATE NOCASE ASC", vals).fetchall()
+                          f"ORDER BY name COLLATE NOCASE ASC", vals).fetchall()
 
     def get_monitored_artist_by_id(self, artist_id: int):
         values = {'id': artist_id, 'profile_id': config['defaults']['profile']}
         return self.query(f"SELECT * FROM monitor WHERE artist_id = :id AND profile_id = :profile_id",
                           values).fetchone()
 
-    def get_monitored_artist_by_name(self, name: str):
+    def get_monitored_artist_by_name(self, name):
         values = {'name': name, 'profile_id': config['defaults']['profile']}
-        return self.query(f"SELECT * FROM monitor WHERE artist_name = :name COLLATE NOCASE "
+        return self.query(f"SELECT * FROM monitor WHERE name = :name COLLATE NOCASE "
                           f"AND profile_id = :profile_id", values).fetchone()
 
     def get_all_monitored_playlist_ids(self):
@@ -247,15 +300,15 @@ class Database(object):
     def monitor_artist(self, artist: dict, artist_config: dict):
         self.new_transaction()
         vals = {
-            'artist_id': artist['id'], 'artist_name': artist['name'], 'bitrate': artist_config['bitrate'],
+            'id': artist['id'], 'name': artist['name'], 'bitrate': artist_config['bitrate'],
             'record_type': artist_config['record_type'], 'alerts': artist_config['alerts'],
             'download_path': artist_config['download_path'], 'profile_id': config['defaults']['profile'],
             'trans_id': config['runtime']['transaction_id']
         }
         query = ("INSERT INTO monitor "
-                 "(artist_id, artist_name, bitrate, record_type, alerts, download_path, profile_id, trans_id) "
+                 "(id, name, bitrate, record_type, alerts, download_path, profile_id, trans_id) "
                  "VALUES "
-                 "(:artist_id, :artist_name, :bitrate, :record_type, :alerts, :download_path, :profile_id, :transaction_id)")
+                 "(:id, :name, :bitrate, :record_type, :alerts, :download_path, :profile_id, :transaction_id)")
         self.query(query, vals)
         self.commit()
 
@@ -298,7 +351,7 @@ class Database(object):
 
     def remove_monitored_artist(self, id: int = None):
         values = {'id': id, 'profile_id': config['defaults']['profile']}
-        self.query("DELETE FROM monitor WHERE artist_id = :id AND profile_id = :profile_id", values)
+        self.query("DELETE FROM monitor WHERE id = :id AND profile_id = :profile_id", values)
         self.query("DELETE FROM releases WHERE artist_id = :id AND profile_id = :profile_id", values)
         self.commit()
 
@@ -311,17 +364,11 @@ class Database(object):
     def get_specified_artist(self, artist):
         values = {'artist': artist, 'profile_id': config['defaults']['profile']}
         if type(artist) is int:
-            return self.query("SELECT * FROM monitor WHERE artist_id = :artist "
+            return self.query("SELECT * FROM monitor WHERE id = :artist "
                               "AND profile_id = :profile_id", values).fetchone()
         else:
-            return self.query("SELECT * FROM monitor WHERE artist_name = ':artist' "
+            return self.query("SELECT * FROM monitor WHERE name = ':artist' "
                               "AND profile_id = :profile_id COLLATE NOCASE", values).fetchone()
-
-    def set_all_artists_refreshed(self):
-        self.query("UPDATE monitor SET refreshed = 1 WHERE refreshed = 0")
-        
-    def set_all_playlists_refreshed(self):
-        self.query("UPDATE playlists SET refreshed = 1 WHERE refreshed = 0")
 
     def add_new_releases(self, values):
         self.new_transaction()
@@ -330,7 +377,6 @@ class Database(object):
                f"VALUES (:artist_id, :artist_name, :id, :title, :release_date, {int(time.time())}, :future, "
                f":explicit_lyrics, :record_type, {config['defaults']['profile']}, {config['runtime']['transaction_id']})")
         self.cursor.executemany(sql, values)
-        self.set_all_artists_refreshed()
 
     def add_new_playlist_releases(self, values):
         self.new_transaction()
@@ -338,7 +384,6 @@ class Database(object):
                f"'track_added', 'profile_id', 'trans_id') VALUES (:artist_id, :artist_name, :id, :title, :playlist_id, "
                f"{int(time.time())}, {config['defaults']['profile']}, {config['runtime']['transaction_id']})")
         self.cursor.executemany(sql, values)
-        self.set_all_playlists_refreshed()
 
     def show_new_releases(self, from_date_ts, now_ts):
         today_date = datetime.utcfromtimestamp(now_ts).strftime('%Y-%m-%d')
@@ -363,7 +408,7 @@ class Database(object):
 
     def update_artist(self, settings: dict):
         self.query("UPDATE monitor SET bitrate = :bitrate, alerts = :alerts, record_type = :record_type,"
-                   "download_path = :download_path WHERE artist_id = :artist_id AND profile_id = :profile_id", settings)
+                   "download_path = :download_path WHERE id = :artist_id AND profile_id = :profile_id", settings)
         self.commit()
 
     def add_playlist_track(self, playlist, track):
@@ -453,14 +498,6 @@ class Database(object):
         self.query(f"DELETE FROM transactions WHERE id = {rollback} AND profile_id = :profile_id", vals)
         self.commit()
 
-    def set_artist_refreshed(self, id):
-        vals = {'id': id, 'profile_id': config['defaults']['profile']}
-        return self.query("UPDATE monitor SET refreshed = 1 WHERE artist_id = :id AND profile_id = :profile_id", vals)
-
-    def set_playlist_refreshed(self, id):
-        vals = {'id': id, 'profile_id': config['defaults']['profile']}
-        return self.query("UPDATE playlists SET refreshed = 1 WHERE id = :id AND profile_id = :profile_id", vals)
-
     def set_latest_version(self, version):
         vals = {'version': version}
         self.query("INSERT OR REPLACE INTO deemon (property, value) VALUES ('latest_ver', :version)", vals)
@@ -496,7 +533,7 @@ class Database(object):
                                                   "FROM playlists "
                                                   "WHERE trans_id = :tid "
                                                   "AND profile_id = :profile_id", vals).fetchall()
-            transaction['monitor'] = self.query("SELECT artist_name "
+            transaction['monitor'] = self.query("SELECT name "
                                                 "FROM monitor "
                                                 "WHERE trans_id = :tid "
                                                 "AND profile_id = :profile_id", vals).fetchall()
@@ -505,48 +542,47 @@ class Database(object):
 
     def get_all_monitored_artist_ids(self):
         values = {"profile_id": config['defaults']['profile']}
-        query = self.query("SELECT artist_id FROM monitor WHERE profile_id = :profile_id", values).fetchall()
+        query = self.query("SELECT id FROM monitor WHERE profile_id = :profile_id", values).fetchall()
         return [v for x in query for v in x.values()]
 
     @performance.timeit
     def get_monitored(self):
         values = {"profile_id": config['defaults']['profile']}
-        query = self.query("SELECT artist_id, artist_name FROM monitor WHERE profile_id = :profile_id",
+        query = self.query("SELECT id, name FROM monitor WHERE profile_id = :profile_id",
                            values).fetchall()
         return query
 
-    def get_unrefreshed_artists(self):
-        values = {"profile_id": config['defaults']['profile']}
-        return self.query("SELECT * FROM monitor WHERE profile_id = :profile_id AND refreshed = 0", values).fetchall()
-
-    def get_unrefreshed_playlists(self):
-        values = {"profile_id": config['defaults']['profile']}
-        return self.query("SELECT * FROM playlists WHERE profile_id = :profile_id AND refreshed = 0", values).fetchall()
-
     def fast_monitor(self, values):
-        self.cursor.executemany(
-            "INSERT OR REPLACE INTO monitor (artist_id, artist_name, bitrate, record_type, alerts, profile_id, download_path, trans_id) VALUES (:id, :name, :bitrate, :record_type, :alerts, :profile_id, :download_path, :transaction_id)",
-            values)
+        self.cursor.executemany("INSERT OR REPLACE INTO monitor ("
+                                "id, name, bitrate, record_type,"
+                                "alerts, profile_id, download_path, trans_id) "
+                                "VALUES (:id, :name, :bitrate, :record_type, :alerts,"
+                                ":profile_id, :download_path, :transaction_id)", values)
+
+        self.cursor.executemany("INSERT OR REPLACE INTO pending_refresh ("
+                                "id, profile_id, playlist) "
+                                "VALUES (:id, :profile_id, 0)", values)
 
     def fast_monitor_playlist(self, values):
-        self.cursor.executemany(
-            "INSERT OR REPLACE INTO playlists (id, title, url, bitrate, alerts, profile_id, download_path, trans_id) VALUES (:id, :title, :link, :bitrate, :alerts, :profile_id, :download_path, :transaction_id)",
-            values)
+        self.cursor.executemany("INSERT OR REPLACE INTO playlists ("
+                                "id, title, url, bitrate, alerts, profile_id,"
+                                "download_path, trans_id) "
+                                "VALUES (:id, :title, :link, :bitrate, :alerts,"
+                                ":profile_id, :download_path, :transaction_id)", values)
 
-    def insert_multiple(self, table, values):
-        self.cursor.executemany(
-            f"INSERT INTO {table} (artist_id, artist_name, album_id, album_name, album_release, album_added, profile_id, future_release, trans_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            values)
+        self.cursor.executemany("INSERT OR REPLACE INTO pending_refresh ("
+                                "id, profile_id, playlist) "
+                                "VALUES (:id, :profile_id, 1)", values)
 
     def remove_by_name(self, values):
-        self.cursor.executemany(f"DELETE FROM monitor WHERE profile_id = {config['defaults']['profile']} AND artist_name = ?",
+        self.cursor.executemany(f"DELETE FROM monitor WHERE profile_id = {config['defaults']['profile']} AND name = ?",
                                 values)
         self.cursor.executemany(f"DELETE FROM releases WHERE profile_id = {config['defaults']['profile']} AND artist_name = ?",
                                 values)
         self.commit()
 
     def remove_by_id(self, values):
-        self.cursor.executemany(f"DELETE FROM monitor WHERE profile_id = {config['defaults']['profile']} AND artist_id = ?",
+        self.cursor.executemany(f"DELETE FROM monitor WHERE profile_id = {config['defaults']['profile']} AND id = ?",
                                 values)
         self.cursor.executemany(f"DELETE FROM releases WHERE profile_id = {config['defaults']['profile']} AND artist_id = ?",
                                 values)
