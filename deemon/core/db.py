@@ -251,6 +251,7 @@ class Database(object):
             logger.warning(f"Database has been upgraded to version {DB_VERSION}")
             print("Starting deemon, please wait...")
             time.sleep(1)
+            ui.clear()
 
     def query(self, query, values=None):
         if values is None:

@@ -1,12 +1,19 @@
-import os
+from os import get_terminal_size, system, name
 
 
 TQDM_FORMAT = ":: {desc} {percentage:3.0f}%"
 
 
+def clear():
+    if name == 'nt':
+        _ = system('cls')
+    else:
+        _ = system('clear')
+
+
 def get_progress_bar_size() -> int:
     try:
-        screen_size = int(os.get_terminal_size().columns)
+        screen_size = int(get_terminal_size().columns)
     except OSError:
         screen_size = 80
 
