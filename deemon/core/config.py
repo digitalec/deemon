@@ -18,6 +18,7 @@ DEFAULT_CONFIG = {
         "prompt_no_matches": False,
         "max_release_age": 90,
         "fast_api": True,
+        "away_mode": False,
     },
     "defaults": {
         "profile": 1,

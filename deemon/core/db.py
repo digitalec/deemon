@@ -598,3 +598,10 @@ class Database(object):
         sql = ("UPDATE releases SET label = :label WHERE album_id = :id AND "
                f"profile_id = {config['defaults']['profile']}")
         self.cursor.executemany(sql, values)
+    def save_holding_queue(self, values):
+        self.cursor.executemany("INSERT OR REPLACE INTO queue (artist_name, album_id, album_title, track_id,"
+                                "track_title, url, playlist_title, bitrate, download_path, profile_id) "
+                                "VALUES (:artist_name, :album_id, :album_title, :track_id, :track_title, :url,"
+                                f":playlist_title, :bitrate, :download_path, "
+                                f"{config['runtime']['profile_id']})", values)
+

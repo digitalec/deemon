@@ -206,6 +206,13 @@ class Refresh:
             if not len(monitored_playlists):
                 return logger.warning("Specified playlist(s) were not found")
             api_result = self.get_release_data({'playlists': monitored_playlists})
+        # If operating in away_mode, dump queue to CSV format
+        if config['app']['away_mode']:
+            logger.debug("Away Mode is enabled. Storing queue items for later")
+            for release in queue:
+                holding_queue.append(vars(release))
+            db.save_holding_queue(holding_queue)
+            db.commit()
         else:
             waiting = self.waiting_for_refresh()
             if waiting:
