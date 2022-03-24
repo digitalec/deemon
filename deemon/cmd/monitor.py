@@ -4,11 +4,11 @@ from pathlib import Path
 
 from tqdm import tqdm
 
-from deemon.cmd import search
+from deemon.cmd import search, refresh
 from deemon.core.db import Database
 from deemon.core.api import PlatformAPI
 from deemon.core.config import Config
-from deemon.utils import dataprocessor
+from deemon.utils import dataprocessor, recordtypes
 
 logger = logging.getLogger(__name__)
 
@@ -133,7 +133,7 @@ def get_best_result(api_result):
             return matches[0]
     elif not len(matches):
         logger.debug(f"   [!] No matches were found for artist \"{api_result['query']}\"")
-        if config.prompt_no_matches() and len(api_result['results']):
+        if config['app']['prompt_no_matches'] and len(api_result['results']):
             logger.debug("Waiting for user input...")
             prompt = prompt_search(name, api_result['results'])
             if prompt:
@@ -211,6 +211,9 @@ def setup_monitoring(queue):
         db.new_transaction()
         db.fast_monitor_playlist(playlist_queue)
     db.commit()
+
+    if artist_queue or playlist_queue:
+        refresh.start()
 
 
 def remove(names: list, by_id=False, playlist=False):
