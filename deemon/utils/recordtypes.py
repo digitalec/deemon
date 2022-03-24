@@ -6,6 +6,10 @@ def get_record_type_index(user_types: list):
     Determines number based on user specified record types
     by adding each ID (key) from RECORD_TYPES
     """
+    if "all" in user_types:
+        user_types += "album", "single", "ep"
+        user_types.remove("all")
+
     record_type_index = 0
     for key, value in RECORD_TYPES.items():
         for ut in user_types:
@@ -43,7 +47,7 @@ def convert_binary_to_record_types(binary_index):
     return active_record_types
 
 
-def get_record_type_str(rti):
+def get_record_type_str(rti: int):
     """
     Accepts a Record Type Index (RTI) and returns a list
     of strings containg record type names
