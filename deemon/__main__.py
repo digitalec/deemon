@@ -30,10 +30,6 @@ if __name__ == "__main__":
     parser_a.add_argument('-i', '--include-logs', action='store_true', help='include log files in backup')
     parser_a.add_argument('-r', '--restore', action='store_true', help='restore from existing backup')
 
-    # Config command
-    config_help_text = 'configure per-artist settings by name or ID'
-    parser_b = subparsers.add_parser('config', help=config_help_text, description=config_help_text)
-
     # Download command
     download_help_text = "download an artist, album ID or URL"
     parser_c = subparsers.add_parser('download', help=download_help_text, description=download_help_text)
@@ -112,10 +108,10 @@ if __name__ == "__main__":
     parser_j_subparser = parser_j.add_subparsers()
 
     # Show - Artists command
-    # show_artist_help_text = 'Show currently monitored artists'
-    # parser_j_a = subparsers.add_parser('artists', help=show_artist_help_text, description=show_artist_help_text)
-    # parser_j_a.add_argument('-c', '--csv', action='store_true', help='Output artists as CSV')
-    # parser_j_a.add_argument('-e', '--export')
+    show_artist_help_text = 'show currently monitored artists'
+    parser_j_a = parser_j_subparser.add_parser('artists', help=show_artist_help_text, description=show_artist_help_text)
+    parser_j_a.add_argument('-c', '--csv', action='store_true', help='Output artists as CSV')
+    parser_j_a.add_argument('-e', '--export', type=Path, help='Export artist IDs to file')
 
     # Test command
     test_help_text = 'test email server settings'
