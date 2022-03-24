@@ -32,11 +32,15 @@ class QueueItem:
         self.playlist_title = None
         self.bitrate = config['defaults']['bitrate']
         self.download_path = config['defaults']['download_path']
-        self.release_type = None
 
         for key, val in payload.items():
-            if key == 'album_id':
+            if key == 'id':
+                key = 'album_id'
                 setattr(self, 'url', f'https://www.deezer.com/album/{val}')
+            if key == 'title':
+                key = 'album_title'
+            if key == 'link':
+                key = 'url'
             setattr(self, key, val)
 
 
