@@ -1,7 +1,7 @@
 RECORD_TYPES = {
-    1: 'album',
+    1: 'single',
     2: 'ep',
-    4: 'single',
+    4: 'album',
     8: 'unofficial',
     16: 'comps',
     32: 'feat',
