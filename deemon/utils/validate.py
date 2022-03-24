@@ -12,15 +12,14 @@ def validate_date(d):
         return False
 
 
-def validate_record_type(record_types: str):
+def validate_record_type(record_types: list):
     """
     Check record_types and return list of invalid types
     """
-    rt = record_types.replace(' ', '').split(',')
-    if all(elem in rt for elem in RECORD_TYPES.values()):
+    if all(elem in record_types for elem in RECORD_TYPES.values()):
         return []
     else:
-        invalid_rt = [elem for elem in rt if elem not in RECORD_TYPES.values()]
+        invalid_rt = [elem for elem in record_types if elem not in RECORD_TYPES.values()]
         return invalid_rt
 
 
