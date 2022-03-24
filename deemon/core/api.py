@@ -34,7 +34,7 @@ class PlatformAPI:
         return PlatformAPI.TOKEN
 
     def debugger(self, message: str, payload = None):
-        if config.debug_mode():
+        if config['app']['debug_mode']:
             if not payload:
                 payload = ""
             logger.debug(f"DEBUG_MODE: {message} {str(payload)}")
@@ -115,85 +115,64 @@ class PlatformAPI:
         
         return album
 
-    def get_artist_albums(self, query: dict, limit: int = -1):
-        """
-        Return a list of dictionaries from API containing
-        """
-        self.debugger("RefreshArtist", query['artist_name'])
+
+    def get_artist_releases(self, query, limit=-1):
         if self.platform == "deezer-gw":
-            try:
-                result = self.api.get_artist_discography(art_id=query['artist_id'], limit=limit)['data']
-            except deezer.errors.GWAPIError as e:
-                if "UNKNOWN" in str(e):
+            query['releases'] = []
+            result = []
+            attempts = 0
+            while attempts < 5:
+                attempts += 1
+                try:
+                    result = self.api.get_artist_discography(query['id'], limit=limit)['data']
+                    break
+                except deezer.errors.GWAPIError as e:
                     logger.debug(e)
-                    logger.warning(f"   [!] Artist discography is not available for "
-                                 f"{query['artist_name']} ({query['artist_id']})")
-                else:
-                    logger.debug(e)
-                    logger.error(f"An error occured while attempting to get the discography for "
-                                 f"{query['artist_name']} ({query['artist_id']})")
-                query['releases'] = []
-                return query
-            api_result = []
-            for r in result:
-                # Remove ID check to get compilations
-                if (r['ART_ID'] == str(query['artist_id']) and r['ARTISTS_ALBUMS_IS_OFFICIAL']) or (r['ART_ID'] == str(query['artist_id']) and config.allow_unofficial()) or config.allow_compilations():
-                    # TYPE 0 - single, TYPE 1 - album, TYPE 2 - compilation, TYPE 3 - ep
-                    if r['TYPE'] == '0':
-                        r['TYPE'] = "single"
-                    elif r['TYPE'] == '1' and r['ART_ID'] != str(query['artist_id']):
-                        if not config.allow_featured_in():
-                            logger.debug(f"Featured In for {query['artist_name']} detected but are disabled in config")
-                            continue
-                        else:
-                            logger.debug(f"Featured In detected for artist {query['artist_name']}: {r['ALB_TITLE']}")
-                            r['TYPE'] = "album"
-                            # TODO set unique r['TYPE'] for FEATURED IN
-                    elif r['TYPE'] == '2':
-                        if not config.allow_compilations():
-                            logger.debug(f"Compilation for {query['artist_name']} detected but are disabled in config")
-                            continue
-                        else:
-                            logger.debug(f"Compilation detected for artist {query['artist_name']}: {r['ALB_TITLE']}")
-                            r['TYPE'] = "album"
-                            # TODO set unique r['TYPE'] for COMPILATIONS
-                    elif r['TYPE'] == '3':
-                        r['TYPE'] = "ep"
+                    if "UNKNOWN" in str(e):
+                        logger.warning(f"Artist discography not available: {query['name']} ({query['id']})")
                     else:
-                        r['TYPE'] = "album"
+                        logger.error(f"An error occured while attempting to get the "
+                                     f"discography for: {query['name']} ({query['id']})")
+                    break
+                except json.decoder.JSONDecodeError:
+                    logger.error(f"API response invalid for {query['name']} ({query['id']}), "
+                                 f"retrying ({attempts}/5)...")
+            for row in result:
+                cover_art = f"https://e-cdns-images.dzcdn.net/images/cover/{row['ALB_PICTURE']}/500x500-00000-80-0-0.jpg"
+                album_url = f"https://www.deezer.com/album/{row['ALB_ID']}"
 
-                    if r['ORIGINAL_RELEASE_DATE'] != "0000-00-00":
-                        release_date = r['ORIGINAL_RELEASE_DATE']
-                    elif r['PHYSICAL_RELEASE_DATE'] != "0000-00-00":
-                        release_date = r['PHYSICAL_RELEASE_DATE']
-                    elif r['DIGITAL_RELEASE_DATE'] != "0000-00-00":
-                        release_date = r['DIGITAL_RELEASE_DATE']
+                # Select best available release date
+                release_date = datetime.strftime(datetime.today(), "%Y-%m-%d")
+                try:
+                    if row['ORIGINAL_RELEASE_DATE'] != "0000-00-00":
+                        release_date = row['ORIGINAL_RELEASE_DATE']
+                    elif row['PHYSICAL_RELEASE_DATE'] != "0000-00-00":
+                        release_date = row['PHYSICAL_RELEASE_DATE']
+                    elif row['DIGITAL_RELEASE_DATE'] != "0000-00-00":
+                        release_date = row['DIGITAL_RELEASE_DATE']
                     else:
-                        # In the event of an unknown release date, set it to today's date
-                        # See album ID: 417403
                         logger.warning(f"   [!] Found release without release date, assuming today: "
-                                        f"{query['name']} - {r['ALB_TITLE']}")
-                        release_date = datetime.strftime(datetime.today(), "%Y-%m-%d")
-                    
-                    cover_art = f"https://e-cdns-images.dzcdn.net/images/cover/{r['ALB_PICTURE']}/500x500-00000-80-0-0.jpg"
-                    album_url = f"https://www.deezer.com/album/{r['ALB_ID']}"
-                    
-                    api_result.append(
-                        {
-                            'id': int(r['ALB_ID']),
-                            'title': r['ALB_TITLE'],
-                            'release_date': release_date,
-                            'explicit_lyrics': r['EXPLICIT_ALBUM_CONTENT']['EXPLICIT_LYRICS_STATUS'],
-                            'record_type': r['TYPE'],
-                            'cover_big': cover_art,
-                            'link': album_url,
-                            'nb_tracks': r['NUMBER_TRACK'],
-                            }
-                    )
-        else:
-            api_result = self.api.get_artist_albums(artist_id=query['artist_id'], limit=limit)['data']
+                                       f"{query['name']} - {row['ALB_TITLE']}")
+                except KeyError:
+                    pass
 
-        query['releases'] = api_result
+                query['releases'].append(
+                    {
+                        'artist_id': int(row['ART_ID']),
+                        'artist_name': row['ART_NAME'],
+                        'official': row['ARTISTS_ALBUMS_IS_OFFICIAL'],
+                        'id': int(row['ALB_ID']),
+                        'title': row['ALB_TITLE'],
+                        'release_date': release_date,
+                        'cover_big': cover_art,
+                        'link': album_url,
+                        'nb_tracks': row['NUMBER_TRACK'],
+                        'record_type': row['TYPE'],
+                        'explicit_lyrics': row['EXPLICIT_ALBUM_CONTENT']['EXPLICIT_LYRICS_STATUS'],
+                    }
+                )
+        else:
+            query['releases'] = self.api.get_artist_albums(query['id'], limit=limit)['data']
         return query
 
     @staticmethod
