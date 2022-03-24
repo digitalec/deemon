@@ -82,7 +82,7 @@ def cli(args):
     elif args.command == 'profile':
         pass
     elif args.command == 'refresh':
-        pass
+        refresh.start()
     elif args.command == 'remove':
         to_remove = dataprocessor.csv_to_list(args.name)
         monitor.remove(to_remove, by_id=args.id, playlist=args.playlist)
