@@ -1,3 +1,4 @@
+import csv
 import logging
 from csv import reader
 
@@ -43,3 +44,10 @@ def csv_to_list(all_artists) -> list:
         combined_line = ([x.lstrip() for x in line])
         result.append(','.join(combined_line))
     return (result)
+
+
+def load_queue_csv(queue):
+    with open(queue) as f:
+        data = csv.DictReader(f)
+        new_data = [x for x in data]
+        return new_data
