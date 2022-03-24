@@ -87,7 +87,15 @@ def cli(args):
         to_remove = dataprocessor.csv_to_list(args.name)
         monitor.remove(to_remove, by_id=args.id, playlist=args.playlist)
     elif args.command == 'reset':
-        pass
+        """Reset monitoring database"""
+        logger.warning("** WARNING: Everything except for profiles will be erased! **")
+        confirm = input(":: Type 'reset' to confirm: ")
+        if confirm.lower() == "reset":
+            print("")
+            db.reset_database()
+        else:
+            logger.info("Reset aborted. Database has NOT been modified.")
+        return
     elif args.command == 'rollback':
         pass
     elif args.command == 'show':
