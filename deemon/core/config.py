@@ -14,8 +14,8 @@ DEFAULT_CONFIG = {
         "release_channel": "stable",
         "max_search_results": 5,
         "rollback_view_limit": 10,
-        "prompt_duplicates": False,
-        "prompt_no_matches": True,
+        "prompt_duplicates": True,
+        "prompt_no_matches": False,
         "max_release_age": 90,
         "fast_api": True,
     },
@@ -99,6 +99,11 @@ class Config(object):
             else:
                 self.logger.debug(f"  {key}: {value}")
 
+        self.load_runtime_config()
+
+    @staticmethod
+    def load_runtime_config():
+        Config.CONFIG['max_threads'] = 50
         Config.CONFIG['runtime'] = {
             "artist": [],
             "artist_id": [],
@@ -111,7 +116,11 @@ class Config(object):
             "download_path": None,
             "transaction_id": None,
             "profile_id": Config.CONFIG['defaults']['profile'],
+            "time_machine": None,
+            "download_all": None,
+            "skip_downloads": None,
         }
+
 
     @staticmethod
     def __write_config(c):
