@@ -93,4 +93,5 @@ def cli(args):
     elif args.command == 'show':
         pass
     elif args.command == 'test':
-        pass
+        notification = notifier.Notify()
+        notification.test()
