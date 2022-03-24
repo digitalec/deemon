@@ -88,7 +88,7 @@ class PlatformAPI:
 
         return {'query': query, 'results': api_result}
 
-    def get_artist_by_id(self, query: int, limit: int = 1) -> dict:
+    def get_artist_by_id(self, query: int, limit: int = 1):
         """
         Return a dictionary from API containing {'id': int, 'name': str}
         """
@@ -96,22 +96,22 @@ class PlatformAPI:
             try:
                 result = self.api.get_artist(query)
             except deezer.errors.GWAPIError as e:
-                logger.debug(f"API error: {e}")
-                return {}
+                logger.debug(f"API error on artist ID {query}: {e}")
+                return
             except json.decoder.JSONDecodeError:
                 logger.error(f"   [!] Empty response from API while getting data for artist ID {query}, retrying...")
                 try:
                     result = self.api.get_artist(query)
                 except json.decoder.JSONDecodeError:
                     logger.error(f"   [!] API still sending empty response for artist ID {query}")
-                    return {}
+                    return
             return {'id': int(result['ART_ID']), 'name': result['ART_NAME']}
         else:
             try:
                 result = self.api.get_artist(query)
             except deezer.errors.DataException as e:
                 logger.debug(f"API error: {e}")
-                return {}
+                return
             return {'id': result['id'], 'name': result['name']}
         
     def get_album(self, query: int) -> dict:

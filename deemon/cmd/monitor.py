@@ -107,6 +107,8 @@ class Monitor:
         pbar = tqdm(api_result, total=len(api_result), desc="Setting up artists for monitoring...", ascii=" #",
                     bar_format=ui.TQDM_FORMAT)
         for artist in pbar:
+            if artist is None:
+                continue
             if artist['id'] in existing:
                 logger.info(f"   - Already monitoring {artist['name']}, skipping...")
             else:
