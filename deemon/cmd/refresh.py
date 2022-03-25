@@ -16,6 +16,8 @@ config = Config().CONFIG
 db = Database()
 new_releases = []
 holding_queue = []
+notification_queue = []
+
 
 def get_api_release_data(artists=None, playlists=None):
     api = PlatformAPI()
@@ -127,8 +129,12 @@ def filter_api_release_data(api_releases):
                     if release_date_dt < (datetime.now() - timedelta(config['app']['max_release_age'])):
                         continue
 
+            if artist['alerts'] or artist['alerts'] is None:
+                create_notification(release)
+
             # Queue release if it made it this far
             queue.append(QueueItem(release))
+
         return queue
 
 
@@ -182,38 +188,22 @@ def start():
         db.drop_all_pending_artists()
         db.commit()
 
-# Fix this dumpster fire...
-"""
-def create_notification(release: dict):
-    for days in self.new_releases_alert:
-        for key in days:
-            if key == "release_date":
-                if release['release_date'] in days[key]:
-                    days["releases"].append(
-                        {
-                            'artist': release['artist_name'],
-                            'album': release['title'],
-                            'cover': release['cover_big'],
-                            'url': release['link'],
-                            'track_num': release.get('nb_tracks', None),
-                            'record_type': release['record_type'],
-                        }
-                    )
-                    return
+    if len(notification_queue):
+        notification = notifier.Notify(notification_queue)
+        notification.send()
 
-    self.new_releases_alert.append(
-        {
-            'release_date': release['release_date'], 
-            'releases': [
-                {
-                    'artist': release['artist_name'],
-                    'album': release['title'],
-                    'cover': release['cover_big'],
-                    'url': release['link'],
-                    'track_num': release.get('nb_tracks', None),
-                    'record_type': release['record_type'],
-                }
-            ]
-        }
-    )
-"""
+
+def create_notification(release: dict):
+
+    if release['release_date'] in [x['release_date'] for x in notification_queue]:
+        for day in notification_queue:
+            if release['release_date'] == day['release_date']:
+                if release['link'] not in [x['link'] for x in day['releases']]:
+                    day["releases"].append(release)
+    else:
+        notification_queue.append(
+            {
+                'release_date': release['release_date'],
+                'releases': [release]
+            }
+        )

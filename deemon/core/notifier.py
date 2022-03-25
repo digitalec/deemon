@@ -116,11 +116,11 @@ class Notify:
         """
         message = "The following new releases were detected:\n\n"
         for release in self.releases:
-            release_date_ts = datetime.strptime(release["release_date"], "%Y-%m-%d")
+            release_date_ts = datetime.strptime(release['release_date'], "%Y-%m-%d")
             release_date_str = datetime.strftime(release_date_ts, "%A, %B %-d")
             message += f"\n{release_date_str}\n"
-            for album in release["releases"]:
-                message += f"+ {album['artist']} - {album['album']}\n"
+            for album in release['releases']:
+                message += f"+ {album['artist_name']} - {album['title']}\n"
         return message
 
     def html_new_releases(self):
@@ -145,7 +145,7 @@ class Notify:
             if all_new_releases != "":
                 all_new_releases += new_release_list_spacer
 
-            release_date_ts = datetime.strptime(release["release_date"], "%Y-%m-%d")
+            release_date_ts = datetime.strptime(release['release_date'], "%Y-%m-%d")
             release_date_str = datetime.strftime(release_date_ts, "%A, %B %d").replace(" 0", " ")
 
             new_release_list_header = f"""
@@ -158,29 +158,29 @@ class Notify:
 
             new_release_list_item = ""
 
-            for album in release["releases"]:
+            for album in release['releases']:
                 new_release_count += 1
                 if album['record_type'].lower() == "ep":
                     record_type = "EP"
                 else:
                     record_type = album['record_type'].title()
             
-                if not album['track_num']:
+                if not album['nb_tracks']:
                     album_info = record_type
                 else:
-                    album_info = f"{record_type} | {album['track_num']} track(s)"
+                    album_info = f"{record_type} | {album['nb_tracks']} track(s)"
             
                 new_release_list_item += f"""
             <div class="album body">
 				<div class="albumart">
-					<img src="{album['cover']}">
+					<img src="{album['cover_big']}">
 				</div>
 				<div class="albuminfo">
 					<div class="albumtitle">
-						<a href="{album['url']}">{album['album']}</a>
+						<a href="{album['link']}">{album['title']}</a>
 					</div>
 					<div>
-						<div class="artistname">{album['artist']}</div>
+						<div class="artistname">{album['artist_name']}</div>
 						<span>{album_info}</span>
 					</div>
 				</div>
