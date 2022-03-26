@@ -4,7 +4,11 @@ import logging
 from pathlib import Path
 from copy import deepcopy
 
-from deemon.core.exceptions import PropertyTypeMismatch, InvalidValue
+from deemon.core.exceptions import (
+    PropertyTypeMismatch,
+    InvalidValue,
+)
+
 from deemon.utils.constants import (
     DEFAULT_CONFIG,
     SENSITIVE_KEYS,
