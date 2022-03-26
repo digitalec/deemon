@@ -20,7 +20,7 @@ from deemon.utils.constants import (
 
 class Config(object):
 
-    def __init__(self, config_path):
+    def __init__(self, config_path: str):
 
         self.logger = logging.getLogger(__name__)
         self._config_path = Path(config_path)
@@ -214,9 +214,93 @@ class Config(object):
         return self._get_property('check_update')
 
     @property
+    def release_channel(self):
+        return self._get_property('release_channel')
+
+    @property
+    def max_search_results(self):
+        return self._get_property('max_search_results')
+
+    @property
+    def rollback_view_limit(self):
+        return self._get_property('rollback_view_limit')
+
+    @property
+    def prompt_duplicates(self):
+        return self._get_property('prompt_duplicates')
+
+    @property
+    def prompt_no_matches(self):
+        return self._get_property('prompt_no_matches')
+
+    @property
+    def max_release_age(self):
+        return self._get_property('max_release_age')
+
+    @property
+    def fast_api(self):
+        return self._get_property('fast_api')
+
+    @property
+    def profile(self):
+        return self._get_property('profile')
+
+    @property
+    def download_path(self):
+        return self._get_property('download_path')
+
+    @property
+    def bitrate(self):
+        return self._get_property('bitrate')
+
+    @property
     def record_types(self):
         return self._get_property('record_types')
 
     @property
-    def release_channel(self):
-        return self._get_property('release_channel')
+    def notifications(self):
+        return self._get_property('enabled')
+
+    @property
+    def recipient(self):
+        return self._get_property('recipient_email')
+
+    @property
+    def smtp_server(self):
+        return self._get_property('smtp_server')
+
+    @property
+    def smtp_username(self):
+        return self._get_property('smtp_username')
+
+    @property
+    def smtp_password(self):
+        return self._get_property('smtp_password')
+
+    @property
+    def smtp_from(self):
+        return self._get_property('smtp_from_address')
+
+    @property
+    def deemix_path(self):
+        return self._get_property('path')
+
+    @property
+    def arl(self):
+        return self._get_property('arl')
+
+    @property
+    def check_account_status(self):
+        return self._get_property('check_account_status')
+
+    @property
+    def plex_url(self):
+        return self._get_property('base_url')
+
+    @property
+    def plex_token(self):
+        return self._get_property('token')
+
+    @property
+    def plex_library(self):
+        return self._get_property('library')
