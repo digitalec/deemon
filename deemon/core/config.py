@@ -2,11 +2,9 @@ import json
 import yaml
 import logging
 from pathlib import Path
+from copy import deepcopy
 
-from deemon.utils import paths, validate
 from deemon.core.exceptions import PropertyTypeMismatch, InvalidValue
-from deemon.utils.constants import SENSITIVE_KEYS
-
 DEFAULT_CONFIG = {
     "app": {
         "check_update": 1,
@@ -50,156 +48,126 @@ DEFAULT_CONFIG = {
         "library": ""
     }
 }
+from deemon.utils.constants import (
+    DEFAULT_CONFIG,
+    SENSITIVE_KEYS,
+    RECORD_TYPES,
+    RELEASE_CHANNELS,
+    BITRATES
+)
 
 
 class Config(object):
 
-    _CONFIG_PATH = None
-    _CONFIG_FILE = None
-    CONFIG = None
+    def __init__(self, config_path):
 
-    def __init__(self, config_path=None):
         self.logger = logging.getLogger(__name__)
+        self._config_path = Path(config_path)
+        self._config_file = Path(self._config_path / "config.yaml")
+        self._config_file_v2 = Path(self._config_path / "config.json")
+        self._default_config = DEFAULT_CONFIG
 
-        if Config.CONFIG:
-            return
-
-        if not config_path:
-            Config._CONFIG_PATH = paths.get_appdata_dir()
-        else:
-            Config._CONFIG_PATH = Path(config_path)
-
-        paths.init_appdata_dir(Config._CONFIG_PATH)
-        Config._CONFIG_FILE = Path(Config._CONFIG_PATH / "config.yaml")
-
-        if Path(Config._CONFIG_PATH / "config.json").exists() and not Config._CONFIG_FILE.exists():
-            self.logger.debug("Migrating deemon configuration to new format, please wait...")
-            self.__write_config(DEFAULT_CONFIG)
-            self.migrate_config()
-
-        if not Path(Config._CONFIG_FILE).exists():
-            self.logger.debug("No configuration file exists, generating default config...")
-            with open(Config._CONFIG_FILE, 'w') as f:
-                self.__write_config(DEFAULT_CONFIG)
-
-        with open(Config._CONFIG_FILE, 'r') as f:
-            self.logger.debug(f"Reading config file: {Config._CONFIG_FILE}")
-            Config.CONFIG = yaml.safe_load(f)
-
-        if self.validate_config() > 0:
-            self.__write_config(Config.CONFIG)
-
-        self.logger.debug("Configuration loaded:")
-        for key, value in Config.CONFIG.items():
-            if isinstance(value, dict):
-                for k, v in value.items():
-                    if k in SENSITIVE_KEYS:
-                        if v:
-                            v = "********"
-                    self.logger.debug(f"  {key}/{k}: {v}")
+        if not self._config_file.exists():
+            if self._config_file_v2.exists():
+                self._write_config(self._default_config)
+                self._migrate_config()
             else:
-                self.logger.debug(f"  {key}: {value}")
+                self._write_config(self._default_config)
 
-        self.load_runtime_config()
+        self._config = self._load_config()
 
-    @staticmethod
-    def load_runtime_config():
-        Config.CONFIG['max_threads'] = 50
-        Config.CONFIG['runtime'] = {
-            "artist": [],
-            "artist_id": [],
-            "playlist": [],
-            "file": [],
-            "url": [],
-            "bitrate": None,
-            "alerts": None,
-            "record_type": None,
-            "download_path": None,
-            "transaction_id": None,
-            "profile_id": Config.CONFIG['defaults']['profile'],
-            "time_machine": None,
-            "download_all": None,
-            "skip_downloads": None,
-        }
+        self._validate_config(deepcopy(self._default_config), self._config)
 
+        if self._update_config:
+            self._write_config(self._config)
 
-    @staticmethod
-    def __write_config(c):
-        with open(Config._CONFIG_FILE, 'w') as f:
-            yaml.dump(c, f, sort_keys=False, indent=4)
+    def _load_config(self):
+        """ Load configuration from disk """
+        with open(self._config_file, 'r') as f:
+            return yaml.safe_load(f)
 
-    def validate_config(self):
+    def _update_config(self, source: dict, target: dict):
         modified = 0
 
-        def process_config(dict1, dict2):
-            """
-            Process user configuration, applying values to a default config
-            """
-            for key, value in dict1.items():
-                if key in dict2.keys():
-                    if isinstance(dict1[key], dict):
-                        process_config(dict1[key], dict2[key])
-                    else:
-                        dict2[key] = dict1[key]
-            return dict2
+        for key, value in source.items():
+            if isinstance(value, dict):
+                modified += self._update_config(value, target[key])
+            elif key not in target.keys():
+                target[key] = value
+                modified += 1
 
-        def find_position(d, key):
-            for k, v in d.items():
-                if isinstance(v, dict):
-                    next = find_position(v, key)
-                    if next:
-                        return [k] + next
-                elif k == key:
-                    return [k]
-
-        def test_values(dict1, dict2):
-            nonlocal modified
-            for key, value in dict1.items():
-                if key in dict2.keys():
-                    if isinstance(dict1[key], dict):
-                        test_values(dict1[key], dict2[key])
-                    else:
-                        if key == "bitrate" and not validate.validate_bitrates(value):
-                            raise InvalidValue(f"Invalid bitrate: {value}")
-                        elif key == "record_type":
-                            invalid_rt = validate.validate_record_type(value)
-                            if len(invalid_rt):
-                                raise InvalidValue(f"Invalid record type(s): {value}")
-                        elif key == "release_channel" and not validate.validate_release_channel(value):
-                            raise InvalidValue(f"Invalid release channel: {value}")
-                        elif not isinstance(dict1[key], type(dict2[key])):
-                            raise PropertyTypeMismatch(f"Invalid type in config - '{str(key)}' incorrectly set "
-                                                       f"as {type(value).__name__}")
-
-        def add_new_options(dict1, dict2):
-            nonlocal modified
-            for key, value in dict1.items():
-                if key not in dict2.keys():
-                    self.logger.debug(f"New option added to config: {key}")
-                    dict2[key] = value
-                    modified += 1
-                elif isinstance(value, dict):
-                    for k, v in value.items():
-                        if k not in dict2[key].keys():
-                            self.logger.debug("New option added to config: "
-                                         f"{key}/{k}")
-                            dict2[key][k] = v
-                            modified += 1
-
-        add_new_options(DEFAULT_CONFIG, Config.CONFIG)
-        Config.CONFIG = process_config(Config.CONFIG, DEFAULT_CONFIG)
-        test_values(Config.CONFIG, DEFAULT_CONFIG)
         return modified
 
-    def migrate_config(self):
+    def _validate_config(self, source: dict, target: dict):
+        """
+        Validate user config values against default dict and add
+        missing key:val pairs
+        """
 
-        with open(Path(Config._CONFIG_PATH / 'config.json'), 'r') as f:
+        for key, value in source.items():
+            if isinstance(value, dict):
+                self._validate_config(value, target[key])
+            elif key in target.keys():
+                if isinstance(target[key], type(value)):
+                    if key == "bitrate":
+                        if value not in BITRATES.values():
+                            raise InvalidValue(f"Invalid value specified for bitrate: {value}")
+                    elif key == "record_types":
+                        for rt in value:
+                            if rt not in RECORD_TYPES.values():
+                                raise InvalidValue(f"Invalid value specified for record_types: {value}")
+                    elif key == "release_channel":
+                        if value not in RELEASE_CHANNELS:
+                            raise InvalidValue(f"Invalid value specified for release_channel: {value}")
+                else:
+                    raise PropertyTypeMismatch(f"Invalid value for `{key}`."
+                                               f" Expected type {type(target[key]).__name__}"
+                                               f" but got {type(value).__name__}")
+
+    def _print_config(self, val: dict = None, parent: str = None):
+        """
+        Print configuration hiding sensitive information
+        """
+        for key, value in val.items():
+            if not parent:
+                parent = key
+            if isinstance(value, dict):
+                self._print_config(value, parent)
+                parent = None
+            else:
+                if key in SENSITIVE_KEYS and value:
+                    value = "********"
+                if isinstance(value, list):
+                    value = ", ".join(value)
+                self.logger.debug(f"{parent}/{key}: {value}")
+
+    def _get_property(self, property_name: str, d: dict = None):
+        """ Recursively search dict for key and return its value """
+
+        d = self._config if not d else d
+
+        if property_name in d.keys():
+            return d[property_name]
+        else:
+            for key, val in d.items():
+                if isinstance(val, dict):
+                    result = self._get_property(property_name, val)
+                    if result:
+                        return result
+
+    def _write_config(self, cfg: dict) -> None:
+        """ Write config to config.yaml """
+        with open(self._config_file, 'w') as f:
+            yaml.dump(cfg, f, sort_keys=False, indent=4)
+
+    def _migrate_config(self):
+
+        with open(self._config_file_v2, 'r') as f:
             old_config = json.load(f)
 
-            with open(Path(Config._CONFIG_PATH / 'config.yaml'), 'r+') as fi:
+            with open(self._config_file, 'r+') as fi:
                 new_config = yaml.safe_load(fi)
 
-                # App
                 if old_config.get('check_update'):
                     new_config['app']['check_update'] = old_config['check_update']
                 if old_config.get('debug_mode'):
@@ -225,8 +193,6 @@ class Config(object):
                         new_config['app']['max_release_age'] = 0
                 else:
                     new_config['app']['max_release_age'] = old_config['new_releases']['release_max_age']
-
-                # Default
                 if old_config.get('global', {}).get('bitrate'):
                     new_config['defaults']['bitrate'] = old_config['global']['bitrate']
                 if old_config.get('global', {}).get('record_type'):
@@ -280,4 +246,16 @@ class Config(object):
                 if old_config.get('experimental', {}).get('allow_featured_in'):
                     new_config['experimental']['allow_featured_in'] = old_config['experimental']['allow_featured_in']
 
-                self.__write_config(new_config)
+                self._write_config(new_config)
+
+    @property
+    def check_update(self):
+        return self._get_property('check_update')
+
+    @property
+    def record_types(self):
+        return self._get_property('record_types')
+
+    @property
+    def release_channel(self):
+        return self._get_property('release_channel')
