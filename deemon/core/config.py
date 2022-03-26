@@ -5,49 +5,6 @@ from pathlib import Path
 from copy import deepcopy
 
 from deemon.core.exceptions import PropertyTypeMismatch, InvalidValue
-DEFAULT_CONFIG = {
-    "app": {
-        "check_update": 1,
-        "debug_mode": False,
-        "release_channel": "stable",
-        "max_search_results": 5,
-        "rollback_view_limit": 10,
-        "prompt_duplicates": True,
-        "prompt_no_matches": False,
-        "max_release_age": 90,
-        "fast_api": True,
-        "away_mode": False,
-    },
-    "defaults": {
-        "profile": 1,
-        "download_path": "",
-        "bitrate": "320",
-        "record_types": [
-            'album',
-            'ep',
-            'single'
-        ],
-    },
-    "alerts": {
-        "enabled": False,
-        "recipient_email": "",
-        "smtp_server": "",
-        "smtp_port": 465,
-        "smtp_username": "",
-        "smtp_password": "",
-        "smtp_from_address": "",
-    },
-    "deemix": {
-        "path": "",
-        "arl": "",
-        "check_account_status": True
-    },
-    "plex": {
-        "base_url": "",
-        "token": "",
-        "library": ""
-    }
-}
 from deemon.utils.constants import (
     DEFAULT_CONFIG,
     SENSITIVE_KEYS,
