@@ -49,7 +49,7 @@ DEFAULT_CONFIG = {
             'single'
         ],
     },
-    "alerts": {
+    "notifications": {
         "enabled": False,
         "recipient_email": "",
         "smtp_server": "",
