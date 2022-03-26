@@ -31,7 +31,6 @@ SENSITIVE_KEYS = [
 DEFAULT_CONFIG = {
     "app": {
         "check_update": 1,
-        "debug_mode": False,
         "release_channel": "stable",
         "max_search_results": 5,
         "rollback_view_limit": 10,
@@ -39,7 +38,6 @@ DEFAULT_CONFIG = {
         "prompt_no_matches": False,
         "max_release_age": 90,
         "fast_api": True,
-        "away_mode": False,
     },
     "defaults": {
         "profile": 1,
