@@ -1,4 +1,23 @@
-import logging
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+#
+# This file is part of deemon.
+#
+# Copyright (C) 2022 digitalec <digitalec.dev@gmail.com>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
 import os
 import tarfile
 from datetime import datetime
@@ -7,13 +26,13 @@ from pathlib import Path
 from packaging.version import parse as parse_version
 from tqdm import tqdm
 
-from deemon import VERSION
-from deemon.utils import startup, dates
-
-logger = logging.getLogger(__name__)
+from deemon import __version__, config
+from deemon.utils import dates, paths
+from deemon.logger import logger
 
 
 def run(include_logs: bool = False):
+
     def filter_func(item):
         includes = ['deemon', 'deemon/config.json', 'deemon/deemon.db']
         if include_logs:
@@ -22,18 +41,18 @@ def run(include_logs: bool = False):
         if item.name in includes:
             return item
 
-    backup_tar = dates.generate_date_filename("backup-" + VERSION + "-") + ".tar"
-    backup_path = startup.get_backup_dir()
+    backup_tar = dates.generate_date_filename("backup-" + __version__ + "-") + ".tar"
+    backup_path = paths.get_backup_dir()
 
     with tarfile.open(backup_path / backup_tar, "w") as tar:
-        tar.add(startup.get_appdata_dir(), arcname='deemon', filter=filter_func)
+        tar.add(paths.get_appdata_dir(), arcname='deemon', filter=filter_func)
         logger.info(f"Backed up to {backup_path / backup_tar}")
 
 
 def restore():
     restore_file_list = ['deemon/config.json', 'deemon/deemon.db']
 
-    def inspect_tar(fn: Path) -> dict:
+    def inspect_tar(fn: Path):
         fn_name = fn.name
         fn_name = fn_name.replace('.tar', '').split('-')
         if fn_name[0] == "backup" and len(fn_name) > 3:
@@ -75,7 +94,7 @@ def restore():
 
     def restore_tarfile(archive: dict):
         logger.debug("Restoring backup from `" + str(archive['filename'].name + "`"))
-        extract_dir = startup.get_appdata_dir()
+        extract_dir = paths.get_appdata_dir()
         tar = tarfile.open(archive['filename'])
         progress = tqdm(tar.getmembers(), ascii=" #",
                         bar_format='{desc}  [{bar}] {percentage:3.0f}%')
@@ -91,7 +110,7 @@ def restore():
                 progress.set_description_str("Restore complete")
 
     def is_newer_backup(version: str):
-        if parse_version(version) > parse_version(VERSION):
+        if parse_version(version) > parse_version(__version__):
             return True
 
     def display_backup_list(available_backups: list):
@@ -113,7 +132,7 @@ def restore():
         restore_tarfile(available_backups[selected_backup])
 
     backups = []
-    backup_path = startup.get_backup_dir()
+    backup_path = paths.get_backup_dir()
     file_list = [x for x in sorted(Path(backup_path).glob('*.tar'))]
     for backup in file_list:
         tar_files = inspect_tar(backup)
