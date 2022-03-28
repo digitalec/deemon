@@ -1,10 +1,31 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+#
+# This file is part of deemon.
+#
+# Copyright (C) 2022 digitalec <digitalec.dev@gmail.com>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
 import json
 import yaml
 import logging
 from pathlib import Path
 from copy import deepcopy
 
-from deemon.core.exceptions import (
+from deemon.utils import paths
+from deemon.exceptions import (
     PropertyTypeMismatch,
     InvalidValue,
 )
@@ -17,13 +38,15 @@ from deemon.utils.constants import (
     BITRATES
 )
 
+MAX_API_THREADS = 50
+
 
 class Config(object):
 
-    def __init__(self, config_path: str):
+    def __init__(self):
 
         self.logger = logging.getLogger(__name__)
-        self._config_path = Path(config_path)
+        self._config_path = paths.get_appdata_dir()
         self._config_file = Path(self._config_path / "config.yaml")
         self._config_file_v2 = Path(self._config_path / "config.json")
         self._default_config = DEFAULT_CONFIG
@@ -67,6 +90,8 @@ class Config(object):
 
         for key, value in source.items():
             if isinstance(value, dict):
+                if not target.get(key):
+                    target[key] = {}
                 self._validate_config(value, target[key])
             elif key in target.keys():
                 if isinstance(target[key], type(value)):
@@ -115,6 +140,20 @@ class Config(object):
                     result = self._get_property(property_name, val)
                     if result:
                         return result
+
+    def set_property(self, property_name: str, value, d: dict = None):
+        """ Update configuration value during running instance """
+
+        d = self._config if not d else d
+
+        if property_name in d.keys():
+            d[property_name] = value
+            return True
+        else:
+            for key, val in d.items():
+                if isinstance(val, dict):
+                    if self.set_property(property_name, value, val):
+                        return
 
     def _write_config(self, cfg: dict) -> None:
         """ Write config to config.yaml """
@@ -171,11 +210,11 @@ class Config(object):
                 if old_config.get('global', {}).get('download_path'):
                     new_config['defaults']['download_path'] = old_config['global']['download_path']
                 if old_config.get('global', {}).get('alerts'):
-                    new_config['alerts']['enabled'] = True
+                    new_config['notifications']['notify'] = True
                 else:
-                    new_config['alerts']['enabled'] = False
+                    new_config['notifications']['notify'] = False
                 if old_config.get('global', {}).get('email'):
-                    new_config['alerts']['recipient_email'] = old_config['global']['email']
+                    new_config['notifications']['recipient_email'] = old_config['global']['email']
                 if old_config.get('deemix', {}).get('path'):
                     new_config['deemix']['path'] = old_config['deemix']['path']
                 if old_config.get('deemix', {}).get('arl'):
@@ -183,15 +222,15 @@ class Config(object):
                 if old_config.get('deemix', {}).get('check_account_status'):
                     new_config['deemix']['check_account_status'] = old_config['deemix']['check_account_status']
                 if old_config.get('smtp_settings', {}).get('server'):
-                    new_config['alerts']['smtp_server'] = old_config['smtp_settings']['server']
+                    new_config['notifications']['smtp_server'] = old_config['smtp_settings']['server']
                 if old_config.get('smtp_settings', {}).get('port'):
-                    new_config['alerts']['smtp_port'] = old_config['smtp_settings']['port']
+                    new_config['notifications']['smtp_port'] = old_config['smtp_settings']['port']
                 if old_config.get('smtp_settings', {}).get('username'):
-                    new_config['alerts']['smtp_username'] = old_config['smtp_settings']['username']
+                    new_config['notifications']['smtp_username'] = old_config['smtp_settings']['username']
                 if old_config.get('smtp_settings', {}).get('password'):
-                    new_config['alerts']['smtp_password'] = old_config['smtp_settings']['password']
+                    new_config['notifications']['smtp_password'] = old_config['smtp_settings']['password']
                 if old_config.get('smtp_settings', {}).get('from_addr'):
-                    new_config['alerts']['smtp_from_address'] = old_config['smtp_settings']['from_addr']
+                    new_config['notifications']['smtp_from_address'] = old_config['smtp_settings']['from_addr']
                 if old_config.get('plex', {}).get('base_url'):
                     new_config['plex']['base_url'] = old_config['plex']['base_url']
                 if old_config.get('plex', {}).get('token'):

@@ -5,7 +5,8 @@ import traceback
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
-from deemon import VERSION
+from deemon import __version__
+from deemon.utils import paths
 
 import tqdm
 
@@ -29,7 +30,10 @@ class TqdmStream(object):
         tqdm.tqdm.write(msg, end='')
 
 
-def setup_logger(log_level='DEBUG', log_file=None):
+LOG_FILENAME = Path(paths.get_appdata_dir() / 'logs' / 'deemon.log')
+
+
+def setup_logger():
     """
     Configure logging for the deemon application
     """
@@ -38,7 +42,7 @@ def setup_logger(log_level='DEBUG', log_file=None):
         if issubclass(exc_type, KeyboardInterrupt):
             sys.__excepthook__(exc_type, exc_value, exc_traceback)
             return
-        print(f"[!] deemon {VERSION} has unexpectedly quit [!]")
+        print(f"[!] deemon {__version__} has unexpectedly quit [!]")
         print("")
         print(f"     Error: {exc_type.__name__}")
         print(f"     Message: {exc_value}")
@@ -65,11 +69,11 @@ def setup_logger(log_level='DEBUG', log_file=None):
                     if l != "":
                         logger.critical(l)
 
-    logger = logging.getLogger()
-    logger.setLevel(logging.DEBUG)
+    _logger = logging.getLogger()
+    _logger.setLevel(logging.DEBUG)
 
-    deemon_logger = logging.getLogger("deemon")
-    deemon_logger.setLevel(logging.DEBUG)
+    deemon_logger = logging.getLogger()
+    deemon_logger.setLevel(logging.INFO)
 
     # TODO REMOVE
     # deemix_logger = logging.getLogger("deemix")
@@ -81,20 +85,21 @@ def setup_logger(log_level='DEBUG', log_file=None):
     # spotipy_logger = logging.getLogger("spotipy")
     # spotipy_logger.setLevel(logging.INFO)
 
-    del logger.handlers[:]
+    del _logger.handlers[:]
     # del deemix_logger.handlers[:]
 
-    if log_file is not None:
-        rotate = RotatingFileHandler(log_file, maxBytes=1048576, backupCount=1, encoding="utf-8")
-        rotate.setLevel(logging.DEBUG)
-        rotate.setFormatter(logging.Formatter(LOG_FORMATS['DEBUG'], datefmt=LOG_DATE))
-        logger.addHandler(rotate)
+    rotate = RotatingFileHandler(LOG_FILENAME, maxBytes=1048576, backupCount=1, encoding="utf-8")
+    rotate.setLevel(logging.DEBUG)
+    rotate.setFormatter(logging.Formatter(LOG_FORMATS['DEBUG'], datefmt=LOG_DATE))
+    _logger.addHandler(rotate)
 
     stream = logging.StreamHandler(stream=TqdmStream)
-    stream.setLevel(log_level)
-    stream.setFormatter(logging.Formatter(STREAM_LOG_FORMATS[log_level], datefmt=LOG_DATE))
+    stream.setFormatter(logging.Formatter(STREAM_LOG_FORMATS['INFO'], datefmt=LOG_DATE))
     deemon_logger.addHandler(stream)
 
     sys.excepthook = log_exceptions
 
-    logger.debug("\n")
+    return deemon_logger
+
+
+logger = setup_logger()

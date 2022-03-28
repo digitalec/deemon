@@ -12,9 +12,7 @@ from deezer.api import APIError
 from deezer.gw import GWAPIError
 from deezer.utils import map_user_playlist, LyricsStatus, map_track
 
-from deemon.core import notifier
-from deemon.core.config import Config as config
-from deemon.core.db import Database
+from deemon import db, config, notifier
 
 logger = logging.getLogger(__name__)
 

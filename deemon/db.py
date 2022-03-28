@@ -6,12 +6,10 @@ from pathlib import Path
 
 from packaging.version import parse as parse_version
 
-from deemon import DB_VERSION, VERSION
-from deemon.core.config import Config
+from deemon import __dbversion__, __version__, config
+from deemon.logger import logger
 from deemon.utils import startup, performance, dates, ui, recordtypes
 
-logger = logging.getLogger(__name__)
-config = Config().CONFIG
 
 class Database(object):
 
@@ -178,7 +176,7 @@ class Database(object):
 
         self.query("CREATE UNIQUE INDEX 'idx_property' ON 'deemon' ('property')")
         self.query("CREATE INDEX 'artist' ON 'releases' ('artist_id', 'profile_id')")
-        self.query(f"INSERT INTO 'deemon' ('property', 'value') VALUES ('version', '{DB_VERSION}')")
+        self.query(f"INSERT INTO 'deemon' ('property', 'value') VALUES ('version', '{__dbversion__}')")
         self.query("INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('latest_ver', '')")
         self.query("INSERT INTO 'deemon' ('property', 'value') VALUES ('last_update_check', 0)")
         self.query(f"INSERT INTO 'deemon' ('property', 'value') "
@@ -196,13 +194,13 @@ class Database(object):
 
     def do_upgrade(self):
         current_ver = parse_version(self.get_db_version())
-        app_db_version = parse_version(DB_VERSION)
+        app_db_version = parse_version(__dbversion__)
 
         if current_ver == app_db_version:
             return
 
         logger.warning("DATABASE UPGRADE IN PROGRESS! PLEASE WAIT...")
-        logger.warning(f"  - Migrating version {current_ver} -> {DB_VERSION}")
+        logger.warning(f"  - Migrating version {current_ver} -> {__dbversion__}")
 
         if current_ver < parse_version("3.6"):
             logger.error("Unsupported upgrade path. Please upgrade to at least v2.8 first.")
@@ -336,9 +334,9 @@ class Database(object):
             self.query("DROP TABLE monitor_temp")
             self.query("DROP TABLE playlists_temp")
             self.query("DROP TABLE releases_temp")
-            self.query(f"INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('version', '{DB_VERSION}')")
+            self.query(f"INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('version', '{__dbversion__}')")
             self.commit()
-            logger.warning(f"Database has been upgraded to version {DB_VERSION}")
+            logger.warning(f"Database has been upgraded to version {__dbversion__}")
             print("Starting deemon, please wait...")
             time.sleep(3)
             ui.clear()
@@ -648,6 +646,7 @@ class Database(object):
         return query
 
     def fast_monitor(self, values):
+        self.new_transaction()
         self.cursor.executemany("INSERT OR REPLACE INTO monitor ("
                                 "id, name, bitrate, record_type,"
                                 "alerts, profile_id, download_path, trans_id) "
@@ -660,6 +659,7 @@ class Database(object):
 
     def fast_monitor_playlist(self, values):
         # TODO FIX THIS
+        self.new_transaction()
         self.cursor.executemany("INSERT OR REPLACE INTO playlists ("
                                 "id, title, url, bitrate, alerts, profile_id,"
                                 "download_path, trans_id) "
