@@ -50,7 +50,7 @@ DEFAULT_CONFIG = {
         ],
     },
     "notifications": {
-        "enabled": False,
+        "notify": False,
         "recipient_email": "",
         "smtp_server": "",
         "smtp_port": 465,
