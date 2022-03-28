@@ -30,7 +30,7 @@ class Refresh:
 
         if self.time_machine:
             logger.info(f":: Time Machine active: {datetime.strftime(self.time_machine, '%b %d, %Y')}!")
-            config.set('by_release_date', False)
+            config._CONFIG['new_releases']['release_max_age'] = 0
             if not self.waiting_for_refresh():
                 self.db.remove_specific_releases({'tm_date': str(self.time_machine)})
                 self.db.commit()
