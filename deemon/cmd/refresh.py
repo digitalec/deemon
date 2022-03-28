@@ -194,6 +194,16 @@ class Refresh:
             logger.debug("No payload provided")
 
     def run(self, artists: list = None, playlists: list = None):
+
+        if config.check_account_status():
+            if self.api.account_type == "free" and config.bitrate() != "128":
+                notification = notifier.Notify()
+                notification.expired_arl()
+                return logger.error("   [X] ARL expired? Deezer account only allows low"
+                                    " quality. If you wish to download "
+                                    "anyway, set `check_account_status` "
+                                    "to False in the config.")
+
         if artists:
             self.debugger("ManualRefresh", artists)
             monitored_artists = [x for x in (self.db.get_monitored_artist_by_name(a) for a in artists) if x]
@@ -241,14 +251,6 @@ class Refresh:
             self.new_releases_alert.clear()
 
         if len(self.queue_list):
-            if config.check_account_status():
-                if self.api.account_type == "free" and config.bitrate() != "128":
-                    notification = notifier.Notify()
-                    notification.expired_arl()
-                    return logger.error("   [X] ARL expired? Deezer account only allows low"
-                                        " quality. If you wish to download "
-                                        "anyway, set `check_account_status` "
-                                        "to False in the config.")
             dl = Download()
             dl.download_queue(self.queue_list)
 
