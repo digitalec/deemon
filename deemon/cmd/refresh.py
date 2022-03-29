@@ -4,8 +4,9 @@ from datetime import datetime, timedelta
 
 from tqdm import tqdm
 
-from deemon.cmd.download import QueueItem, Download
+from deemon import db, config
 from deemon.core import notifier
+from deemon.core.config import MAX_API_THREADS
 from deemon.core.api import PlatformAPI
 from deemon.core.db import Database
 from deemon.core.config import Config
@@ -91,6 +92,10 @@ def filter_api_release_data(api_releases):
             # Check if release already exists in database or else store it in list to add later
             if release['id'] in db_release_ids:
                 continue
+from deemon.core.logger import logger
+from deemon.cmd.download import QueueItem, Download
+from deemon.utils import dates, ui, recordtypes
+
             else:
                 new_releases.append(release)
 

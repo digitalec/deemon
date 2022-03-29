@@ -4,10 +4,11 @@ from pathlib import Path
 
 from tqdm import tqdm
 
-from deemon.cmd import search, refresh
-from deemon.core.db import Database
+from deemon import config, db
 from deemon.core.api import PlatformAPI
-from deemon.core.config import Config
+from deemon.core.logger import logger
+from deemon.core.config import MAX_API_THREADS
+from deemon.cmd import search, refresh
 from deemon.utils import dataprocessor, recordtypes
 
 logger = logging.getLogger(__name__)

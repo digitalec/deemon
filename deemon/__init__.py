@@ -23,18 +23,18 @@ import sys
 __version__ = '3.0_alpha1'
 __dbversion__ = '4'
 
-import requests
-
-from deemon.logger import logger
-from deemon.db import Database
-from deemon.config import Config
+from deemon.core.logger import logger
 from deemon.main import DeemonMain
 
 if sys.version_info < (3, 6):
     print('deemon requires Python 3.6 or higher to run.')
     sys.exit(1)
 
+
+from deemon.core.config import Config
 config = Config()
+
+from deemon.core.db import Database
 db = Database()
 
 
@@ -99,6 +99,6 @@ def main():
         from deemon.cmd import monitor
         monitor.remove(config=cli.get_config(), args=cli.get_args())
     elif cli.args.command == "test":
-        from deemon.notifier import Notify
+        from deemon.core.notifier import Notify
         notification = Notify()
         notification.test()

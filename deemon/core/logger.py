@@ -1,4 +1,23 @@
-import inspect
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+#
+# This file is part of deemon.
+#
+# Copyright (C) 2022 digitalec <digitalec.dev@gmail.com>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
 import logging
 import sys
 import traceback
@@ -61,18 +80,18 @@ def setup_logger():
                         print(f"        {line}")
             print("")
             print("Please see logs for more information.")
-            logger.critical("=" * 60)
-            logger.critical(f"      Uncaught Exception : {exc_type.__name__}      ")
-            logger.critical("=" * 60)
+            _logger.critical("=" * 60)
+            _logger.critical(f"      Uncaught Exception : {exc_type.__name__}      ")
+            _logger.critical("=" * 60)
             for line in formatted_traceback:
                 for l in line.split('\n'):
                     if l != "":
-                        logger.critical(l)
+                        _logger.critical(l)
 
     _logger = logging.getLogger()
     _logger.setLevel(logging.DEBUG)
 
-    deemon_logger = logging.getLogger()
+    deemon_logger = logging.getLogger("deemon")
     deemon_logger.setLevel(logging.INFO)
 
     # TODO REMOVE

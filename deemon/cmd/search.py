@@ -1,16 +1,12 @@
-import logging
 import sys
 
 from deezer import Deezer
 
 from deemon.cmd import download
 from deemon.cmd import monitor as mon
-from deemon.core import db, api
-from deemon.core.config import Config
+from deemon import db, config
+from deemon.core import api
 from deemon.utils import dates
-
-logger = logging.getLogger(__name__)
-config = Config().CONFIG
 
 class Search:
     def __init__(self):

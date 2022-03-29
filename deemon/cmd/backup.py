@@ -26,9 +26,9 @@ from pathlib import Path
 from packaging.version import parse as parse_version
 from tqdm import tqdm
 
-from deemon import __version__, config
+from deemon import __version__
 from deemon.utils import dates, paths
-from deemon.logger import logger
+from deemon.core.logger import logger
 
 
 def run(include_logs: bool = False):

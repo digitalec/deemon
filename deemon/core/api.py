@@ -1,15 +1,11 @@
 import json
-import logging
 from datetime import datetime
 
 import deezer.errors
 from deezer import Deezer
+from deemon import config
+from deemon.core.logger import logger
 
-from deemon.core.config import Config
-
-logger = logging.getLogger(__name__)
-
-config = Config().CONFIG
 
 class PlatformAPI:
     
@@ -32,15 +28,9 @@ class PlatformAPI:
         Returns API token to use across entire session
         """
         return PlatformAPI.TOKEN
-
-    def debugger(self, message: str, payload = None):
-        if config['app']['debug_mode']:
-            if not payload:
-                payload = ""
-            logger.debug(f"DEBUG_MODE: {message} {str(payload)}")
             
     def get_platform(self):
-        if config['app']['fast_api']:
+        if config.fast_api:
             return "deezer-gw"
         return "deezer-api"
 
@@ -52,10 +42,11 @@ class PlatformAPI:
                 return self.dz.gw
         else:
             return self.dz.api
-        
-    def get_account_type(self):
+
+    @staticmethod
+    def get_account_type():
         temp_dz = Deezer()
-        temp_dz.login_via_arl(config['deemix']['arl'])
+        temp_dz.login_via_arl(config.arl)
         if temp_dz.get_session()['current_user'].get('can_stream_lossless'):
             logger.debug(f"Deezer account type is \"Hi-Fi\"")
             return "hifi"
@@ -115,8 +106,7 @@ class PlatformAPI:
         
         return album
 
-
-    def get_artist_releases(self, query, limit=-1):
+    def get_artist_releases(self, query: dict, limit=-1):
         if self.platform == "deezer-gw":
             query['releases'] = []
             result = []

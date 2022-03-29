@@ -1,7 +1,7 @@
 import logging
 import requests
 
-from deemon import VERSION
+from deemon import __version__
 from deemon.cmd import monitor, refresh
 from deemon.core import notifier
 from deemon.core.db import Database
@@ -27,10 +27,9 @@ def cli(args):
             return print("Unable to reach GitHub API")
 
         for release in response.json():
-            if release['name'] == VERSION:
+            if release['name'] == __version__:
                 return print(release['body'])
-        return print(f"Changelog for v{VERSION} was not found.")
-
+        return print(f"Changelog for v{__version__} was not found.")
 
     if args.whats_new:
         show_whats_new()

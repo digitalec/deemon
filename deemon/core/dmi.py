@@ -12,7 +12,8 @@ from deezer.api import APIError
 from deezer.gw import GWAPIError
 from deezer.utils import map_user_playlist, LyricsStatus, map_track
 
-from deemon import db, config, notifier
+from deemon import db, config
+from deemon.core import notifier
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +21,6 @@ logger = logging.getLogger(__name__)
 class DeemixInterface:
     def __init__(self):
         logger.debug("Initializing deemix library")
-        self.db = Database()
         self.dz = Deezer()
 
         if config.deemix_path() == "":
@@ -156,7 +156,7 @@ class DeemixInterface:
             #
             vals = {'track_id': trackAPI['SNG_ID'], 'playlist_id': playlistAPI['id']}
             sql = "SELECT * FROM 'playlist_tracks' WHERE track_id = :track_id AND playlist_id = :playlist_id"
-            result = self.db.query(sql, vals).fetchone()
+            result = db.query(sql, vals).fetchone()
             if result:
                 continue
             #

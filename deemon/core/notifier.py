@@ -1,4 +1,3 @@
-import logging
 import platform
 import smtplib
 import ssl
@@ -11,10 +10,8 @@ from email.utils import formataddr
 
 import pkg_resources
 
-from deemon import __version__
-from deemon.core.config import Config as config
-
-logger = logging.getLogger(__name__)
+from deemon import __version__, config
+from deemon.core.logger import logger
 
 
 class Notify:
@@ -29,8 +26,8 @@ class Notify:
         """
         Send email notification message
         """
-        if not all([config.smtp_server(), config.smtp_port(), config.smtp_user(),
-                    config.smtp_pass(), config.smtp_sender(), config.smtp_recipient()]):
+        if not all([config.smtp_server, config.smtp_port, config.smtp_user,
+                    config.smtp_pass, config.smtp_sender, config.recipient]):
             if test:
                 logger.info("   [!] Unable to send test notification, email is"
                             " not configured")

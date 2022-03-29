@@ -21,11 +21,10 @@
 import argparse
 import logging
 import platform
-import os
 from pathlib import Path
 
-from deemon import __version__, config
-from deemon.logger import logger
+from deemon import __version__
+from deemon.core.logger import logger
 from deemon.utils.constants import RECORD_TYPES, BITRATES
 
 

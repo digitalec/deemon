@@ -25,7 +25,7 @@ from pathlib import Path
 from copy import deepcopy
 
 from deemon.utils import paths
-from deemon.exceptions import (
+from deemon.core.exceptions import (
     PropertyTypeMismatch,
     InvalidValue,
 )
@@ -138,7 +138,7 @@ class Config(object):
             for key, val in d.items():
                 if isinstance(val, dict):
                     result = self._get_property(property_name, val)
-                    if result:
+                    if result is not None:
                         return result
 
     def set_property(self, property_name: str, value, d: dict = None):
@@ -343,3 +343,7 @@ class Config(object):
     @property
     def plex_library(self):
         return self._get_property('library')
+
+    @property
+    def away_mode(self):
+        return self._get_property('away_mode')
