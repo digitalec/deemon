@@ -50,4 +50,10 @@ def load_queue_csv(queue):
     with open(queue) as f:
         data = csv.DictReader(f)
         new_data = [x for x in data]
+        for i, row in enumerate(new_data):
+            for k, v in row.items():
+                if v == "" or v == "None":
+                    new_data[i][k] = None
+                elif k in ["album_id", "bitrate", "track_id"] and v is not None:
+                    new_data[i][k] = int(v)
         return new_data
