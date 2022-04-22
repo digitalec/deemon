@@ -2,14 +2,14 @@
 layout: default
 title: Home
 nav_order: 1
-description: "deemon is a monitoring utility for new artist releases that can provide email alerts and automate downloading via the deemix library"
+description: "deemon is a monitoring utility for new artist releases that can provide email notify and automate downloading via the deemix library"
 permalink: /
 ---
 
 # deemon 2.9 Documentation
 {: .fs-9 }
 
-deemon is a monitoring utility for new artist releases that can provide email alerts and automate downloading via the deemix library
+deemon is a monitoring utility for new artist releases that can provide email notify and automate downloading via the deemix library
 {: .fs-6 .fw-300 }
 
 [Get started now](#getting-started){: .btn .btn-primary .fs-5 .mb-4 .mb-md-0 .mr-2 } [View it on GitHub](https://github.com/digitalec/deemon){: .btn .fs-5 .mb-4 .mb-md-0 }

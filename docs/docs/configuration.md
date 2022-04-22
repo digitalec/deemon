@@ -52,7 +52,7 @@ not present. For example: to generate this configuration file, run
     },
     "global": {
         "bitrate": "320",
-        "alerts": false,
+        "notify": false,
         "record_type": "all",
         "download_path": "",
         "email": ""
@@ -104,7 +104,7 @@ inherit the other settings from the _Global Configuration_.
 ### Per-Artist Configuration *(optional)*
 
 Within deemon, you can configure different settings for each individual artist 
-(using the `config` command). This gives you the flexibility to disable alerts 
+(using the `config` command). This gives you the flexibility to disable notify 
 for certain artists or specify a certain release type, bitrate or download path.
 
 <br>
@@ -148,10 +148,10 @@ These settings can be overriden within deemon using _profiles_ or by specifying 
 |Setting|Description|
 |-|---|
 |**bitrate**<br>options: _128, 320, FLAC_<br><br>|This option allows you to specify the bitrate used for downloads.<br><br><br>|
-|**alerts**<br>options: _true, false_<br><br>|Enable or disable email notification alerts when new releases are present. You must also have your email settings configured (see _[SMTP Settings](#smtp-settings)_).<br><br>|
+|**notify**<br>options: _true, false_<br><br>|Enable or disable email notification notify when new releases are present. You must also have your email settings configured (see _[SMTP Settings](#smtp-settings)_).<br><br>|
 |**record_type**<br>options: all, album, ep, single<br><br><br>|This option allows you to specify what release types you wish to download upon release. Keep in mind, most EPs are labelled as albums in the Deezer API.<br><br>**Limitation:** Currently only one option at a time is allowed.<br><br>|
 |**download_path**<br><br><br><br><br><br>|This option allows you to specify where downloads are saved. If no path is provided, downloads will be saved in the default directory specified by deemix.<br><br>**Windows users:** When providing a path, you **must** use double backslashes: `C:\\Music` or forward slashes: `C:/Music`.<br><br>|
-|**email**<br><br><br>|This option allows you to specify the default email address to use when alerts are enabled and SMTP settings are defined.<br><br>|
+|**email**<br><br><br>|This option allows you to specify the default email address to use when notify are enabled and SMTP settings are defined.<br><br>|
 
 ---
 

@@ -26,7 +26,7 @@ deemon Artist Configurator
 
 Bitrate [None]: 320
 Record Type [None]: album
-Alerts [None]: true
+Notify [None]: true
 Download Path [None]:
 
 :: Save these settings? [y|N] y

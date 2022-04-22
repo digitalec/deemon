@@ -28,7 +28,7 @@ user@localhost:~$ deemon profile default
 deemon Profile Editor
 :: Showing profile 'default' (Profile ID: 1)
 
-Name       Email                Alerts   Bitrate  Type     Plex Base URL       Plex Token     Plex Library         Download Path
+Name       Email                Notify   Bitrate  Type     Plex Base URL       Plex Token     Plex Library         Download Path
 default 
 ```
 
@@ -38,7 +38,7 @@ user@localhost:~$ deemon profile                                                
 deemon Profile Editor
 :: Showing all profiles
 
-Name       Email                Alerts   Bitrate    Type     Plex Base URL          Plex Token         Plex Library         Download Path
+Name       Email                Notify   Bitrate    Type     Plex Base URL          Plex Token         Plex Library         Download Path
 default                                                                                                                                                                
 
 Soundtracks                       0        320      album                                                                    /music/soundtracks  

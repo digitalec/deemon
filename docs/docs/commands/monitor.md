@@ -58,8 +58,8 @@ $ deemon monitor --import file.csv
 $ deemon monitor --import /home/user/Music
 ```
 
-## Specify custom bitrate, record type and alerts
-By default, deemon uses the settings configured in the `config.json` configuration file for all operations. This can be overridden at any time by using the available options such as `--bitrate`, `--record-type` and `--alerts`.
+## Specify custom bitrate, record type and notify
+By default, deemon uses the settings configured in the `config.json` configuration file for all operations. This can be overridden at any time by using the available options such as `--bitrate`, `--record-type` and `--notify`.
 
 ```bash
 $ deemon monitor ArtistA --bitrate FLAC

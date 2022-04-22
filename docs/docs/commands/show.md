@@ -40,7 +40,7 @@ The `show` command allows you to view and export more data pertaining to each ar
 First, we'll use the `-c` or `--csv` option to see all the data available:
 ```bash
 $ deemon show artists --csv
-name,id,bitrate,alerts,type,path
+name,id,bitrate,notify,type,path
 John Doe,1234,,,,
 ```
 
@@ -75,7 +75,7 @@ $ deemon show artists --export artists.csv
 CSV data has been saved to: artists.csv
 
 $ cat artists.csv
-name,id,bitrate,alerts,type,path
+name,id,bitrate,notify,type,path
 John Doe,1234,,,,
 ```
 
