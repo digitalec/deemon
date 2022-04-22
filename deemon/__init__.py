@@ -19,28 +19,29 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 import sys
+import requests
 
 __version__ = '3.0_alpha1'
 __dbversion__ = '4'
 
 from deemon.core.logger import logger
 from deemon.main import DeemonMain
-
-if sys.version_info < (3, 6):
-    print('deemon requires Python 3.6 or higher to run.')
-    sys.exit(1)
-
+from deemon.utils import startup
+from deemon.core.exceptions import ProfileNotExistError
 
 from deemon.core.config import Config
 config = Config()
 
-from deemon.core.db import Database
+from deemon.core.database import Database, Profile
 db = Database()
 
 
 def main():
     """ Main entry point for deemon """
     cli = DeemonMain()
+
+    # TODO - Add LoadProfile
+    # TODO - Add update check
 
     if cli.args.whats_new:
         try:
@@ -56,9 +57,9 @@ def main():
         sys.exit()
 
     if cli.args.profile:
-        config.set_property('profile', cli.args.profile)
-        profile = db.get_profile_by_id(config.profile)
-        logger.info(f"Active profile is {profile['id']} ({profile['name']})")
+        config.set_property('profile_id', cli.args.profile)
+        profile = db.get_profile_by_id(config.profile_id)
+        logger.info(f"Active profile is {profile.id} ({profile.name})")
 
     if cli.args.command == "backup":
         from deemon.cmd import backup
@@ -76,7 +77,8 @@ def main():
         pass
     elif cli.args.command == "refresh":
         from deemon.cmd import refresh
-        pass
+        r = refresh.Refresh(skip_downloads=cli.args.skip_downloads, time_machine=cli.args.time_machine)
+        r.start()
     elif cli.args.command == "remove":
         from deemon.cmd import monitor
         monitor.remove(cli.args.name, cli.args.id, cli.args.playlist)
@@ -85,7 +87,7 @@ def main():
         confirm = input(":: Type 'reset' to confirm: ")
         if confirm.lower() == "reset":
             print("")
-            db.reset_database()
+            db.reset()
         else:
             logger.info("Reset aborted. Database has NOT been modified.")
         return
@@ -96,8 +98,7 @@ def main():
         elif cli.args.num:
             rollback.rollback_last(cli.args.num)
     elif cli.args.command == "show":
-        from deemon.cmd import monitor
-        monitor.remove(config=cli.get_config(), args=cli.get_args())
+        pass
     elif cli.args.command == "test":
         from deemon.core.notifier import Notify
         notification = Notify()

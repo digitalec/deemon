@@ -38,9 +38,10 @@ DEFAULT_CONFIG = {
         "prompt_no_matches": False,
         "max_release_age": 90,
         "fast_api": True,
+        "away_mode": False,
     },
     "defaults": {
-        "profile": 1,
+        "profile_id": 1,
         "download_path": "",
         "bitrate": "320",
         "record_types": [

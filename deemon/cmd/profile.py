@@ -79,7 +79,7 @@ class ProfileConfig:
 
         menu = [
             {'setting': 'email', 'type': str, 'text': 'Email address', 'allowed': []},
-            {'setting': 'alerts', 'type': bool, 'text': 'Alerts', 'allowed': config.allowed_values('alerts')},
+            {'setting': 'notify', 'type': bool, 'text': 'Notify', 'allowed': config.allowed_values('notify')},
             {'setting': 'bitrate', 'type': str, 'text': 'Bitrate',
              'allowed': config.allowed_values('bitrate').values()},
             {'setting': 'record_type', 'type': str, 'text': 'Record Type',
@@ -144,13 +144,13 @@ class ProfileConfig:
                 return logger.error(f"Profile {self.profile_name} not found")
 
         print("{:<10} {:<40} {:<8} {:<8} {:<8} {:<25} "
-              "{:<20} {:<20} {:<20}".format('Name', 'Email', 'Alerts', 'Bitrate', 'Type',
+              "{:<20} {:<20} {:<20}".format('Name', 'Email', 'Notify', 'Bitrate', 'Type',
                                             'Plex Base URL', 'Plex Token', 'Plex Library', 'Download Path'))
         for u in profile:
-            id, name, email, alerts, bitrate, rtype, url, token, \
+            id, name, email, notify, bitrate, rtype, url, token, \
             lib, dl_path = [x if x is not None else '' for x in u.values()]
             print("{:<10} {:<40} {:<8} {:<8} {:<8} {:<25} "
-                  "{:<20} {:<20} {:<20}".format(name, email, alerts, bitrate, rtype, url, token, lib, dl_path))
+                  "{:<20} {:<20} {:<20}".format(name, email, notify, bitrate, rtype, url, token, lib, dl_path))
             print("")
 
     def clear(self):

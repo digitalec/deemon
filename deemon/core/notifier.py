@@ -18,7 +18,6 @@ class Notify:
 
     def __init__(self, new_releases: list = None):
         logger.debug("notify initialized")
-        logger.debug(f"releases to notify on: {new_releases}")
         self.subject = "New releases detected!"
         self.releases = new_releases
 
@@ -27,7 +26,7 @@ class Notify:
         Send email notification message
         """
         if not all([config.smtp_server, config.smtp_port, config.smtp_user,
-                    config.smtp_pass, config.smtp_sender, config.recipient]):
+                    config.smtp_pass, config.smtp_from, config.recipient]):
             if test:
                 logger.info("   [!] Unable to send test notification, email is"
                             " not configured")

@@ -20,7 +20,7 @@
 #
 from deemon import db
 from deemon.utils import dates
-from deemon.logger import logger
+from deemon.core.logger import logger
 
 
 def view_transactions():

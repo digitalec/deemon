@@ -116,7 +116,7 @@ Examples of usage:
         # Refresh command
         refresh_help_text = 'check monitored artists for new releases'
         parser_f = subparsers.add_parser('refresh', help=refresh_help_text, description=refresh_help_text)
-        parser_f.add_argument('-s', '--skip-download', action='store_true', help='skip downloading of releases')
+        parser_f.add_argument('-s', '--skip-downloads', action='store_true', help='skip downloading of releases')
         parser_f.add_argument('-T', '--time-machine', metavar='YYYY-MM-DD', type=str,
                               help='refresh as if it were this date')
 

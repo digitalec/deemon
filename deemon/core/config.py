@@ -26,8 +26,8 @@ from copy import deepcopy
 
 from deemon.utils import paths
 from deemon.core.exceptions import (
-    PropertyTypeMismatch,
-    InvalidValue,
+    PropertyTypeMismatchError,
+    InvalidValueError,
 )
 
 from deemon.utils.constants import (
@@ -97,16 +97,16 @@ class Config(object):
                 if isinstance(target[key], type(value)):
                     if key == "bitrate":
                         if value not in BITRATES.values():
-                            raise InvalidValue(f"Invalid value specified for bitrate: {value}")
+                            raise InvalidValueError(f"Invalid value specified for bitrate: {value}")
                     elif key == "record_types":
                         for rt in value:
                             if rt not in RECORD_TYPES.values():
-                                raise InvalidValue(f"Invalid value specified for record_types: {value}")
+                                raise InvalidValueError(f"Invalid value specified for record_types: {value}")
                     elif key == "release_channel":
                         if value not in RELEASE_CHANNELS:
-                            raise InvalidValue(f"Invalid value specified for release_channel: {value}")
+                            raise InvalidValueError(f"Invalid value specified for release_channel: {value}")
                 else:
-                    raise PropertyTypeMismatch(f"Invalid value for `{key}`."
+                    raise PropertyTypeMismatchError(f"Invalid value for `{key}`."
                                                f" Expected type {type(target[key]).__name__}"
                                                f" but got {type(value).__name__}")
 
@@ -209,7 +209,7 @@ class Config(object):
                             new_config['defaults']['record_types'].append('feat')
                 if old_config.get('global', {}).get('download_path'):
                     new_config['defaults']['download_path'] = old_config['global']['download_path']
-                if old_config.get('global', {}).get('alerts'):
+                if old_config.get('global', {}).get('notify'):
                     new_config['notifications']['notify'] = True
                 else:
                     new_config['notifications']['notify'] = False
@@ -281,8 +281,8 @@ class Config(object):
         return self._get_property('fast_api')
 
     @property
-    def profile(self):
-        return self._get_property('profile')
+    def profile_id(self):
+        return self._get_property('profile_id')
 
     @property
     def download_path(self):
@@ -309,11 +309,15 @@ class Config(object):
         return self._get_property('smtp_server')
 
     @property
-    def smtp_username(self):
+    def smtp_port(self):
+        return self._get_property('smtp_port')
+
+    @property
+    def smtp_user(self):
         return self._get_property('smtp_username')
 
     @property
-    def smtp_password(self):
+    def smtp_pass(self):
         return self._get_property('smtp_password')
 
     @property

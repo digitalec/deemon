@@ -67,7 +67,7 @@ def artist_lookup(query):
     print_header(f"Configuring '{result['artist_name']}' (Artist ID: {result['artist_id']})")
     modified = 0
     for property in result:
-        if property not in ['alerts', 'bitrate', 'record_type', 'download_path']:
+        if property not in ['notify', 'bitrate', 'record_type', 'download_path']:
             continue
         allowed_opts = config.allowed_values(property)
         if isinstance(allowed_opts, dict):

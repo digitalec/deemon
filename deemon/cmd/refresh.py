@@ -1,4 +1,23 @@
-import logging
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+#
+# This file is part of deemon.
+#
+# Copyright (C) 2022 digitalec <digitalec.dev@gmail.com>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
 
@@ -8,207 +27,264 @@ from deemon import db, config
 from deemon.core import notifier
 from deemon.core.config import MAX_API_THREADS
 from deemon.core.api import PlatformAPI
-from deemon.core.db import Database
-from deemon.core.config import Config
-from deemon.utils import dates, ui, dataprocessor, recordtypes
-
-logger = logging.getLogger(__name__)
-config = Config().CONFIG
-db = Database()
-new_releases = []
-holding_queue = []
-notification_queue = []
-
-
-def get_api_release_data(artists=None, playlists=None):
-    api = PlatformAPI()
-    api_result = {}
-
-    if artists:
-        with ThreadPoolExecutor(max_workers=config['max_threads']) as ex:
-            api_result['artists'] = list(
-                tqdm(ex.map(api.get_artist_releases, artists),
-                     total=len(artists),
-                     desc=f"Getting artist release data for {len(artists)} artist(s), please wait...",
-                     ascii=" #",
-                     bar_format=ui.TQDM_FORMAT)
-            )
-
-    return api_result
-
-
-def is_future_release(release_date: str):
-    """ Returns True if release date is in the future"""
-    release_date_dt = dates.str_to_datetime_obj(release_date)
-    if release_date_dt > datetime.now():
-        return True
-
-
-def filter_api_release_data(api_releases):
-
-    allowed_record_types = None
-    existing_future_releases = db.get_future_releases()
-    queue = []
-
-    # Get existing releases in database
-    db_releases = db.get_artist_releases()
-    db_release_ids = [x['album_id'] for x in db_releases]
-
-    # Loop over each artist containing all of their releases
-    for artist in api_releases['artists']:
-
-        # Check if record type matches what user specified
-        if artist['record_type']:
-            logger.debug("Overriding record type based on artist settings")
-            allowed_record_types = recordtypes.get_record_type_str(artist['record_type'])
-        else:
-            allowed_record_types = config['defaults']['record_types']
-
-        # Loop over each release for this artist
-        for release in artist['releases']:
-
-            record_type = []
-
-            # Explicit is either 1 or 0
-            if release['explicit_lyrics'] != 1:
-                release['explicit_lyrics'] = 0
-
-            # Convert record type to our own format for filtering
-            if artist['id'] == release['artist_id'] and not release['official']:
-                record_type.append("unofficial")
-            if artist['id'] != release['artist_id']:
-                record_type.append("feat")
-            if release['record_type'] == "0":
-                record_type.append("single")
-            elif release['record_type'] == "1":
-                record_type.append("album")
-            elif release['record_type'] == "2":
-                record_type.append("comp")
-            elif release['record_type'] == "3":
-                record_type.append("ep")
-
-            release['record_type'] = recordtypes.get_record_type_index(record_type)
-
-            # Check if release already exists in database or else store it in list to add later
-            if release['id'] in db_release_ids:
-                continue
+from deemon.core.database import Album
 from deemon.core.logger import logger
 from deemon.cmd.download import QueueItem, Download
 from deemon.utils import dates, ui, recordtypes
 
-            else:
-                new_releases.append(release)
 
-            if config['runtime']['skip_downloads']:
-                continue
+class Refresh:
 
-            # #####
-            # Filtering beyond this point to see if release qualifies for download
-            # #####
+    def __init__(self, download_all: bool = False, skip_downloads: bool = False, time_machine: str = None):
+        self.new_releases = list()
+        self.holding_queue = list()
+        self.notification_queue = list()
+        self.download_all = download_all
+        self.skip_downloads = skip_downloads
+        self.time_machine = time_machine
 
-            # Check if release is in future release list and update if release date has changed
-            if release['id'] in [x['album_id'] for x in existing_future_releases]:
-                for existing in existing_future_releases:
-                    if existing['album_id'] == release['id']:
-                        if not existing['album_release'] == release['release_date']:
-                            if is_future_release(release['release_date']):
-                                logger.info(f"Release date has changed to {release['release_date']} for "
-                                            f"{release['artist_name']} - {release['title']}.")
-                                db.update_future_release(release)
+        self.db_releases = [x.Album.alb_id for x in db.get_releases()]
+        self.db_future_releases = self.get_future_releases()
 
-            # If record type(s) of release aren't all allowed, skip it
-            if not all(elem in allowed_record_types for elem in record_type):
-                continue
+    @staticmethod
+    def get_api_release_data(artists=None, playlists=None):
+        api = PlatformAPI()
+        api_result = {'artists': list(), 'playlists': list()}
 
-            # If download_all is set, release date doesn't matter
-            if not config['runtime']['download_all']:
-                # Verify if release is within time_machine date
-                release_date_dt = dates.str_to_datetime_obj(release['release_date'])
-                if config['runtime']['time_machine']:
-                    time_machine_dt = dates.str_to_datetime_obj(config['runtime']['time_machine'])
-                    if release_date_dt <= time_machine_dt:
-                        continue
+        if artists:
+            with ThreadPoolExecutor(max_workers=MAX_API_THREADS) as ex:
+                api_result['artists'] = list(
+                    tqdm(ex.map(api.get_artist_releases, artists),
+                         total=len(artists),
+                         desc=f"Getting artist release data for {len(artists)} artist(s), please wait...",
+                         ascii=" #",
+                         bar_format=ui.TQDM_FORMAT)
+                )
 
-                # Verify if release is within max_release_age range
-                if config['app']['max_release_age']:
-                    if release_date_dt < (datetime.now() - timedelta(config['app']['max_release_age'])):
-                        continue
+        return api_result
 
-            if artist['alerts'] or artist['alerts'] is None:
-                create_notification(release)
+    @staticmethod
+    def release_date_in_future(release_date: str):
+        """ Returns True if release date is in the future"""
+        release_date_dt = dates.str_to_datetime_obj(release_date)
+        if release_date_dt > datetime.now():
+            return True
 
-            # Queue release if it made it this far
-            queue.append(QueueItem(release))
+    @staticmethod
+    def get_release_record_type_index(artist_id: int, release: dict):
+        """ Returns releases' Record Type Index based on information returned from API """
+        record_type = list()
+        if artist_id == release['art_id'] and not release['official']:
+            record_type.append("unofficial")
+        if artist_id != release['art_id']:
+            record_type.append("feat")
+        if release['rectype'] == "0":
+            record_type.append("single")
+        elif release['rectype'] == "1":
+            record_type.append("album")
+        elif release['rectype'] == "2":
+            record_type.append("comp")
+        elif release['rectype'] == "3":
+            record_type.append("ep")
+        return recordtypes.get_record_type_index(record_type)
 
-        return queue
-
-
-def prune_future_releases(f):
-    to_prune = [x for x in f if not is_future_release(x['album_release'])]
-    if to_prune:
-        logger.debug(f"Pruning {len(to_prune)} release(s) from future release table")
-        db.remove_future_release(to_prune)
-
-
-def start():
-
-    artists = []
-
-    pending = db.get_pending_artist_refresh()
-
-    if pending:
-        logger.info(f"Refreshing {len(pending)} pending artist(s)/playlist(s)")
-        for entry in pending:
-            artists.append(entry)
-        if not config['runtime']['download_all']:
-            config['runtime']['skip_downloads'] = True
-    else:
-        artists = db.get_all_monitored_artists()
-
-    if not artists:
-        return logger.info("No artists/playlists to refresh. Try monitoring something first!")
-
-    prune_future_releases(db.get_future_releases())
-
-    api_releases = get_api_release_data(artists)
-    queue = filter_api_release_data(api_releases)
-
-    if queue:
-        # If operating in away_mode, dump queue to CSV format
-        if config['app']['away_mode']:
-            logger.debug("Away Mode is enabled. Storing queue items for later")
-            for release in queue:
-                holding_queue.append(vars(release))
-            db.save_holding_queue(holding_queue)
-            db.commit()
+    @staticmethod
+    def get_allowed_record_type_index(artist: dict) -> int:
+        """ Returns Record Type Index for artist if defined, otherwise uses config """
+        if artist['rectype']:
+            logger.debug("Overriding record type based on artist settings")
+            return artist['rectype']
         else:
-            dl = Download()
-            dl.download_queue(queue)
+            return recordtypes.get_record_type_index(config.record_types)
 
-    if new_releases:
-        db.add_new_releases(new_releases)
-        db.commit()
+    @staticmethod
+    def is_allowed_record_type(allowed_rt, release_rt):
+        if recordtypes.compare_record_type_index(allowed_rt, release_rt):
+            return True
 
-    if pending:
-        db.drop_all_pending_artists()
-        db.commit()
+    @staticmethod
+    def get_explicit_value(value):
+        """ Returns whether release is explicit or not """
+        if value != 1:
+            return 0
+        else:
+            return 1
 
-    if len(notification_queue):
-        notification = notifier.Notify(notification_queue)
-        notification.send()
+    def release_before_time_machine(self, release_date):
+        """ Returns True if release date is before time machine date """
+        time_machine = dates.str_to_datetime_obj(self.time_machine)
+        if release_date <= time_machine:
+            return True
 
+    @staticmethod
+    def release_before_max_release_age(release_date):
+        if release_date < (datetime.now() - timedelta(config.max_release_age)):
+            return True
 
-def create_notification(release: dict):
+    def is_new_release(self, release):
+        """ Returns True if release ID is not already stored in database """
+        if release['alb_id'] not in self.db_releases:
+            return True
 
-    if release['release_date'] in [x['release_date'] for x in notification_queue]:
-        for day in notification_queue:
-            if release['release_date'] == day['release_date']:
-                if release['link'] not in [x['link'] for x in day['releases']]:
-                    day["releases"].append(release)
-    else:
-        notification_queue.append(
-            {
-                'release_date': release['release_date'],
-                'releases': [release]
-            }
-        )
+    def is_in_future_table(self, release_id: int):
+        """ Returns True if release ID is found in future_release table """
+        if release_id in [x['alb_id'] for x in self.db_future_releases]:
+            return True
+
+    def is_future_changed(self, release: dict):
+        """ Returns True if release date has changed """
+        for future_release in self.db_future_releases:
+            if future_release['alb_id'] == release['alb_id']:
+                if future_release['album_release'] != release['alb_date']:
+                    return True
+
+    def is_released(self, release: dict):
+        """ Checks if release is in future table and/or is a future release """
+        if self.is_in_future_table(release['alb_id']):
+            if self.release_date_in_future(release['alb_date']):
+                if self.is_future_changed(release):
+                    logger.info("Release date has changed on future release")
+                    db.update_future_release(release)
+                    return False
+            else:
+                db.remove_future_release(release['alb_id'])
+                return True
+        elif self.release_date_in_future(release['alb_date']):
+            db.add_future_release(release)
+            return False
+
+    def filter_artist_releases(self, artist):
+        """ Filter out releases already seen and add new to new_releases list, download_queue """
+
+        download_queue = list()
+        allowed_rti = self.get_allowed_record_type_index(artist)
+
+        for release in artist['releases']:
+            release['explicit'] = self.get_explicit_value(release['explicit'])
+            release['rectype'] = self.get_release_record_type_index(artist['art_id'], release)
+
+            if self.is_new_release(release) and self.is_allowed_record_type(allowed_rti, release['rectype']):
+                self.new_releases.append(
+                    Album(
+                        art_id=release['art_id'],
+                        art_name=release['art_name'],
+                        alb_id=release['alb_id'],
+                        alb_title=release['alb_title'],
+                        alb_date=release['alb_date'],
+                        explicit=release['explicit'],
+                        rectype=release['rectype'],
+                    )
+                )
+            else:
+                continue
+
+            if not self.skip_downloads:
+                if self.is_released(release):
+                    if not self.download_all:
+                        release_date_dt = dates.str_to_datetime_obj(release['alb_date'])
+                        if self.time_machine and self.release_before_time_machine(release_date_dt):
+                            continue
+                        if config.max_release_age and self.release_before_max_release_age(release_date_dt):
+                            continue
+                        # TODO - Change notify
+                        if artist['notify'] or (artist['notify'] is None and config.notifications):
+                            self.append_notification(release)
+
+                    download_queue.append(QueueItem(release))
+        return download_queue
+
+    def get_future_releases(self):
+        """ Prune releases and return remaining """
+        self.prune_future_releases()
+        return db.get_future_albums()
+
+    def prune_future_releases(self):
+        """ Remove all future releases that are no longer in the future """
+        future_releases = db.get_future_albums()
+        to_prune = [x for x in future_releases if not self.release_date_in_future(x.AlbumFuture.alb_date)]
+        if to_prune:
+            logger.debug(f"Pruning {len(to_prune)} release(s) from future release table")
+            db.remove_future_release(to_prune)
+            db.commit()
+
+    def start(self):
+        db.init_transaction()
+        pending = db.get_pending_artist_refresh()
+        artists = []
+
+        if pending:
+            logger.info(f"Refreshing {len(pending)} pending artist(s)/playlist(s)")
+            for entry in pending:
+                artists.append(entry)
+            if not self.download_all:
+                self.skip_downloads = True
+        else:
+            artists = db.get_artists()
+
+        if not artists:
+            return logger.info("No artists/playlists to refresh. Try monitoring something first!")
+
+        api_releases = self.get_api_release_data(artists)
+
+        # TODO Need to clean up this block
+        with ThreadPoolExecutor(max_workers=MAX_API_THREADS) as ex:
+            result = list(ex.map(self.filter_artist_releases, api_releases['artists']))
+            queue = [elem for q in result for elem in q]
+
+        if queue:
+            # If operating in away_mode, dump queue to CSV format
+            # TODO - Implement away mode
+            if config.away_mode:
+                logger.debug("Away Mode is enabled. Storing queue items for later")
+                for release in queue:
+                    self.holding_queue.append(vars(release))
+                db.save_holding_queue(self.holding_queue)
+                db.commit()
+            else:
+                dl = Download()
+                dl.download_queue(queue)
+
+        if self.new_releases:
+            logger.debug("New releases found, adding to database...")
+            db.add_new_releases(self.new_releases)
+
+        if pending:
+            db.drop_all_pending_artists()
+
+        db.session.commit()
+
+        if len(self.notification_queue):
+            notification = notifier.Notify(self.notification_queue)
+            notification.send()
+
+        self.db_stats()
+
+    def append_notification(self, release: dict):
+        """ Append release to list for its release date """
+        if release['alb_date'] in [x['release_date'] for x in self.notification_queue]:
+            for day in self.notification_queue:
+                if release['alb_date'] == day['release_date']:
+                    if release['link'] not in [x['link'] for x in day['releases']]:
+                        day["releases"].append(release)
+        else:
+            self.notification_queue.append(
+                {
+                    'release_date': release['alb_date'],
+                    'releases': [release]
+                }
+            )
+
+    @staticmethod
+    def db_stats():
+        """ Prints out some statistics at the end of a Refresh operation """
+        artists = len(db.get_artists())
+        playlists = len(db.get_playlists())
+        releases = len(db.get_albums())
+        future = len(db.get_future_albums())
+
+        print("")
+        print(f"+ Artists monitored: {artists:,}")
+        print(f"+ Playlists monitored: {playlists:,}")
+        print(f"+ Releases seen: {releases:,}")
+        print(f"+ Pending future releases: {future:,}")
+        print("")

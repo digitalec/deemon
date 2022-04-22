@@ -18,6 +18,16 @@ def get_record_type_index(user_types: list):
     return record_type_index
 
 
+def compare_record_type_index(allowed_rti: int, release_rti: int):
+    """ Convert Record Type Index to list of string record types for comparison"""
+
+    allowed_types = get_record_type_str(allowed_rti)
+    release_types = get_record_type_str(release_rti)
+
+    if all(elem in allowed_types for elem in release_types):
+        return True
+
+
 def convert_index_to_binary(i):
     """
     Converts record_type_index to binary format and

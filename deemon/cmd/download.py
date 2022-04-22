@@ -1,5 +1,3 @@
-import csv
-import logging
 import os
 from pathlib import Path
 from tqdm import tqdm
@@ -9,14 +7,10 @@ import deezer
 import plexapi.exceptions
 from plexapi.server import PlexServer
 
-from deemon import utils
-from deemon.core import dmi, db, api
-from deemon.core.config import Config
+from deemon import db, config, utils
+from deemon.core import dmi, api
+from deemon.core.logger import logger
 from deemon.utils import ui, validate, startup, dates
-
-logger = logging.getLogger(__name__)
-
-config = Config().CONFIG
 
 
 class QueueItem:
@@ -30,8 +24,8 @@ class QueueItem:
         self.track_title = None
         self.url = None
         self.playlist_title = None
-        self.bitrate = config['defaults']['bitrate']
-        self.download_path = config['defaults']['download_path']
+        self.bitrate = config.bitrate
+        self.download_path = config.download_path
 
         for key, val in payload.items():
             if key == 'id':

@@ -6,7 +6,7 @@ from deemon.cmd import monitor, refresh
 from deemon.core import notifier
 from deemon.core.db import Database
 from deemon.core.config import Config
-from deemon.core.exceptions import InvalidValue
+from deemon.core.exceptions import InvalidValueError
 from deemon.utils import dataprocessor, validate, recordtypes
 
 logger = logging.getLogger(__name__)
@@ -34,9 +34,9 @@ def cli(args):
     if args.whats_new:
         show_whats_new()
 
-    if args.profile:
+    if args.profile_id:
         # if args.profile in db.available_profiles()
-        config["defaults"]["profile"] = args.profile
+        config["defaults"]["profile"] = args.profile_id
 
     if args.command == 'backup':
         if args.restore:
@@ -48,19 +48,19 @@ def cli(args):
     elif args.command == 'download':
         pass
     elif args.command == 'monitor':
-        if args.alerts:
-            config['runtime']['alerts'] = True
+        if args.notify:
+            config['runtime']['notify'] = True
         if args.bitrate:
             if validate.validate_bitrates(args.bitrate):
                 config['runtime']['bitrate'] = args.bitrate
             else:
-                raise InvalidValue(f"Invalid bitrate: {args.bitrate}")
+                raise InvalidValueError(f"Invalid bitrate: {args.bitrate}")
         if args.download_path:
             config['runtime']['download_path'] = args.download_path
         if args.record_type:
             invalid_rt = validate.validate_record_type(args.record_type)
             if len(invalid_rt):
-                raise InvalidValue(f"Invalid record type(s): {args.record_type}")
+                raise InvalidValueError(f"Invalid record type(s): {args.record_type}")
             else:
                 config['runtime']['record_type'] = recordtypes.get_record_type_index(args.record_type)
         if args.artist:

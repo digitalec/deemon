@@ -9,7 +9,7 @@ venv
 tests.py
 **/.DS_Store
 artists.txt
-/deemon/tests/
+/deemon/test/
 .vscode/settings.json
 .vscode/launch.json
 createenv.sh

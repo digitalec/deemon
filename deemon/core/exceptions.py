@@ -1,14 +1,18 @@
-class ValueNotAllowed(Exception):
+class ValueNotAllowedError(Exception):
     pass
 
 
-class PropertyTypeMismatch(Exception):
+class PropertyTypeMismatchError(Exception):
     pass
 
 
-class UnknownValue(Exception):
+class UnknownValueError(Exception):
     pass
 
 
-class InvalidValue(Exception):
+class InvalidValueError(Exception):
+    pass
+
+
+class ProfileNotExistError(Exception):
     pass

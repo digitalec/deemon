@@ -76,12 +76,12 @@ class Show:
                 if val == None:
                     db_result[key] = "-"
 
-            print("{:<10} {:<35} {:<10} {:<10} {:<10} {:<25}".format('ID', 'Artist', 'Alerts',
+            print("{:<10} {:<35} {:<10} {:<10} {:<10} {:<25}".format('ID', 'Artist', 'Notify',
                                                                      'Bitrate', 'Type', 'Download Path'))
 
             print("{!s:<10} {!s:<35} {!s:<10} {!s:<10} {!s:<10} {!s:<25}".format(db_result['artist_id'],
                                                                                  db_result['artist_name'],
-                                                                                 db_result['alerts'],
+                                                                                 db_result['notify'],
                                                                                  db_result['bitrate'],
                                                                                  db_result['record_type'],
                                                                                  db_result['download_path']))
@@ -91,11 +91,11 @@ class Show:
                 if val == None:
                     db_result[key] = "-"
 
-            print("{:<15} {:<30} {:<50} {:<10} {:<10} {:<25}".format('ID', 'Title', 'URL', 'Alerts',
+            print("{:<15} {:<30} {:<50} {:<10} {:<10} {:<25}".format('ID', 'Title', 'URL', 'Notify',
                                                                      'Bitrate', 'Download Path'))
 
             print("{!s:<15} {!s:<30} {!s:<50}  {!s:<10} {!s:<10} {!s:<25}".format(db_result['id'], db_result['title'],
-                                                                                  db_result['url'], db_result['alerts'],
+                                                                                  db_result['url'], db_result['notify'],
                                                                                   db_result['bitrate'],
                                                                                   db_result['download_path']))
             print("")
@@ -103,7 +103,7 @@ class Show:
             if export_csv or save_path:
                 if artist:
                     if not filter:
-                        filter = "name,id,bitrate,alerts,type,path"
+                        filter = "name,id,bitrate,notify,type,path"
                     filter = filter.split(',')
                     logger.debug(f"Generating CSV data using filters: {', '.join(filter)}")
                     column_names = ['artist_id' if x == 'id' else x for x in filter]
@@ -112,7 +112,7 @@ class Show:
                     column_names = ['download_path' if x == 'path' else x for x in column_names]
                 else:
                     if not filter:
-                        filter = "id,title,url,bitrate,alerts,path"
+                        filter = "id,title,url,bitrate,notify,path"
                     filter = filter.split(',')
                     logger.debug(f"Generating CSV data using filters: {', '.join(filter)}")
                     column_names = ['download_path' if x == 'path' else x for x in filter]
