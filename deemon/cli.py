@@ -427,10 +427,14 @@ def extra_command():
     extra.main()
 
 @run.command(name="search")
-def search():
+@click.argument('query', nargs=-1, required=False)
+def search(query):
     """Interactively search and download/monitor artists"""
+    if query:
+        query = ' '.join(query)
+
     client = Search()
-    client.search_menu()
+    client.search_menu(query)
 
 
 @run.command(name="config")
