@@ -307,10 +307,16 @@ class Download:
             for group in id_group:
                 id_type = group
                 try:
-                    id = int(url.split(f'/{group}/')[1])
+                    # Strip ID from URL
+                    id_from_url = url.split(f'/{group}/')[1]
+
+                    # Support for share links: http://deezer.com/us/track/12345?utm_campaign...
+                    id_from_url_extra = id_from_url.split('?')[0]
+
+                    id = int(id_from_url_extra)
                     logger.debug(f"Extracted group={id_type}, id={id}")
                     return id_type, id
-                except (IndexError, ValueError):
+                except (IndexError, ValueError) as e:
                     continue
             return False, False
 
