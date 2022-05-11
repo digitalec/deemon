@@ -73,7 +73,6 @@ class Search:
                 self.display_options(options="(d) Download Queue  (Q) Show Queue")
             if query:
                 search_query = query
-                quick_search = True
             else:
                 search_query = input(f":: Enter an artist to search for{self.show_mini_queue()}: ")
                 if search_query == "exit":
@@ -100,7 +99,7 @@ class Search:
             artist_selected = self.artist_menu(self.search_results['query'], self.search_results['results'], quick_search)
             if artist_selected:
                 return [artist_selected]
-            elif quick_search:
+            else:
                 return
 
     def queue_menu_options(self):
