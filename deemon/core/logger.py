@@ -49,7 +49,9 @@ class TqdmStream(object):
         tqdm.tqdm.write(msg, end='')
 
 
-LOG_FILENAME = Path(paths.get_appdata_dir() / 'logs' / 'deemon.log')
+appdata_dir = paths.get_appdata_dir()
+paths.init_appdata_dir(appdata_dir)
+LOG_FILENAME = Path(appdata_dir / 'logs' / 'deemon.log')
 
 
 def setup_logger():
@@ -57,36 +59,37 @@ def setup_logger():
     Configure logging for the deemon application
     """
 
-    def log_exceptions(exc_type, exc_value, exc_traceback):
-        if issubclass(exc_type, KeyboardInterrupt):
-            sys.__excepthook__(exc_type, exc_value, exc_traceback)
-            return
-        print(f"[!] deemon {__version__} has unexpectedly quit [!]")
-        print("")
-        print(f"     Error: {exc_type.__name__}")
-        print(f"     Message: {exc_value}")
-        print("")
-
-        if exc_traceback:
-            formatted_traceback = traceback.format_tb(exc_traceback)
-            if len(formatted_traceback) > 4:
-                print_traceback = formatted_traceback[-4:]
-            else:
-                print_traceback = formatted_traceback
-            print("     Traceback (showing last 4 entries):")
-            for lines in print_traceback:
-                for line in lines.split('\n'):
-                    if line != "":
-                        print(f"        {line}")
-            print("")
-            print("Please see logs for more information.")
-            _logger.critical("=" * 60)
-            _logger.critical(f"      Uncaught Exception : {exc_type.__name__}      ")
-            _logger.critical("=" * 60)
-            for line in formatted_traceback:
-                for l in line.split('\n'):
-                    if l != "":
-                        _logger.critical(l)
+    # def log_exceptions(exc_type, exc_value, exc_traceback):
+    #     if issubclass(exc_type, KeyboardInterrupt):
+    #         sys.__excepthook__(exc_type, exc_value, exc_traceback)
+    #         return
+    #
+    #     print(f"[!] deemon {__version__} has unexpectedly quit [!]")
+    #     print("")
+    #     print(f"\tError: {exc_type.__name__}")
+    #     print(f"\tMessage: " + str(exc_value).replace("\n", " "))
+    #     print("")
+    #
+    #     if exc_traceback:
+    #         formatted_traceback = traceback.format_tb(exc_traceback)
+    #         if len(formatted_traceback) > 4:
+    #             print_traceback = formatted_traceback[-4:]
+    #         else:
+    #             print_traceback = formatted_traceback
+    #         print("\tTraceback (showing last 4 entries):")
+    #         for lines in print_traceback:
+    #             for line in lines.split('\n'):
+    #                 if line != "":
+    #                     print(f"\t\t{line}")
+    #         print("")
+    #         print("Please see logs for more information.")
+    #         _logger.critical("=" * 60)
+    #         _logger.critical(f"      Uncaught Exception : {exc_type.__name__}      ")
+    #         _logger.critical("=" * 60)
+    #         for line in formatted_traceback:
+    #             for l in line.split('\n'):
+    #                 if l != "":
+    #                     _logger.critical(l)
 
     _logger = logging.getLogger()
     _logger.setLevel(logging.DEBUG)
@@ -116,7 +119,7 @@ def setup_logger():
     stream.setFormatter(logging.Formatter(STREAM_LOG_FORMATS['INFO'], datefmt=LOG_DATE))
     deemon_logger.addHandler(stream)
 
-    sys.excepthook = log_exceptions
+    #sys.excepthook = log_exceptions
 
     return deemon_logger
 

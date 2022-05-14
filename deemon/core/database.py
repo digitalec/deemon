@@ -361,8 +361,8 @@ class Database:
 
     def create_db(self):
         Base.metadata.create_all(self.engine)
-        # TODO re-enable this!
-        # self.session.add(Profile("default"))
+        # TODO disable this for testing
+        self.session.add(Profile("default"))
         self.session.add(Settings("db_version", __dbversion__))
         self.session.add(Settings("latest_app_ver", __version__))
         self.session.add(Settings("last_update_check", 0))
@@ -400,12 +400,13 @@ class Database:
             raise ProfileNotExistError("The profile ID does not exist.")
 
     def get_artists(self):
-        print(f"Selecting artist where profile_id = {config.profile_id}")
+        # TODO Testing profile ID selection is correct
+        #print(f"Selecting artist where profile_id = {config.profile_id}")
         stmt = select(Artist)
         return self.session.execute(stmt).all()
 
     def get_artist_by_name(self, art_name):
-        stmt = select(Artist).join(Transaction).where(Artist.art_name == art_name)
+        stmt = select(Artist).join(Transaction).where(Artist.art_name.collate("NOCASE") == art_name)
         return self.session.execute(stmt).one_or_none()
 
     def remove_artist(self, art_id):
@@ -457,6 +458,7 @@ class Database:
         self.session.commit()
 
 
+# TODO TESTS - REMOVE THIS LATER
 if __name__ == "__main__":
     print(config.profile_id)
     db = Database()
