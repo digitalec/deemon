@@ -75,7 +75,11 @@ def artist_lookup(query):
 
         while True:
             friendly_text = property.replace("_", " ").title()
-            user_input = input(f"{friendly_text} [{result[property]}]: ").lower()
+            user_input = input(f"{friendly_text} [{result[property]}]: ")
+
+            if property != "download_path":
+                user_input = user_input.lower()
+
             if user_input == "":
                 break
             elif user_input == "false" or user_input == "0":
