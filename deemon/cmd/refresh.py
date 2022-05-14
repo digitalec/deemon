@@ -81,6 +81,7 @@ class Refresh:
             release['bitrate'] = payload['bitrate'] or config.bitrate()
             release['download_path'] = payload['download_path'] or config.download_path()
             release['future'] = self.is_future_release(release['release_date'])
+            release['alerts'] = payload['alerts']
             
             if release['explicit_lyrics'] != 1:
                 release['explicit_lyrics'] = 0
@@ -162,8 +163,9 @@ class Refresh:
 
     def queue_release(self, release: dict):
         """ Add release to download queue and create alert notification """
-        
-        self.create_notification(release)
+
+        if release['alerts']:
+            self.create_notification(release)
         self.queue_list.append(QueueItem(release_full=release))
 
     def filter_playlist_releases(self, payload: dict):
