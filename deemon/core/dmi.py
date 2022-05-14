@@ -32,21 +32,15 @@ class DeemixInterface:
 
         self.dx_settings = LoadSettings(self.config_dir)
 
-        if config.download_path() != "":
-            # TODO is this necessary?
-            self.download_path = Path(config.download_path())
-            self.dx_settings['downloadLocation'] = str(self.download_path)
-
         logger.debug("deemix " + deemix.__version__)
-        logger.debug(f"deemix Config Path: {self.config_dir}")
-        logger.debug(f"deemix Download Path: {self.dx_settings['downloadLocation']}")
+        logger.debug(f"deemix config path: {self.config_dir}")
 
     def download_url(self, url, bitrate, download_path, override_deemix=True):
         if override_deemix:
             deemix.generatePlaylistItem = self.generatePlaylistItem
-
-        if download_path and download_path != "":
-            self.dx_settings['downloadLocation'] = download_path
+            
+        self.dx_settings['downloadLocation'] = download_path
+        logger.debug(f"deemix download path has changed: {self.dx_settings['downloadLocation']}")
 
         links = []
         for link in url:
