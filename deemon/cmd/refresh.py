@@ -78,6 +78,8 @@ class Refresh:
         for release in payload['releases']:
             release['artist_id'] = payload['artist_id']
             release['artist_name'] = payload['artist_name']
+            release['bitrate'] = payload['bitrate'] or config.bitrate()
+            release['download_path'] = payload['download_path'] or config.download_path()
             release['future'] = self.is_future_release(release['release_date'])
             
             if release['explicit_lyrics'] != 1:

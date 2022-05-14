@@ -38,6 +38,8 @@ class QueueItem:
             self.album_title = release_full['title']
             self.url = f"https://www.deezer.com/album/{self.album_id}"
             self.release_type = release_full['record_type']
+            self.bitrate = release_full['bitrate']
+            self.download_path = release_full['download_path']
 
         if artist:
             try:
@@ -166,16 +168,21 @@ class Download:
                 if self.verbose == "true":
                     logger.debug(f"Processing queue item {vars(item)}")
                 try:
+                    if item.download_path:
+                        download_path = item.download_path
+                    else:
+                        download_path = None
+
                     if item.artist_name:
                         if item.album_title:
                             logger.info(f"   > {item.artist_name} - {item.album_title}... ")
-                            self.di.download_url([item.url], dx_bitrate, config.download_path())
+                            self.di.download_url([item.url], dx_bitrate, download_path)
                         else:
                             logger.info(f"   > {item.artist_name} - {item.track_title}... ")
-                            self.di.download_url([item.url], dx_bitrate, config.download_path())
+                            self.di.download_url([item.url], dx_bitrate, download_path)
                     else:
                         logger.info(f"   > {item.playlist_title} (playlist)...")
-                        self.di.download_url([item.url], dx_bitrate, item.download_path, override_deemix=True)
+                        self.di.download_url([item.url], dx_bitrate, download_path, override_deemix=True)
                 except deemix.errors.GenerationError:
                     failed_count.append([(item, "No tracks listed or unavailable in your country")])
             failed_count = [x for x in failed_count if x]
