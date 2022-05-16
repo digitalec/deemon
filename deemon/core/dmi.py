@@ -38,9 +38,10 @@ class DeemixInterface:
     def download_url(self, url, bitrate, download_path, override_deemix=True):
         if override_deemix:
             deemix.generatePlaylistItem = self.generatePlaylistItem
-            
-        self.dx_settings['downloadLocation'] = download_path
-        logger.debug(f"deemix download path has changed: {self.dx_settings['downloadLocation']}")
+
+        if download_path:
+            self.dx_settings['downloadLocation'] = download_path
+            logger.debug(f"deemix download path set to: {self.dx_settings['downloadLocation']}")
 
         links = []
         for link in url:
