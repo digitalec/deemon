@@ -349,6 +349,10 @@ class Config(object):
         return Config._CONFIG.get('global').get('email')
 
     @staticmethod
+    def smtp_starttls() -> bool:
+        return Config._CONFIG.get('smtp_settings').get('starttls')
+
+    @staticmethod
     def check_update() -> int:
         return Config._CONFIG.get('check_update')
 
