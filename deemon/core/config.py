@@ -45,7 +45,7 @@ DEFAULT_CONFIG = {
     },
     "smtp_settings": {
         "server": "",
-        "port": 465,
+        "port": 587,
         "starttls": True,
         "username": "",
         "password": "",
