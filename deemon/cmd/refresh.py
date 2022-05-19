@@ -164,7 +164,8 @@ class Refresh:
     def queue_release(self, release: dict):
         """ Add release to download queue and create alert notification """
 
-        if release['alerts']:
+        # Create notification of release if per-artist is set to True
+        if release['alerts'] is not False and config.alerts():
             self.create_notification(release)
         self.queue_list.append(QueueItem(release_full=release))
 
