@@ -178,7 +178,7 @@ class Search:
         else:
             monitor_opt = "(m) Stop Monitoring"
         ui_filter = "Filters: (*) All  (a) Albums  (e) EP  (s) Singles - (E) Explicit (r) Reset"
-        ui_sort = "   Sort: (y) Year Desc  (Y) Year Asc  (t) Title Desc  (T) Title Asc"
+        ui_sort = "   Sort: (y) Release Date (desc)  (Y) Release Date (asc)  (t) Title (desc)  (T) Title (asc)"
         ui_mode = "   Mode: (S) Toggle Select"
         ui_options = ("(b) Back  (d) Download Queue  (Q) Show Queue  (f) Queue Filtered  "
                       f"{monitor_opt}")
