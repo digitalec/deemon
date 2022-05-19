@@ -36,20 +36,13 @@ class Show:
 
         if artist:
             if query:
-                if is_id:
-                    try:
-                        query = int(query)
-                    except ValueError:
-                        return logger.error(f"Invalid Artist ID - {query}")
-                    db_result = self.db.get_monitored_artist_by_id(query)
-                else:
-                    db_result = self.db.get_monitored_artist_by_name(query)
+                db_result = self.db.get_monitored_artist_by_name(query)
             else:
                 db_result = self.db.get_all_monitored_artists()
 
             if not db_result:
                 if query:
-                    return logger.error("Artist/ID not found: " + str(query))
+                    return logger.error("Artist not found: " + str(query))
                 else:
                     return logger.error("No artists are being monitored")
         else:
