@@ -4,7 +4,6 @@ import smtplib
 import ssl
 from datetime import datetime
 from email.message import EmailMessage
-from email.mime.image import MIMEImage
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.utils import formataddr
