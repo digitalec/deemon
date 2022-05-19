@@ -36,10 +36,6 @@ class Notify:
             logger.debug("Email not configured, no notifications will be sent")
             return False
 
-        if config.smtp_port() == 587:
-            return logger.error("[!] Unable to send email. Support for STARTTLS is coming in a future update. "
-                                "Please use port 465 (SSL).")
-
         if not body:
             body = self.build_message()
 
@@ -48,13 +44,17 @@ class Notify:
         logger.debug("Sending notification email")
         logger.debug(f"Using server: {config.smtp_server()}:{config.smtp_port()}")
 
-        try:
+        if config.smtp_starttls():
+            with smtplib.SMTP(config.smtp_server(), config.smtp_port()) as server:
+                server.starttls()
+                server.login(config.smtp_user(), config.smtp_pass())
+                server.sendmail(config.smtp_sender(), config.smtp_recipient(), body.as_string())
+                logger.debug("Email notification has been sent")
+        else:
             with smtplib.SMTP_SSL(config.smtp_server(), config.smtp_port(), context=context) as server:
                 server.login(config.smtp_user(), config.smtp_pass())
                 server.sendmail(config.smtp_sender(), config.smtp_recipient(), body.as_string())
                 logger.debug("Email notification has been sent")
-        except Exception as e:
-            logger.error("Error while sending mail: " + str(e))
 
     def get_cover_images(self):
         pass
