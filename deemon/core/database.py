@@ -122,7 +122,7 @@ class Album(Base):
     )
 
     id = Column(Integer, primary_key=True)
-    art_id = Column(Integer)
+    art_id = Column(Integer, ForeignKey('artist.art_id', ondelete="CASCADE"))
     art_name = Column(String)
     alb_id = Column(Integer)
     alb_title = Column(String)
@@ -130,7 +130,7 @@ class Album(Base):
     added_on = Column(Integer)
     explicit = Column(Boolean)
     rectype = Column(Integer)
-    profile_id = Column(Integer)
+    profile_id = Column(Integer, ForeignKey('profile.id', ondelete="CASCADE"))
     txn_id = Column(Integer, ForeignKey('transaction.id', ondelete="CASCADE"), nullable=False)
     transaction = relationship("Transaction", cascade="delete", back_populates="album")
 
@@ -400,23 +400,21 @@ class Database:
             raise ProfileNotExistError("The profile ID does not exist.")
 
     def get_artists(self):
-        # TODO Testing profile ID selection is correct
-        #print(f"Selecting artist where profile_id = {config.profile_id}")
-        stmt = select(Artist)
+        stmt = select(Artist).where(Artist.profile_id == config.profile_id)
         return self.session.execute(stmt).all()
 
     def get_artist_by_name(self, art_name):
-        stmt = select(Artist).join(Transaction).where(Artist.art_name.collate("NOCASE") == art_name)
+        stmt = select(Artist).join(Transaction).where(Artist.art_name.collate("NOCASE") == art_name).where(Artist.profile_id == config.profile_id)
         return self.session.execute(stmt).one_or_none()
 
     def remove_artist(self, art_id):
-        stmt = delete(Artist).join(Transaction).where(Artist.art_id == art_id)
+        stmt = delete(Artist).where(Artist.art_id == art_id).where(Artist.profile_id == config.profile_id).where(Artist.profile_id == config.profile_id)
         self.session.execute(stmt)
         self.session.commit()
 
     def get_pending_artist_refresh(self):
         return self.session.execute(
-            select(ArtistPendingRefresh)
+            select(ArtistPendingRefresh).where(ArtistPendingRefresh.profile_id == config.profile_id)
         ).all()
 
     def get_albums(self):
@@ -428,7 +426,7 @@ class Database:
         return self.session.execute(stmt).all()
 
     def get_playlists(self):
-        stmt = select(Playlist)
+        stmt = select(Playlist).where(Playlist.profile_id == config.profile_id)
         return self.session.execute(stmt).scalars().all()
 
     def get_playlist_ids(self):
@@ -450,7 +448,7 @@ class Database:
         self.session.commit()
 
     def get_releases(self):
-        stmt = select(Album).join(Transaction)
+        stmt = select(Album).join(Transaction).where(Album.profile_id == config.profile_id)
         return self.session.execute(stmt).all()
 
     def reset(self):
