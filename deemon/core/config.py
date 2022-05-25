@@ -25,6 +25,7 @@ DEFAULT_CONFIG = {
     "prompt_duplicates": False,
     "prompt_no_matches": True,
     "fast_api": True,
+    "exclude": [],
     "new_releases": {
         "release_max_age": 90,
         "include_unofficial": False,
@@ -415,6 +416,10 @@ class Config(object):
     @staticmethod
     def allow_unofficial() -> bool:
         return Config._CONFIG['new_releases']['include_unofficial']
+
+    @staticmethod
+    def exclusions() -> list:
+        return Config._CONFIG['exclude']
 
     @staticmethod
     def find_position(d, property):
