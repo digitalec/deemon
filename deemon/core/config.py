@@ -68,7 +68,7 @@ class Config(object):
             self.__create_default_config()
 
         if Config._CONFIG is None:
-            with open(Config._CONFIG_FILE, 'r') as f:
+            with open(Config._CONFIG_FILE, 'r', encoding='utf8') as f:
                 try:
                     Config._CONFIG = json.load(f)
                 except json.decoder.JSONDecodeError as e:
@@ -96,12 +96,12 @@ class Config(object):
 
     @staticmethod
     def __create_default_config():
-        with open(Config._CONFIG_FILE, 'w') as f:
+        with open(Config._CONFIG_FILE, 'w', encoding='utf8') as f:
             json.dump(DEFAULT_CONFIG, f, indent=4)
 
     @staticmethod
     def __write_modified_config():
-        with open(Config._CONFIG_FILE, 'w') as f:
+        with open(Config._CONFIG_FILE, 'w', encoding='utf8') as f:
             json.dump(Config._CONFIG, f, indent=4)
 
     @staticmethod
