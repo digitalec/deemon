@@ -1,4 +1,5 @@
 import logging
+import re
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
 
@@ -89,6 +90,10 @@ class Refresh:
             self.append_database_release(release)
             
             if release['future']:
+                continue
+
+            if any([re.search(fr'(?i)\((.*?)({ex})(.*?)\)', release['title']) for ex in config.exclusions()]):
+                logger.debug(f"Skipping release matching one or more exclusions: {release['title']}")
                 continue
 
             explicit_album_id = self.explicit_id(release['title'], payload['releases'])
