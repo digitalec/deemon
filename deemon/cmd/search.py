@@ -99,8 +99,6 @@ class Search:
             artist_selected = self.artist_menu(self.search_results['query'], self.search_results['results'], quick_search)
             if artist_selected:
                 return [artist_selected]
-            else:
-                return
 
     def queue_menu_options(self):
         ui_options = ("(d) Download Queue  (c) Clear Queue  (b) Back")
