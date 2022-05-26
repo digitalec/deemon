@@ -9,6 +9,7 @@ from sqlalchemy import (
     Boolean,
     ForeignKey,
     UniqueConstraint,
+    ForeignKeyConstraint,
     select,
     delete,
 )
@@ -119,10 +120,15 @@ class Album(Base):
     __tablename__ = 'album'
     __table_args__ = (
         UniqueConstraint('alb_id', 'profile_id'),
+        ForeignKeyConstraint(
+            ('art_id', 'profile_id'),
+            ['artist.art_id', 'artist.profile_id'],
+            ondelete="CASCADE",
+        ),
     )
 
     id = Column(Integer, primary_key=True)
-    art_id = Column(Integer, ForeignKey('artist.art_id', ondelete="CASCADE"))
+    art_id = Column(Integer)
     art_name = Column(String)
     alb_id = Column(Integer)
     alb_title = Column(String)
