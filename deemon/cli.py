@@ -90,15 +90,23 @@ def run(whats_new, verbose, profile):
             db.set_last_update_check()
         new_version = db.get_latest_ver()
         if parse_version(new_version) > parse_version(__version__):
-            config.set('update_available', new_version, False)
-            print("*" * 50)
-            logger.info(f"* New version is available: v{__version__} -> v{new_version}")
-            if config.release_channel() == "beta":
-                logger.info("* To upgrade, run `pip install --upgrade --pre deemon`")
+            if parse_version(new_version).major > parse_version(__version__).major:
+                config.set('update_available', new_version, False)
+                print("*" * 80)
+                logger.info(f"deemon {parse_version(new_version).major} is available. "
+                            f"Please see the release notes before upgrading.")
+                logger.info("Release notes available at: https://github.com/digitalec/deemon/releases")
+                print("*" * 80)
             else:
-                logger.info("* To upgrade, run `pip install --upgrade deemon`")
-            print("*" * 50)
-            print("")
+                config.set('update_available', new_version, False)
+                print("*" * 50)
+                logger.info(f"* New version is available: v{__version__} -> v{new_version}")
+                if config.release_channel() == "beta":
+                    logger.info("* To upgrade, run `pip install --upgrade --pre deemon`")
+                else:
+                    logger.info("* To upgrade, run `pip install --upgrade deemon`")
+                print("*" * 50)
+                print("")
 
     config.set("start_time", int(time.time()), False)
 
