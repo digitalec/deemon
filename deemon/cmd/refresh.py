@@ -92,7 +92,7 @@ class Refresh:
             if release['future']:
                 continue
 
-            if any([re.search(fr'(?i)\((.*?)({ex})(.*?)\)', release['title']) for ex in config.exclusions()]):
+            if any([re.search(ex, release['title']) for ex in config.exclusions()]):
                 logger.debug(f"Skipping release matching one or more exclusions: {release['title']}")
                 continue
 
