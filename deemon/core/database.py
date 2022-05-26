@@ -408,7 +408,7 @@ class Database:
         return self.session.execute(stmt).one_or_none()
 
     def remove_artist(self, art_id):
-        stmt = delete(Artist).where(Artist.art_id == art_id).where(Artist.profile_id == config.profile_id).where(Artist.profile_id == config.profile_id)
+        stmt = delete(Artist).where(Artist.art_id == art_id).where(Artist.profile_id == config.profile_id)
         self.session.execute(stmt)
         self.session.commit()
 
