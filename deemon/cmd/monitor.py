@@ -188,7 +188,9 @@ class Monitor:
 
     def setup_monitoring(self):
         artist_queue = []
+        update_artist_queue = []
         playlist_queue = []
+        update_playlist_queue = []
 
         monitored_artists = [x.Artist.art_id for x in db.get_artists()]
         monitored_playlists = [x.Playlist.playlist_id for x in db.get_playlist_ids()]
@@ -210,12 +212,25 @@ class Monitor:
         for item in self.monitor_queue:
             if item.get('link'):
                 if item['playlist_id'] in monitored_playlists:
-                    logger.info(f"   - Already monitoring playlist {item['title']} ({item['playlist_id']})")
+                    # TODO update item['playlist_title'] once playlist code has been implemented
+                    logger.info(f"Updating artist: {item['playlist_title']}")
+                    update_playlist_queue.append(item)
                 else:
                     playlist_queue.append(item)
             else:
+                # TODO Condense this code if it cannot be merged
                 if item['art_id'] in monitored_artists:
-                    logger.info(f"   - Already monitoring artist {item['art_name']} ({item['art_id']})")
+                    logger.info(f"Updating artist: {item['art_name']}")
+                    update_artist_queue.append(
+                        Artist(
+                            art_id=item['art_id'],
+                            art_name=item['art_name'],
+                            bitrate=item['bitrate'],
+                            rectype=item['rectype'],
+                            notify=item['notify'],
+                            dl_path=item['dl_path'],
+                        )
+                    )
                 else:
                     artist_queue.append(
                         Artist(
@@ -232,6 +247,11 @@ class Monitor:
             db.fast_monitor(artist_queue)
         elif len(playlist_queue):
             db.fast_monitor_playlist(playlist_queue)
+
+        if len(update_artist_queue):
+            db.update_monitor(update_artist_queue)
+        elif len(update_playlist_queue):
+            db.update_monitor_playlist(update_playlist_queue)
 
         if artist_queue or playlist_queue:
             r = refresh.Refresh(download_all=self.args.download, time_machine=self.args.time_machine)

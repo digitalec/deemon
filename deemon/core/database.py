@@ -447,6 +447,14 @@ class Database:
         self.session.bulk_save_objects(artists)
         self.session.commit()
 
+    def update_monitor(self, artists):
+        # TODO Placeholder
+        pass
+
+    def update_monitor_playlists(self, playlists):
+        # TODO Placeholder
+        pass
+
     def get_releases(self):
         stmt = select(Album).join(Transaction).where(Album.profile_id == config.profile_id)
         return self.session.execute(stmt).all()
