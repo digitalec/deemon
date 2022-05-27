@@ -32,7 +32,7 @@ from deemon.core.exceptions import ProfileNotExistError
 from deemon.core.config import Config
 config = Config()
 
-from deemon.core.database import Database, Profile
+from deemon.core.database import Database
 db = Database()
 
 
