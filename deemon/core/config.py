@@ -202,6 +202,11 @@ class Config(object):
                     if isinstance(dict1[key], dict):
                         test_values(dict1[key], dict2[key])
                     else:
+                        if key == "starttls" and value is True:
+                            if dict1['port'] == 465:
+                                logger.debug("STARTTLS enabled in config but port set to 465 (SSL); disabling STARTTLS")
+                                dict1['starttls'] = False
+                                modified += 1
                         if key in ALLOWED_VALUES:
                             if isinstance(ALLOWED_VALUES[key], dict):
                                 if key == "bitrate" and value in ["1", "3", "9"]:
