@@ -25,6 +25,7 @@ DEFAULT_CONFIG = {
     "prompt_duplicates": False,
     "prompt_no_matches": True,
     "fast_api": True,
+    "fast_api_threads": 10,
     "exclude": [],
     "new_releases": {
         "release_max_age": 90,
