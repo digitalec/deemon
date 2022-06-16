@@ -59,7 +59,7 @@ def main():
     if cli.args.profile:
         config.set_property('profile_id', cli.args.profile)
     profile = db.get_profile_by_id(config.profile_id)
-    logger.debug(f"Active profile is {profile.id} ({profile.name})")
+    logger.debug(f"Active profile is {profile['id']} ({profile['name']})")
 
     if cli.args.command == "backup":
         from deemon.cmd import backup

@@ -104,12 +104,12 @@ class PlatformAPI:
 
     def get_artist_releases(self, artist, limit=-1):
         query = {
-            'art_id': artist.Artist.art_id,
-            'art_name': artist.Artist.art_name,
-            'bitrate': artist.Artist.bitrate,
-            'rectype': artist.Artist.rectype,
-            'notify': artist.Artist.notify,
-            'dl_path': artist.Artist.dl_path,
+            'art_id': artist['art_id'],
+            'art_name': artist['art_name'],
+            'bitrate': artist['bitrate'],
+            'rectype': artist['rectype'],
+            'notify': artist['notify'],
+            'dl_path': artist['dl_path'],
             'releases': [],
         }
         result = []
@@ -117,7 +117,7 @@ class PlatformAPI:
         while attempts < 5:
             attempts += 1
             try:
-                result = self.api.get_artist_discography(artist.Artist.art_id, limit=limit)['data']
+                result = self.api.get_artist_discography(artist['art_id'], limit=limit)['data']
                 break
             except deezer.errors.GWAPIError as e:
                 logger.debug(e)

@@ -5,7 +5,7 @@ from pathlib import Path
 from packaging.version import parse as parse_version
 
 from deemon import config, __dbversion__, __version__, ProfileNotExistError
-from deemon.utils import startup, performance, dates
+from deemon.utils import startup
 
 logger = logging.getLogger(__name__)
 
@@ -73,9 +73,10 @@ class Database(object):
         self.create_queue_table()
         self.create_settings_table()
         self.create_transactions_table()
-        self.query("INSERT INTO profile (name) VALUES ('default')")
+        self.query("CREATE INDEX 'art_prof' ON 'artist' ('art_id', 'profile_id')")
+        self.query(f"INSERT INTO 'settings' ('db_version') VALUES ('{__dbversion__}')")
+        self.query("INSERT INTO 'profile' ('name') VALUES ('default')")
         self.commit()
-        exit()
 
     def create_album_table(self):
         self.query("""
@@ -86,7 +87,7 @@ class Database(object):
             alb_id     INTEGER,
             alb_title  VARCHAR,
             alb_date   VARCHAR,
-            added_on   INTEGER,
+            added_on   INTEGER DEFAULT (strftime('%s', 'now')) NOT NULL,
             explicit   BOOLEAN,
             rectype    INTEGER,
             profile_id INTEGER,
@@ -111,7 +112,7 @@ class Database(object):
             FOREIGN KEY (
                 txn_id
             )
-            REFERENCES [transaction] (id) ON DELETE CASCADE
+            REFERENCES transactions (id) ON DELETE CASCADE
         )""")
 
     def create_album_future_table(self):
@@ -123,7 +124,7 @@ class Database(object):
             alb_id     INTEGER,
             alb_title  VARCHAR,
             alb_date   VARCHAR,
-            added_on   INTEGER,
+            added_on   INTEGER DEFAULT (strftime('%s', 'now')) NOT NULL,
             explicit   BOOLEAN,
             rectype    INTEGER,
             profile_id INTEGER,
@@ -138,7 +139,7 @@ class Database(object):
             FOREIGN KEY (
                 txn_id
             )
-            REFERENCES [transaction] (id) ON DELETE CASCADE
+            REFERENCES transactions (id) ON DELETE CASCADE
         )""")
 
     def create_artist_table(self):
@@ -163,7 +164,7 @@ class Database(object):
             FOREIGN KEY (
                 txn_id
             )
-            REFERENCES [transaction] (id) ON DELETE CASCADE
+            REFERENCES transactions (id) ON DELETE CASCADE
         )""")
 
     def create_artist_pending_refresh_table(self):
@@ -199,7 +200,7 @@ class Database(object):
             FOREIGN KEY (
                 txn_id
             )
-            REFERENCES [transaction] (id) ON DELETE CASCADE
+            REFERENCES transactions (id) ON DELETE CASCADE
         )""")
 
     def create_playlist_pending_refresh_table(self):
@@ -240,7 +241,7 @@ class Database(object):
             FOREIGN KEY (
                 txn_id
             )
-            REFERENCES [transaction] (id) ON DELETE CASCADE
+            REFERENCES transactions (id) ON DELETE CASCADE
         )""")
 
     def create_profile_table(self):
@@ -283,15 +284,18 @@ class Database(object):
             FOREIGN KEY (
                 txn_id
             )
-            REFERENCES [transaction] (id) ON DELETE CASCADE
+            REFERENCES transactions (id) ON DELETE CASCADE
         )""")
 
     def create_settings_table(self):
         self.query("""
             CREATE TABLE settings (
-            id    INTEGER NOT NULL,
-            [key] VARCHAR NOT NULL,
-            value VARCHAR NOT NULL,
+            id                 INTEGER     NOT NULL
+                                           CHECK (id = 1),
+            db_version         INTEGER (1) NOT NULL,
+            remote_app_version TEXT,
+            last_update_check  BIGINT,
+            release_channel    TEXT        DEFAULT stable,
             PRIMARY KEY (
                 id
             )
@@ -331,6 +335,7 @@ class Database(object):
         logger.debug(f"Database version {version}")
         return version
 
+    # TODO Write upgrade script before 3.0-FINAL
     def do_upgrade(self):
         current_ver = parse_version(self.get_db_version())
         app_db_version = parse_version(__dbversion__)
@@ -340,42 +345,15 @@ class Database(object):
 
         logger.debug("DATABASE UPGRADE IN PROGRESS!")
 
-        if current_ver < parse_version("3.5"):
+        if current_ver < parse_version("3.6"):
             logger.error("Due to database changes, you must be on at least "
-                         f"v2.5 before upgrading to v{__version__}.")
+                         f"v2.8 before upgrading to v{__version__}.")
             exit()
 
-        if current_ver < parse_version("3.5.2"):
-            self.query("CREATE TABLE releases_tmp ("
-                       "'artist_id' INTEGER,"
-                       "'artist_name' TEXT,"
-                       "'album_id' INTEGER,"
-                       "'album_name' TEXT,"
-                       "'album_release' TEXT,"
-                       "'album_added' INTEGER,"
-                       "'explicit' INTEGER,"
-                       "'label' TEXT,"
-                       "'record_type' INTEGER,"
-                       "'profile_id' INTEGER DEFAULT 1,"
-                       "'future_release' INTEGER DEFAULT 0,"
-                       "'trans_id' INTEGER,"
-                       "unique(album_id, profile_id))")
-            self.query("INSERT OR REPLACE INTO releases_tmp(artist_id, artist_name, "
-                       "album_id, album_name, album_release, album_added, "
-                       "explicit, label, record_type, profile_id, "
-                       "future_release, trans_id) SELECT artist_id, "
-                       "artist_name, album_id, album_name, album_release, "
-                       "album_added, explicit, label, record_type, "
-                       "profile_id, future_release, trans_id FROM releases")
-            self.query("DROP TABLE releases")
-            self.query("ALTER TABLE releases_tmp RENAME TO releases")
-            self.query("INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('version', '3.5.2')")
+        if current_ver < parse_version("4"):
+            self.query("INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('version', '4')")
             self.commit()
-            logger.debug(f"Database upgraded to version 3.5.2")
-
-        if current_ver < parse_version("3.6"):
-            # album_release_ts REMOVED
-            pass
+            logger.debug(f"Database upgraded to version 4")
 
     def query(self, query, values=None):
         if values is None:
@@ -397,6 +375,7 @@ class Database(object):
             return stmt
 
     def fast_monitor(self, artists):
+        self.init_transaction()
         self.cursor.executemany(
             "INSERT OR REPLACE INTO artist ("
             "art_id,"
@@ -414,9 +393,43 @@ class Database(object):
             ":rectype,"
             ":notify,"
             ":dl_path,"
-            ":profile_id,"
-            ":txn_id"
+            f"{config.profile_id},"
+            f"{Database.TXN_ID})",
+            artists
         )
 
+    def get_releases(self):
+        stmt = f"""SELECT * FROM album WHERE profile_id = {config.profile_id}"""
+        return self.query(stmt).fetchall()
+
+    def get_future_albums(self):
+        stmt = f"""SELECT * FROM album_future WHERE profile_id = {config.profile_id}"""
+        return self.query(stmt).fetchall()
+
+    def get_pending_artist_refresh(self):
+        stmt = f"""SELECT * FROM artist_pending_refresh WHERE profile_id = {config.profile_id}"""
+        return self.query(stmt).fetchall()
+
+    def get_artists(self):
+        stmt = f"""SELECT * FROM artist WHERE profile_id = {config.profile_id}"""
+        return self.query(stmt).fetchall()
+
+    def add_new_releases(self, releases):
+        self.init_transaction()
+        stmt = f"""
+        INSERT OR REPLACE INTO album (
+        art_id, art_name, alb_id, alb_title, alb_date, explicit, rectype, profile_id, txn_id
+        ) VALUES (
+        :art_id, :art_name, :alb_id, :alb_title, :alb_date, :explicit, :rectype, {config.profile_id}, {Database.TXN_ID})
+        """
+        self.cursor.executemany(stmt, releases)
+
+    def get_playlists(self):
+        stmt = f"""SELECT * FROM playlist WHERE profile_id = {config.profile_id}"""
+        return self.query(stmt).fetchall()
+
+    def reset(self):
+        stmt = f"DELETE FROM transactions WHERE transactions.profile_id == {config.profile_id}"
+
     def test(self):
-        exit()
+        pass

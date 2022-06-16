@@ -27,7 +27,6 @@ from deemon import db, config
 from deemon.core import notifier
 from deemon.core.config import MAX_API_THREADS
 from deemon.core.api import PlatformAPI
-from deemon.core.database import Album
 from deemon.core.logger import logger
 from deemon.cmd.download import QueueItem, Download
 from deemon.utils import dates, ui, recordtypes
@@ -43,7 +42,7 @@ class Refresh:
         self.skip_downloads = skip_downloads
         self.time_machine = time_machine
 
-        self.db_releases = [x.Album.alb_id for x in db.get_releases()]
+        self.db_releases = [x['alb_id'] for x in db.get_releases()]
         self.db_future_releases = self.get_future_releases()
 
     @staticmethod
@@ -165,15 +164,15 @@ class Refresh:
 
             if self.is_new_release(release) and self.is_allowed_record_type(allowed_rti, release['rectype']):
                 self.new_releases.append(
-                    Album(
-                        art_id=release['art_id'],
-                        art_name=release['art_name'],
-                        alb_id=release['alb_id'],
-                        alb_title=release['alb_title'],
-                        alb_date=release['alb_date'],
-                        explicit=release['explicit'],
-                        rectype=release['rectype'],
-                    )
+                    {
+                        "art_id": release['art_id'],
+                        "art_name": release['art_name'],
+                        "alb_id": release['alb_id'],
+                        "alb_title": release['alb_title'],
+                        "alb_date": release['alb_date'],
+                        "explicit": release['explicit'],
+                        "rectype": release['rectype'],
+                    }
                 )
             else:
                 continue
@@ -201,14 +200,13 @@ class Refresh:
     def prune_future_releases(self):
         """ Remove all future releases that are no longer in the future """
         future_releases = db.get_future_albums()
-        to_prune = [x for x in future_releases if not self.release_date_in_future(x.AlbumFuture.alb_date)]
+        to_prune = [x for x in future_releases if not self.release_date_in_future(x['alb_date'])]
         if to_prune:
             logger.debug(f"Pruning {len(to_prune)} release(s) from future release table")
             db.remove_future_release(to_prune)
             db.commit()
 
     def start(self):
-        db.init_transaction()
         pending = db.get_pending_artist_refresh()
         artists = []
 
@@ -251,7 +249,7 @@ class Refresh:
         if pending:
             db.drop_all_pending_artists()
 
-        db.session.commit()
+        db.commit()
 
         if len(self.notification_queue):
             notification = notifier.Notify(self.notification_queue)
@@ -279,7 +277,7 @@ class Refresh:
         """ Prints out some statistics at the end of a Refresh operation """
         artists = len(db.get_artists())
         playlists = len(db.get_playlists())
-        releases = len(db.get_albums())
+        releases = len(db.get_releases())
         future = len(db.get_future_albums())
 
         print("")

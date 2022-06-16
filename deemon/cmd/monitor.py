@@ -25,7 +25,6 @@ from tqdm import tqdm
 
 from deemon import config, db
 from deemon.core.api import PlatformAPI
-from deemon.core.database import Artist
 from deemon.core.logger import logger
 from deemon.core.config import MAX_API_THREADS
 from deemon.cmd import search, refresh
@@ -206,28 +205,24 @@ class Monitor:
 
         for item in self.monitor_queue:
             if item.get('link'):
+                # TODO check this!
                 playlist_queue.append(item)
             else:
                 artist_queue.append(
-                    Artist(
-                        art_id=item['art_id'],
-                        art_name=item['art_name'],
-                        bitrate=item['bitrate'],
-                        rectype=item['rectype'],
-                        notify=item['notify'],
-                        dl_path=item['dl_path'],
-                    )
+                    {
+                        "art_id": item['art_id'],
+                        "art_name": item['art_name'],
+                        "bitrate": item['bitrate'],
+                        "rectype": item['rectype'],
+                        "notify": item['notify'],
+                        "dl_path": item['dl_path']
+                    }
                 )
 
         if len(artist_queue):
             db.fast_monitor(artist_queue)
         elif len(playlist_queue):
             db.fast_monitor_playlist(playlist_queue)
-
-        if len(update_artist_queue):
-            db.update_monitor(update_artist_queue)
-        elif len(update_playlist_queue):
-            db.update_monitor_playlist(update_playlist_queue)
 
         if artist_queue or playlist_queue:
             r = refresh.Refresh(download_all=self.args.download, time_machine=self.args.time_machine)
