@@ -46,6 +46,10 @@ class PlatformAPI:
     def set_platform(self):
         if self.platform == "deezer-gw":
                 self.max_threads = config.fast_api_threads()
+                if self.max_threads > 50:
+                    self.max_threads = 50
+                if self.max_threads < 1:
+                    self.max_threads = 1
                 logger.debug("Using GW API, max_threads set "
                              f"to {self.max_threads}")
                 return self.dz.gw
