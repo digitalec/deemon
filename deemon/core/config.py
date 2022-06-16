@@ -412,6 +412,10 @@ class Config(object):
         return Config._CONFIG['fast_api']
 
     @staticmethod
+    def fast_api_threads() -> int:
+        return Config._CONFIG['fast_api_threads']
+
+    @staticmethod
     def allow_compilations() -> bool:
         return Config._CONFIG['new_releases']['include_compilations']
 
