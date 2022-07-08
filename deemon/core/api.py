@@ -19,6 +19,7 @@ class PlatformAPI:
         self.dz = Deezer()
         
         # Make our session threadsafe
+        logger.debug("Getting API Token")
         PlatformAPI.TOKEN = self.dz.gw.get_user_data()['checkForm']
         self.dz.gw._get_token = self._get_token
         
@@ -57,6 +58,7 @@ class PlatformAPI:
             return self.dz.api
         
     def get_account_type(self):
+        logger.debug("Verifying ARL, please wait...")
         temp_dz = Deezer()
         temp_dz.login_via_arl(config.arl())
         if temp_dz.get_session()['current_user'].get('can_stream_lossless'):
@@ -155,7 +157,7 @@ class PlatformAPI:
         """
         Return a list of dictionaries from API containing
         """
-        self.debugger("Getting artist releases:", query['artist_name'])
+        self.debugger("Getting artist releases", query)
         if self.platform == "deezer-gw":
             try:
                 result = self.api.get_artist_discography(art_id=query['artist_id'], limit=limit)['data']
