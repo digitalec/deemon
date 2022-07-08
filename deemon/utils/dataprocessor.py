@@ -16,11 +16,30 @@ def process_input_file(artist_list):
     logger.debug("Processing file contents")
     try:
         artists = [int(x) for x in artist_list]
-        logger.debug(f"File detected as containing {len(artists)} artist IDs")
+        total_artist_count = len(artists)
+        logger.debug(f"File detected as containing {total_artist_count} artist IDs")
+        logger.debug("Checking for duplicates")
+        artists_removed_duplicates = list(set(artists))
+        new_artists_count = len(artists_removed_duplicates)
+        duplicates = total_artist_count - new_artists_count
+        if duplicates:
+            logger.debug(f"Removed {duplicates} duplicate(s)")
+        else:
+            logger.debug("No duplicates found, continuing...")
+
     except ValueError:
         artists = [x for x in artist_list]
+        total_artist_count = len(artists)
         logger.debug(f"File detected as containing {len(artists)} artist names")
-    return artists
+
+        artists_removed_duplicates = list(set(artists))
+        new_artists_count = len(artists_removed_duplicates)
+        duplicates = total_artist_count - new_artists_count
+        if duplicates:
+            logger.debug(f"Removed {duplicates} duplicate(s)")
+
+    logger.info(f"Detected {new_artists_count} unique artists")
+    return artists_removed_duplicates
 
 
 def csv_to_list(all_artists) -> list:
