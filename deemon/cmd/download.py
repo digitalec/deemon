@@ -1,5 +1,6 @@
 import logging
 import os
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from tqdm import tqdm
 
@@ -253,7 +254,6 @@ class Download:
                 except (deezer.api.DataException, IndexError):
                     logger.error(f"Track ID {track_id} not found.")
 
-
         def queue_filtered_releases(api_object):
             filtered = filter_artist_by_record_type(api_object)
             for album in filtered:
@@ -360,11 +360,18 @@ class Download:
                 artist_list = utils.dataprocessor.process_input_file(artists_csv)
                 if artist_list:
                     if isinstance(artist_list[0], int):
-                        for artist in artist_list:
-                            process_artist_by_id(artist)
+                        with ThreadPoolExecutor(max_workers=self.api.max_threads) as ex:
+                            _api_results = list(tqdm(ex.map(process_artist_by_id, artist_list),
+                                 total=len(artist_list), desc=f"Fetching artist release data for {len(artist_list)} artist(s), please wait...", ascii=" #",
+                                 bar_format=ui.TQDM_FORMAT))
                     else:
-                        for artist in artist_list:
-                            process_artist_by_name(artist)
+                        if isinstance(artist_list[0], int):
+                            with ThreadPoolExecutor(max_workers=self.api.max_threads) as ex:
+                                _api_results = list(tqdm(ex.map(process_artist_by_name, artist_list),
+                                                         total=len(artist_list),
+                                                         desc=f"Fetching artist release data for {len(artist_list)} artist(s), please wait...",
+                                                         ascii=" #",
+                                                         bar_format=ui.TQDM_FORMAT))
 
         if url:
             logger.debug("Processing URLs")
