@@ -11,7 +11,7 @@ from plexapi.server import PlexServer
 from deemon import utils
 from deemon.core import dmi, db, api
 from deemon.core.config import Config as config
-from deemon.utils import ui, validate, startup, dates
+from deemon.utils import ui, dataprocessor, startup, dates
 
 logger = logging.getLogger(__name__)
 
