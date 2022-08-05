@@ -1,3 +1,4 @@
+import email.utils
 import logging
 import platform
 import smtplib
@@ -71,7 +72,8 @@ class Notify:
         # msg.attach(part1)
         msg.attach(part2)
         msg['Subject'] = self.subject
-
+        # Add Date Header as required by RFC.
+        msg['Date'] = email.utils.formatdate(localtime=True)
         return msg
 
     def test(self):
@@ -84,6 +86,8 @@ class Notify:
         msg['To'] = config.smtp_recipient()
         msg['From'] = formataddr(('deemon', config.smtp_sender()))
         msg['Subject'] = self.subject
+        # Add Date Header as required by RFC.
+        msg['Date'] = email.utils.formatdate(localtime=True)
         msg.set_content(message)
         self.send(msg, test=True)
 
