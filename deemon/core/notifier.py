@@ -57,8 +57,6 @@ class Notify:
                 server.sendmail(config.smtp_sender(), config.smtp_recipient(), body.as_string())
                 logger.debug("Email notification has been sent")
 
-    def get_cover_images(self):
-        pass
 
     def build_message(self):
         """
