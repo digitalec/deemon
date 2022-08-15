@@ -83,44 +83,27 @@ class Notify:
         """
         Verify SMTP settings by sending test email
         """
-        self.subject = "deemon Test Notification"
-        message = "Congrats! You'll now receive new release notifications."
-        msg = EmailMessage()
-        msg['To'] = config.smtp_recipient()
-        msg['From'] = formataddr(('deemon', config.smtp_sender()))
-        msg['Subject'] = self.subject
-        # Add Date Header as required by RFC.
-        msg['Date'] = email.utils.formatdate(localtime=True)
-        msg.set_content(message)
+        msg = self.construct_header(subject="deemon Test Notification")
+        msg.set_content("Congrats! You'll now receive new release notifications.")
         self.send(msg, test=True)
 
     def expired_arl(self):
         """
-        Verify SMTP settings by sending test email
+        Notify user of expired ARL
         """
-        self.subject = "deemon Notification"
-        message = "Your ARL has expired"
-        msg = EmailMessage()
-        msg['To'] = config.smtp_recipient()
-        msg['From'] = formataddr(('deemon', config.smtp_sender()))
-        msg['Subject'] = self.subject
-        msg.set_content(message)
+        msg = self.construct_header(subject="deemon - ARL expired")
+        msg.set_content("Your ARL has expired. Please update your ARL to receive new releases.")
         self.send(msg)
 
     def expired_sub(self):
         """
-        Verify SMTP settings by sending test email
+        Notify user of expired subscription
         """
-        self.subject = "deemon Notification"
-        message = "Your Deezer subscription only allows 128k (expired?)."
-        msg = EmailMessage()
-        msg['To'] = config.smtp_recipient()
-        msg['From'] = formataddr(('deemon', config.smtp_sender()))
-        msg['Subject'] = self.subject
-        msg.set_content(message)
+        msg = self.construct_header(subject="deemon - Subscription expired")
+        msg.set_content("Your Deezer subscription appears to have expired.")
         self.send(msg)
 
-    def plaintext(self) -> str:
+    def plaintext_message(self) -> str:
         """
         Plaintext version of email to send
         """
