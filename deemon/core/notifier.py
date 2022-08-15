@@ -57,6 +57,20 @@ class Notify:
                 server.sendmail(config.smtp_sender(), config.smtp_recipient(), body.as_string())
                 logger.debug("Email notification has been sent")
 
+    def construct_header(self, is_plain_text=True, subject=None):
+        subject = subject or self.subject
+
+        if is_plain_text:
+            message = EmailMessage()
+        else:
+            message = MIMEMultipart('mixed')
+
+        message['To'] = config.smtp_recipient()
+        message['From'] = formataddr(('deemon', config.smtp_sender()))
+        message['Subject'] = subject
+        message['Date'] = formatdate(localtime=True)
+
+        return message
 
     def build_message(self):
         """
