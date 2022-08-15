@@ -19,9 +19,8 @@ logger = logging.getLogger(__name__)
 class Notify:
 
     def __init__(self, new_releases: list = None):
-        logger.debug("notify initialized")
-        logger.debug(f"releases to notify on: {new_releases}")
-        self.subject = "New releases detected!"
+        logger.debug(f"Sending notification for {new_releases} release(s)")
+        self.subject = "deemon Notification"
         self.releases = new_releases
 
     def send(self, body=None, test=False):
@@ -31,8 +30,8 @@ class Notify:
         if not all([config.smtp_server(), config.smtp_port(), config.smtp_user(),
                     config.smtp_pass(), config.smtp_sender(), config.smtp_recipient()]):
             if test:
-                logger.info("   [!] Unable to send test notification, email is"
-                            " not configured")
+                logger.info("   [!] Unable to send test notification. Please configure "
+                            "email server settings and provide recipient address.")
             logger.debug("Email not configured, no notifications will be sent")
             return False
 
