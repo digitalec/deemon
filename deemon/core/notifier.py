@@ -36,7 +36,7 @@ class Notify:
             return False
 
         if not body:
-            body = self.build_message()
+            body = self.html_message()
 
         context = ssl.create_default_context()
 
@@ -70,20 +70,13 @@ class Notify:
 
         return message
 
-    def build_message(self):
+    def html_message(self):
         """
-        Builds message by combining plaintext and HTML messages for sending
+        Builds HTML messages
         """
-        msg = MIMEMultipart('mixed')
-        msg['To'] = config.smtp_recipient()
-        msg['From'] = formataddr(('deemon', config.smtp_sender()))
-        # part1 = MIMEText(self.plaintext(), 'plain')
-        part2 = MIMEText(self.html_new_releases(), 'html')
-        # msg.attach(part1)
-        msg.attach(part2)
-        msg['Subject'] = self.subject
-        # Add Date Header as required by RFC.
-        msg['Date'] = email.utils.formatdate(localtime=True)
+        html_body = MIMEText(self.html_new_releases(), 'html')
+        msg = self.construct_header(is_plain_text=False)
+        msg.attach(html_body)
         return msg
 
     def test(self):
