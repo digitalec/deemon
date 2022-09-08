@@ -7,6 +7,7 @@ from deemix import generateDownloadObject
 from deemix.downloader import Downloader
 from deemix.settings import load as LoadSettings
 from deemix.types.DownloadObjects import Collection
+from deemix.utils import formatListener
 from deezer import Deezer
 from deezer.api import APIError
 from deezer.gw import GWAPIError
@@ -17,6 +18,15 @@ from deemon.core.config import Config as config
 from deemon.core.db import Database
 
 logger = logging.getLogger(__name__)
+
+
+class DeemixLogListener:
+    @classmethod
+    def send(cls, key, value=None):
+        if isinstance(value, dict):
+            if value.get('failed') and value['failed'] == True:
+                logger.error(f"  [!] Error while downloading {value['data']['title']} by {value['data']['artist']}")
+                logger.error(f"      >> {value['error']}")
 
 
 class DeemixInterface:
@@ -36,6 +46,8 @@ class DeemixInterface:
         logger.debug(f"deemix config path: {self.config_dir}")
 
     def download_url(self, url, bitrate, download_path, override_deemix=True):
+        listener = DeemixLogListener()
+
         if override_deemix:
             deemix.generatePlaylistItem = self.generatePlaylistItem
 
@@ -51,12 +63,12 @@ class DeemixInterface:
             else:
                 links.append(link)
         for link in links:
-            download_object = generateDownloadObject(self.dz, link, bitrate)
+            download_object = generateDownloadObject(self.dz, link, bitrate, listener=listener)
             if isinstance(download_object, list):
                 for obj in download_object:
-                    Downloader(self.dz, obj, self.dx_settings).start()
+                    Downloader(self.dz, obj, self.dx_settings, listener=listener).start()
             else:
-                Downloader(self.dz, download_object, self.dx_settings).start()
+                Downloader(self.dz, download_object, self.dx_settings, listener=listener).start()
 
     def deezer_acct_type(self):
         user_session = self.dz.get_session()['current_user']
