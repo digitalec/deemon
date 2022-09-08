@@ -27,6 +27,9 @@ class DeemixLogListener:
             if value.get('failed') and value['failed'] == True:
                 logger.error(f"  [!] Error while downloading {value['data']['title']} by {value['data']['artist']}")
                 logger.error(f"      >> {value['error']}")
+        log_string = formatListener(key, value)
+        if config.debug_mode():
+            if log_string: logger.debug(f"[DEEMIX] {log_string}")
 
 
 class DeemixInterface:
