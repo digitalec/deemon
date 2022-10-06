@@ -1,5 +1,6 @@
 import logging
 import os
+import requests
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from tqdm import tqdm
@@ -80,14 +81,20 @@ def get_deemix_bitrate(bitrate: str):
 
 def get_plex_server():
     if (config.plex_baseurl() != "") and (config.plex_token() != ""):
+        session = None
+        if not config.plex_ssl_verify():
+            requests.packages.urllib3.disable_warnings()
+            session = requests.Session()
+            session.verify = False
         try:
             print("Plex settings found, trying to connect (10s)... ", end="")
-            plex_server = PlexServer(config.plex_baseurl(), config.plex_token(), timeout=10)
+            plex_server = PlexServer(config.plex_baseurl(), config.plex_token(), timeout=10, session=session)
             print(" OK")
             return plex_server
-        except Exception:
+        except Exception as e:
             print(" FAILED")
             logger.error("Error: Unable to reach Plex server, please refresh manually.")
+            logger.debug(e)
             return False
 
 

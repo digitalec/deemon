@@ -55,6 +55,7 @@ DEFAULT_CONFIG = {
     },
     "plex": {
         "base_url": "",
+        "ssl_verify": True,
         "token": "",
         "library": ""
     }
@@ -430,6 +431,10 @@ class Config(object):
     @staticmethod
     def exclusions() -> list:
         return Config._CONFIG['exclude']
+
+    @staticmethod
+    def plex_ssl_verify() -> bool:
+        return Config._CONFIG.get('plex').get('ssl_verify')
 
     @staticmethod
     def find_position(d, property):
