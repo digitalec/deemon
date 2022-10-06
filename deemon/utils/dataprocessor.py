@@ -46,7 +46,7 @@ def csv_to_list(all_artists) -> list:
     """
     Separate artists and replace delimiter to find artists containing commas in their name
     """
-    all_artists = [x for x in all_artists]
+    all_artists = [str(x) for x in all_artists]
     processed_artists = []
     for artist in all_artists:
         if artist[-1] == ',':
