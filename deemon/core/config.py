@@ -226,7 +226,10 @@ class Config(object):
                                         dict1_tmp = dict1.setdefault(i, {})
                                     dict1_tmp[key] = ALLOWED_VALUES[key][value]
                                     modified += 1
-                                elif value in ALLOWED_VALUES[key].values():
+                                elif (
+                                        value in ALLOWED_VALUES[key].values() or
+                                        value.upper() in ALLOWED_VALUES[key].values()
+                                ):
                                     continue
                                 else:
                                     raise UnknownValue(
