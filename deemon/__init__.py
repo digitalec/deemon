@@ -21,7 +21,7 @@
 import sys
 import requests
 
-__version__ = '3.0_alpha1'
+__version__ = '3.0a1dev2278'
 __dbversion__ = '4'
 
 from deemon.core.logger import logger
