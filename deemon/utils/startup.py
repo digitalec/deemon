@@ -16,7 +16,7 @@ def get_config():
 
 # TODO REMOVE
 def get_database():
-    return get_appdata_dir() / 'deemon.db'
+    return get_appdata_dir() / 'deemon3.db'
 
 
 # TODO REMOVE
