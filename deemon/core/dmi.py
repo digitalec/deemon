@@ -5,8 +5,11 @@ import deemix
 import deemix.utils.localpaths as localpaths
 from deemix import generateDownloadObject
 from deemix.downloader import Downloader
-from deemix.settings import load as LoadSettings
-from deemix.types.DownloadObjects import Collection
+from deemix.settings import load as LoadSettings, OverwriteOption
+from deemix.types.DownloadObjects import Single, Collection
+from deemix.types import Track
+from deemix.itemgen import generateAlbumItem, generateTrackItem
+from deemix.utils.pathtemplates import generatePath, generateTrackName, generateArtistName, generateAlbumName
 from deezer import Deezer
 from deezer.api import APIError
 from deezer.gw import GWAPIError
@@ -20,8 +23,12 @@ logger = logging.getLogger(__name__)
 
 class DeemixInterface:
     def __init__(self):
-        logger.debug("Initializing deemix library")
         self.dz = Deezer()
+        self.config_dir = None
+        self.dx_settings = None
+        self.download_path = None
+
+        logger.debug("Initializing deemix library")
 
         if config.deemix_path() == "":
             self.config_dir = localpaths.getConfigFolder()
@@ -185,6 +192,34 @@ class DeemixInterface:
                 'playlistAPI': playlistAPI
             }
         })
+
+    def get_track_lyrics(self, track_id):
+
+        track_gw_api = self.dz.gw.get_track(track_id)
+        track_api = map_track(track_gw_api)
+
+        track = Track.Track().parseData(self.dz, track_id, track_api)
+        filename = generateTrackName(self.dx_settings['albumTracknameTemplate'], track, self.dx_settings)
+        filepath = Path(config.download_path)
+
+        if self.dx_settings['createArtistFolder']:
+            filepath = filepath / generateArtistName(self.dx_settings['artistNameTemplate'],
+                                                       track.album.mainArtist,
+                                                       self.dx_settings,
+                                                       rootArtist=track.album.rootArtist
+                                                       )
+
+        if self.dx_settings['createAlbumFolder']:
+            filepath = filepath / generateAlbumName(self.dx_settings['albumNameTemplate'],
+                                                      track.album,
+                                                      self.dx_settings,
+                                                      track.playlist
+                                                      )
+
+        if self.dx_settings['syncedLyrics'] and track.lyrics.sync:
+            with open(filepath / f"{filename}.lrc", 'w', encoding="utf-8") as f:
+                f.write(track.lyrics.sync)
+
 
 class GenerationError(Exception):
     def __init__(self, link, message, errid=None):
