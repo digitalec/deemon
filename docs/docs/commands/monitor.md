@@ -41,6 +41,13 @@ Monitoring by URL was implemented with the intention of using it for integration
 ```bash
 $ deemon monitor --url https://www.deezer.com/us/artist/1234
 ```
+## Monitor by Playlist
+
+Deemon will monitor the playlist URL, and will download any new additions to the playlist.
+
+```bash
+$ deemon monitor --playlist https://www.deezer.com/en/playlist/1234
+```
 
 ## Import artists from file or directory
 
@@ -72,6 +79,14 @@ If you no longer wish to monitor an artist, include the `--remove` flag with one
 ```bash
 $ deemon monitor --remove ArtistA
 $ deemon monitor --remove --artist-id 1234
+```
+
+## Stop Monitoring a Playlist
+
+If you no longer wish to monitor an playlist, include the `--remove --playlist` flags along with the playlist URL.
+
+```bash
+$ deemon monitor --remove --playlist https://www.deezer.com/en/playlist/1234
 ```
 
 ## Reset database
