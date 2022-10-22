@@ -26,7 +26,11 @@ DEFAULT_CONFIG = {
     "prompt_no_matches": True,
     "fast_api": True,
     "fast_api_threads": 10,
-    "exclude": [],
+    "exclusions": {
+        "enable_exclusions": True,
+        "patterns": [],
+        "keywords": [],
+    },
     "new_releases": {
         "release_max_age": 90,
         "include_unofficial": False,
@@ -432,8 +436,22 @@ class Config(object):
         return Config._CONFIG['new_releases']['include_unofficial']
 
     @staticmethod
-    def exclusions() -> list:
-        return Config._CONFIG['exclude']
+    def enable_exclusions() -> bool:
+        return Config._CONFIG['exclusions']['enable_exclusions']
+
+    @staticmethod
+    def exclusion_keywords() -> list:
+        if Config._CONFIG['exclusions']['enable_exclusions']:
+            return [x.lower() for x in Config._CONFIG['exclusions']['keywords']]
+        else:
+            return []
+
+    @staticmethod
+    def exclusion_patterns() -> list:
+        if Config._CONFIG['exclusions']['enable_exclusions']:
+            return Config._CONFIG['exclusions']['patterns']
+        else:
+            return []
 
     @staticmethod
     def plex_ssl_verify() -> bool:
