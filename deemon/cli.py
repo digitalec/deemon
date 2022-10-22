@@ -8,7 +8,7 @@ import click
 from packaging.version import parse as parse_version
 
 from deemon import __version__
-from deemon.cmd import download, rollback, backup, extra
+from deemon.cmd import download, rollback, backup, extra, tests
 from deemon.cmd.artistconfig import artist_lookup
 from deemon.cmd.monitor import Monitor
 from deemon.cmd.profile import ProfileConfig
@@ -112,11 +112,18 @@ def run(whats_new, verbose, profile):
 
 
 @run.command(name='test')
-def test():
-    """Test email server settings by sending a test notification"""
-    notification = notifier.Notify()
-    notification.test()
-
+@click.option('-e', '--email', is_flag=True, help="Send test notification to configured email")
+@click.option('-E', '--exclusions', metavar="URL", type=str, help="Test exclude regex pattern against URL")
+def test(email, exclusions):
+    """Run tests on email configuration, exclusion filters, etc."""
+    if email:
+        notification = notifier.Notify()
+        notification.test()
+    elif exclusions:
+        if config.exclusion_patterns() or config.exclusion_keywords:
+            tests.exclusion_test(exclusions)
+        else:
+            logger.info("You don't have any exclusions configured or they're disabled")
 
 @run.command(name='download', no_args_is_help=True)
 @click.argument('artist', nargs=-1, required=False)
