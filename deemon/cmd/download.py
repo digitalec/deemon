@@ -11,7 +11,7 @@ import plexapi.exceptions
 from plexapi.server import PlexServer
 
 from deemon import utils
-from deemon.core import dmi, db, api
+from deemon.core import dmi, db, api, common
 from deemon.core.config import Config as config
 from deemon.utils import ui, dataprocessor, startup, dates
 
@@ -263,6 +263,8 @@ class Download:
 
         def queue_filtered_releases(api_object):
             filtered = filter_artist_by_record_type(api_object)
+            filtered = common.exclude_filtered_versions(filtered)
+
             for album in filtered:
                 if not queue_item_exists(album['id']):
                     self.queue_list.append(QueueItem(artist=api_object, album=album))
