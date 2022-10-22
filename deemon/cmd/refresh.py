@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 from tqdm import tqdm
 
 from deemon.cmd.download import QueueItem, Download
-from deemon.core import db, api, notifier
+from deemon.core import db, api, notifier, common
 from deemon.core.config import Config as config
 from deemon.utils import dates, ui, performance
 
@@ -92,8 +92,8 @@ class Refresh:
             if release['future']:
                 continue
 
-            if any([re.search(ex, release['title']) for ex in config.exclusions()]):
-                logger.debug(f"Skipping release matching one or more exclusions: {release['title']}")
+            if not common.exclude_filtered_versions([{'title': release['title']}]):
+                # exclude_filtered_versions returns empty list if excluded
                 continue
 
             explicit_album_id = self.explicit_id(release['title'], payload['releases'])
