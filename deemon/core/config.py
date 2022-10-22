@@ -140,6 +140,14 @@ class Config(object):
             """ Used to move existing values to new property names/locations """
             nonlocal modified
 
+            if user_config.get('exclude'):
+                user_config['exclusions'] = {
+                    'enable_exclusions': True,
+                    'patterns': user_config['exclude'],
+                    'keywords': []
+                }
+                modified += 1
+
             if user_config.get('experimental'):
                 if user_config['experimental'].get('allow_unofficial_releases'):
                     user_config['new_releases']['include_unofficial'] = True
