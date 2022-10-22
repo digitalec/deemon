@@ -305,7 +305,7 @@ class Download:
                 self.queue_list.append(QueueItem(album=album_id_result))
 
         def process_track_by_id(id):
-            logger.debug("Processing track by name")
+            logger.debug("Processing track by ID")
             track_id_result = get_api_result(track_id=id)
             if not track_id_result:
                 return

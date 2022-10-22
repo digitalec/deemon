@@ -73,8 +73,7 @@ class Refresh:
 
     def filter_artist_releases(self, payload: dict):
         """ Inspect artist releases and decide what to do with each release """
-        self.debugger("FilterReleases", {'artist': payload['artist_id'],
-                                         'releases': len(payload['releases'])})
+        self.debugger(f"{payload['artist_name']} has {len(payload['releases'])} new releases")
 
         for release in payload['releases']:
             release['artist_id'] = payload['artist_id']

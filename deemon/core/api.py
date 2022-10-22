@@ -157,7 +157,7 @@ class PlatformAPI:
         """
         Return a list of dictionaries from API containing
         """
-        self.debugger("Getting artist releases", query)
+        self.debugger(f"Refreshing artist releases for {query['artist_name']} ({query['artist_id']})")
         if self.platform == "deezer-gw":
             try:
                 result = self.api.get_artist_discography(art_id=query['artist_id'], limit=limit)['data']
