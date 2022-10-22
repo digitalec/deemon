@@ -167,7 +167,13 @@ class Download:
             logger.debug(f"Queue exported to {startup.get_appdata_dir()}/queue.csv")
 
             failed_count = []
-            download_progress = tqdm(self.queue_list, total=len(self.queue_list), desc="Downloading releases...", ascii=" #", bar_format=ui.TQDM_FORMAT)
+            download_progress = tqdm(
+                self.queue_list,
+                total=len(self.queue_list),
+                desc="Downloading releases...",
+                ascii=" #",
+                bar_format=ui.TQDM_FORMAT
+            )
             for index, item in enumerate(download_progress):
                 i = str(index + 1)
                 t = str(len(download_progress))
@@ -371,14 +377,17 @@ class Download:
                     if isinstance(artist_list[0], int):
                         with ThreadPoolExecutor(max_workers=self.api.max_threads) as ex:
                             _api_results = list(tqdm(ex.map(process_artist_by_id, artist_list),
-                                 total=len(artist_list), desc=f"Fetching artist release data for {len(artist_list)} artist(s), please wait...", ascii=" #",
-                                 bar_format=ui.TQDM_FORMAT))
+                                                     total=len(artist_list),
+                                                     desc=f"Fetching artist release data for {len(artist_list)} "
+                                                          f"artist(s), please wait...", ascii=" #",
+                                                     bar_format=ui.TQDM_FORMAT))
                     else:
                         if isinstance(artist_list[0], int):
                             with ThreadPoolExecutor(max_workers=self.api.max_threads) as ex:
                                 _api_results = list(tqdm(ex.map(process_artist_by_name, artist_list),
                                                          total=len(artist_list),
-                                                         desc=f"Fetching artist release data for {len(artist_list)} artist(s), please wait...",
+                                                         desc=f"Fetching artist release data for {len(artist_list)} "
+                                                              f"artist(s), please wait...",
                                                          ascii=" #",
                                                          bar_format=ui.TQDM_FORMAT))
 
