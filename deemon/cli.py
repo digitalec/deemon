@@ -158,13 +158,15 @@ def download_command(artist, artist_id, album_id, url, file, bitrate,
     if record_type:
         config.set('record_type', record_type)
 
-    if monitored:
-        artists, artist_ids, album_ids, urls = None, None, None, None
-    else:
-        artists = dataprocessor.csv_to_list(artist) if artist else None
-        artist_ids = [x for x in artist_id] if artist_id else None
-        album_ids = [x for x in album_id] if album_id else None
-        urls = [x for x in url] if url else None
+    artists = dataprocessor.csv_to_list(artist) if artist else None
+    artist_ids = [x for x in artist_id] if artist_id else None
+    album_ids = [x for x in album_id] if album_id else None
+    track_ids = [x for x in track_id] if track_id else None
+    urls = [x for x in url] if url else None
+
+    if file:
+        logger.info("WARNING: -f/--file has been replaced with --artist-file and will be removed in future versions.")
+        artist_file = file
 
     if download_path and download_path != "":
         if Path(download_path).exists:
@@ -175,7 +177,7 @@ def download_command(artist, artist_id, album_id, url, file, bitrate,
 
     dl = download.Download()
     dl.set_dates(from_date, to_date)
-    dl.download(artists, artist_ids, album_ids, urls, file)
+    dl.download(artists, artist_ids, album_ids, urls, artist_file, track_file, track_ids, monitored=monitored)
 
 
 @run.command(name='monitor', context_settings={"ignore_unknown_options": False}, no_args_is_help=True)
