@@ -4,11 +4,15 @@ from csv import reader
 logger = logging.getLogger(__name__)
 
 
-def read_file_as_csv(file):
+def read_file_as_csv(file, split_new_line=True):
     with open(file, 'r', encoding="utf-8-sig", errors="replace") as f:
         make_csv = f.read()
-        csv_to_list = make_csv.split('\n')
+        if split_new_line:
+            csv_to_list = make_csv.split('\n')
+        else:
+            csv_to_list = make_csv.split(', ')
         sorted_list = sorted(list(filter(None, csv_to_list)))
+        sorted_list = list(set(sorted_list))
         return sorted_list
 
 
