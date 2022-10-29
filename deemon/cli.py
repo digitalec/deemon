@@ -127,21 +127,22 @@ def test(email, exclusions):
 
 @run.command(name='download', no_args_is_help=True)
 @click.argument('artist', nargs=-1, required=False)
+@click.option('-m', '--monitored', is_flag=True, help='Download all currently monitored artists')
+@click.option('-i', '--artist-id', multiple=True, metavar='ID', type=int, help='Download by artist ID')
 @click.option('-A', '--album-id', multiple=True, metavar='ID', type=int, help='Download by album ID')
+@click.option('-T', '--track-id', multiple=True, metavar='ID', type=int, help='Download by track ID')
+@click.option('-u', '--url', metavar='URL', multiple=True, help='Download by URL of artist/album/track/playlist')
 @click.option('-f', '--file', metavar='FILE', help='Download batch of artists or artist IDs from file', hidden=True)
 @click.option('--artist-file', metavar='FILE', help='Download batch of artists or artist IDs from file')
 @click.option('--track-file', metavar='FILE', help='Download batch of track IDs from file')
 @click.option('-a', '--after', 'from_date', metavar="YYYY-MM-DD", type=str, help='Grab releases released after this date')
 @click.option('-B', '--before', 'to_date', metavar="YYYY-MM-DD", type=str, help='Grab releases released before this date')
 @click.option('-b', '--bitrate', metavar="BITRATE", help='Set custom bitrate for this operation')
-@click.option('-i', '--artist-id', multiple=True, metavar='ID', type=int, help='Download by artist ID')
-@click.option('-m', '--monitored', is_flag=True, help='Download all currently monitored artists')
 @click.option('-o', '--download-path', metavar="PATH", type=str, help='Specify custom download directory')
 @click.option('-t', '--record-type', metavar="TYPE", type=str, help='Specify record types to download')
-@click.option('-u', '--url', metavar='URL', multiple=True, help='Download by URL of artist/album/track/playlist')
 def download_command(artist, artist_id, album_id, url, file, bitrate,
                      record_type, download_path, from_date, to_date,
-                     monitored):
+                     monitored, track_id, track_file, artist_file):
     """
     Download specific artist, album ID or by URL
 
