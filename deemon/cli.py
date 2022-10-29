@@ -8,7 +8,7 @@ import click
 from packaging.version import parse as parse_version
 
 from deemon import __version__
-from deemon.cmd import download, rollback, backup, extra, tests
+from deemon.cmd import download, rollback, backup, extra, tests, upgradelib
 from deemon.cmd.artistconfig import artist_lookup
 from deemon.cmd.monitor import Monitor
 from deemon.cmd.profile import ProfileConfig
@@ -151,6 +151,7 @@ def download_command(artist, artist_id, album_id, url, file, bitrate,
         download Mozart
         download -i 100 -t album -b 9
     """
+
     if bitrate:
         config.set('bitrate', bitrate)
     if download_path:
@@ -440,10 +441,12 @@ def profile_command(profile, add, clear, delete, edit):
     else:
         pc.show()
 
+
 @run.command(name="extra")
 def extra_command():
     """Fetch extra release info"""
     extra.main()
+
 
 @run.command(name="search")
 @click.argument('query', nargs=-1, required=False)
@@ -474,3 +477,24 @@ def rollback_command(num, view):
     elif num:
         rollback.rollback_last(num)
 
+
+@click.group(name="library")
+def library_command():
+    """
+    Library options such as upgrading from MP3 to FLAC
+    """
+
+
+@library_command.command(name="upgrade")
+@click.argument('library', metavar='PATH')
+@click.option('-A', '--album-only', is_flag=True, help="Get album IDs instead of track IDs (Fastest)")
+@click.option('-E', '--allow-exclusions', is_flag=True, help="Allow exclusions to be applied")
+@click.option('-O', '--output', metavar='PATH', help="Output file to save IDs (default: current directory)")
+def library_upgrade_command(library, output, album_only, allow_exclusions):
+    """ (BETA) Scans MP3 files in PATH and generates a text file containing album/track IDs """
+    if not output:
+        output = Path.cwd()
+    upgradelib.upgrade(library, output, album_only, allow_exclusions)
+
+
+run.add_command(library_command)
