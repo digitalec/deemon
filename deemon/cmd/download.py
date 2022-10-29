@@ -227,7 +227,7 @@ class Download:
         return True
 
     def download(self, artist, artist_id, album_id, url,
-                 artist_file, track_file, track_id, auto=True, monitored=False):
+                 artist_file, track_file, album_file, track_id, auto=True, monitored=False):
 
         def filter_artist_by_record_type(artist):
             album_api = self.api.get_artist_albums(query={'artist_name': '', 'artist_id': artist['id']})
@@ -385,7 +385,29 @@ class Download:
         if track_id:
             [process_track_by_id(i) for i in track_id]
 
+        if album_file:
+            logger.info(f":: Reading from file {album_file}")
+            if Path(album_file).exists():
+                album_list = utils.dataprocessor.read_file_as_csv(album_file, split_new_line=False)
+                album_list = utils.dataprocessor.process_input_file(album_list)
+                if album_list:
+                    if isinstance(album_list[0], int):
+                        with ThreadPoolExecutor(max_workers=self.api.max_threads) as ex:
+                            _api_results = list(tqdm(ex.map(process_album_by_id, album_list),
+                                                     total=len(album_list),
+                                                     desc=f"Fetching album data for {len(album_list)} "
+                                                          f"album(s), please wait...", ascii=" #",
+                                                     bar_format=ui.TQDM_FORMAT))
+                    else:
+                        logger.debug(f"Invalid album ID: \"{album_list[0]}\"")
+                        logger.error(f"Invalid album ID file detected.")
+            else:
+                logger.error(f"The file {album_file} could not be found")
+                sys.exit()
+
         if artist_file:
+            # TODO artist_file is in different format than album_file and track_file
+            # TODO is one continuous CSV line better than separate lines?
             logger.info(f":: Reading from file {artist_file}")
             if Path(artist_file).exists():
                 artist_list = utils.dataprocessor.read_file_as_csv(artist_file)
