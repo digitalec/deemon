@@ -192,12 +192,13 @@ def download_command(artist, artist_id, album_id, url, file, bitrate,
 @click.option('-I', '--import', 'im', metavar="PATH", help="Monitor artists/IDs from file or directory")
 @click.option('-i', '--artist-id', is_flag=True, help="Monitor artist by ID")
 @click.option('-p', '--playlist', is_flag=True, help='Monitor Deezer playlist by URL')
+@click.option('--include-artists', is_flag=True, help='Also monitor artists from playlist')
 @click.option('-u', '--url', is_flag=True, help='Monitor artist by URL')
 @click.option('-R', '--remove', is_flag=True, help='Stop monitoring an artist')
 @click.option('-s', '--search', 'search_flag', is_flag=True, help='Show similar artist results to choose from')
 @click.option('-T', '--time-machine', type=str, metavar="YYYY-MM-DD", help="Refresh newly added artists on this date")
 @click.option('-t', '--record-type', metavar="TYPE", type=str, help='Specify record types to download')
-def monitor_command(artist, im, playlist, bitrate, record_type, alerts, artist_id,
+def monitor_command(artist, im, playlist, include_artists, bitrate, record_type, alerts, artist_id,
                     dl, remove, url, download_path, search_flag, time_machine):
     """
     Monitor artist for new releases by ID, URL or name.
@@ -256,7 +257,7 @@ def monitor_command(artist, im, playlist, bitrate, record_type, alerts, artist_i
     if im:
         monitor.importer(im)
     elif playlist:
-        monitor.playlists(playlist_id)
+        monitor.playlists(playlist_id, include_artists)
     elif artist_id:
         monitor.artist_ids(dataprocessor.csv_to_list(artist))
     elif artist:
