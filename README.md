@@ -33,9 +33,6 @@ $ python3 -m deemon
 
 ### Docker
 
-**Docker support will be removed in the next major release. It is recommended to use a python virtual environment
-instead ([see below](#installation-in-a-python-virtual-environment-venv)).**
-
 Docker support has been added for `amd64`, `arm64` and `armv7` architectures. It is recommended to save your `docker run` command as a script to execute via cron/Task Scheduler.
 
 **Note:** Inside deemon's `config.json`, download_location **must** be set to `/downloads` until I can integrate this myself.
@@ -47,16 +44,15 @@ docker run --name deemon \
        -v /path/to/deemon/config:/config \
        -v /path/to/music:/downloads \
        -v /path/to/deemix/config:/deemix  \
-       -v /file/to/monitor:/artists.txt \
        ghcr.io/digitalec/deemon:latest \
-       python3 -m deemon monitor --import /artists.txt
+       python3 -m deemon refresh
 ```
 
 ### Installation in a Python Virtual Environment (venv)
 
 If you wish to install deemon and it's dependencies in a sandbox-style environment, I would recommend using venv.
 
-Create a venv and install deemon
+Create a venv and install deemon (you may need to use `python3` and `pip3` depending on your system):
 ```commandline
 $ python -m venv venv
 $ source ./venv/bin/activate
