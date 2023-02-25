@@ -247,10 +247,10 @@ class PlatformAPI:
         try:
             api_result = Deezer().api.get_playlist(query)
         except deezer.errors.PermissionException:
-            logger.warning(f"   [!] Playlist ID {query} is private")
+            logger.warning(f"   [!] Permission Denied: Playlist {query} is private")
             return
         except deezer.errors.DataException:
-            logger.warning(f"   [!] Playlist ID {query} was not found")
+            logger.warning(f"   [!] Playlist ID {query['id']} was not found")
             return
         except json.decoder.JSONDecodeError:
             logger.error(f"   [!] Empty response from API while getting data for playlist ID {query}, retrying...")
@@ -268,7 +268,7 @@ class PlatformAPI:
         try:
             api_result = Deezer().api.get_playlist(query['id'])
         except deezer.errors.PermissionException:
-            logger.warning(f"   [!] Playlist ID {query} is private")
+            logger.warning(f"   [!] Permission Denied: Playlist {query['title']} ({query['id']}) is private")
             return
         except deezer.errors.DataException:
             logger.warning(f"   [!] Playlist ID {query} was not found")
