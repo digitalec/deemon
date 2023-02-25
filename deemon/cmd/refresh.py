@@ -249,7 +249,7 @@ class Refresh:
                 self.prep_payload(payload)
 
         for payload in api_result['playlists']:
-            if len(payload):
+            if payload and len(payload):
                 self.seen = self.db.get_playlist_tracks(payload['id'])
                 payload['tracks'] = self.remove_existing_releases(payload, self.seen)
                 self.filter_playlist_releases(payload)
