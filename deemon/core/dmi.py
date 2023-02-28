@@ -7,7 +7,7 @@ from deemix import generateDownloadObject
 from deemix.downloader import Downloader
 from deemix.settings import load as LoadSettings
 from deemix.types.DownloadObjects import Collection
-from deemix.utils import formatListener
+from deemix.utils import formatListener, pathtemplates
 from deezer import Deezer
 from deezer.api import APIError
 from deezer.gw import GWAPIError
@@ -37,6 +37,9 @@ class DeemixInterface:
         logger.debug("Initializing deemix library")
         self.db = Database()
         self.dz = Deezer()
+
+        # Override deemix code causing unhandled TypeError exception on line 158
+        pathtemplates.generateTrackName = self.generateTrackName
 
         if config.deemix_path() == "":
             self.config_dir = localpaths.getConfigFolder()
@@ -197,6 +200,62 @@ class DeemixInterface:
                 'playlistAPI': playlistAPI
             }
         })
+
+
+    def generateTrackName(filename, track, settings):
+        from deemix.utils.pathtemplates import fixName
+
+        logger.debug("[PATCH] Overriding deemix method generateTrackName with bug fix")
+
+        c = settings['illegalCharacterReplacer']
+        filename = filename.replace("%title%", fixName(track.title, c))
+        filename = filename.replace("%artist%", fixName(track.mainArtist.name, c))
+        filename = filename.replace("%artists%", fixName(", ".join(track.artists), c))
+        filename = filename.replace("%allartists%", fixName(track.artistsString, c))
+        filename = filename.replace("%mainartists%", fixName(track.mainArtistsString, c))
+        if track.featArtistsString:
+            filename = filename.replace("%featartists%", fixName('('+track.featArtistsString+')', c))
+        else:
+            filename = filename.replace("%featartists%", '')
+        filename = filename.replace("%album%", fixName(track.album.title, c))
+        filename = filename.replace("%albumartist%", fixName(track.album.mainArtist.name, c))
+        filename = filename.replace("%tracknumber%", pad(track.trackNumber, track.album.trackTotal, settings))
+        filename = filename.replace("%tracktotal%", str(track.album.trackTotal))
+        filename = filename.replace("%discnumber%", str(track.discNumber))
+        filename = filename.replace("%disctotal%", str(track.album.discTotal))
+        if len(track.album.genre) > 0:
+            filename = filename.replace("%genre%", fixName(track.album.genre[0], c))
+        else:
+            filename = filename.replace("%genre%", "Unknown")
+        filename = filename.replace("%year%", str(track.date.year))
+        filename = filename.replace("%date%", track.dateString)
+        filename = filename.replace("%bpm%", str(track.bpm))
+        filename = filename.replace("%label%", fixName(track.album.label, c))
+        filename = filename.replace("%isrc%", track.ISRC)
+
+        """ BEGIN DEEMON PATCH """
+        """ Catches exception when track.album.barcode == None """
+        try:
+            filename = filename.replace("%upc%", track.album.barcode)
+        except TypeError:
+            pass
+        """ END DEEMON PATCH """
+
+        filename = filename.replace("%explicit%", "(Explicit)" if track.explicit else "")
+
+        filename = filename.replace("%track_id%", str(track.id))
+        filename = filename.replace("%album_id%", str(track.album.id))
+        filename = filename.replace("%artist_id%", str(track.mainArtist.id))
+        if track.playlist:
+            filename = filename.replace("%playlist_id%", str(track.playlist.playlistID))
+            filename = filename.replace("%position%", pad(track.position, track.playlist.trackTotal, settings))
+        else:
+            filename = filename.replace("%playlist_id%", '')
+            filename = filename.replace("%position%", pad(track.position, track.album.trackTotal, settings))
+        filename = filename.replace('\\', pathSep).replace('/', pathSep)
+        return antiDot(fixLongName(filename))
+
+
 
 class GenerationError(Exception):
     def __init__(self, link, message, errid=None):
