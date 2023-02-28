@@ -1,5 +1,6 @@
 import logging
 import re
+import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
 
@@ -248,11 +249,18 @@ class Refresh:
             for payload in payload_container:
                 self.prep_payload(payload)
 
+        playlist_monitor_artists = []
         for payload in api_result['playlists']:
             if payload and len(payload):
                 self.seen = self.db.get_playlist_tracks(payload['id'])
                 payload['tracks'] = self.remove_existing_releases(payload, self.seen)
                 self.filter_playlist_releases(payload)
+
+                if payload['monitor_artists']:
+                    logger.debug(f"Artists from this playlist ({payload['id']}) are to be monitored!")
+                    for track in payload['tracks']:
+                        playlist_monitor_artists.append(track['artist_id'])
+        playlist_monitor_artists = list(set(playlist_monitor_artists))
 
         if self.skip_download:
             logger.info(f"   [!] You have opted to skip downloads, clearing {len(self.queue_list):,} item(s) from queue...")
@@ -262,7 +270,6 @@ class Refresh:
         if len(self.queue_list):
             dl = Download()
             dl.download_queue(self.queue_list)
-
 
         if len(self.new_playlist_releases) or len(self.new_releases):
             if len(self.new_playlist_releases):
@@ -283,6 +290,14 @@ class Refresh:
         if len(self.new_releases_alert) > 0:
             notification = notifier.Notify(self.new_releases_alert)
             notification.send()
+
+        if playlist_monitor_artists:
+            print("")
+            logger.info(":: New artists to monitor, stand by...")
+            time.sleep(2)
+            from deemon.cmd.monitor import Monitor
+            monitor = Monitor()
+            monitor.artist_ids(playlist_monitor_artists)
 
     def db_stats(self):
         artists = len(self.db.get_all_monitored_artist_ids())

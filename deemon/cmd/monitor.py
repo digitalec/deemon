@@ -123,7 +123,11 @@ class Monitor:
             self.db.commit()
             return True
 
-    def build_playlist_query(self, api_result: list):
+    def build_playlist_query(self, api_result: list, include_artists: bool):
+
+        if include_artists:
+            include_artists = '1'
+
         existing = self.db.get_all_monitored_playlist_ids() or []
         playlists_to_add = []
         pbar = tqdm(api_result, total=len(api_result), desc="Setting up playlists for monitoring...", ascii=" #",
@@ -134,8 +138,16 @@ class Monitor:
             if playlist['id'] in existing:
                 logger.info(f"   Already monitoring {playlist['title']}, skipping...")
             else:
-                playlist.update({'bitrate': self.bitrate, 'alerts': self.alerts, 'download_path': self.download_path,
-                                 'profile_id': config.profile_id(), 'trans_id': config.transaction_id()})
+                playlist.update(
+                    {
+                        'bitrate': self.bitrate,
+                        'alerts': self.alerts,
+                        'download_path': self.download_path,
+                        'profile_id': config.profile_id(),
+                        'trans_id': config.transaction_id(),
+                        'monitor_artists': include_artists
+                    }
+                )
                 playlists_to_add.append(playlist)
         if len(playlists_to_add):
             logger.debug("New playlists have been monitored. Saving changes to the database...")
@@ -214,7 +226,7 @@ class Monitor:
             return
 
     # @performance.timeit
-    def playlists(self, playlists: list):
+    def playlists(self, playlists: list, include_artists: bool):
         if self.remove:
             return self.purge_playlists(ids=playlists)
         ids = [int(x) for x in playlists]
@@ -225,7 +237,7 @@ class Monitor:
                      desc=f"Fetching playlist data for {len(ids):,} playlist(s), please wait...",
                      ascii=" #", bar_format=ui.TQDM_FORMAT))
 
-        if self.build_playlist_query(api_result):
+        if self.build_playlist_query(api_result, include_artists):
             self.call_refresh()
         else:
             print("")

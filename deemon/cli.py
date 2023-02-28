@@ -8,7 +8,7 @@ import click
 from packaging.version import parse as parse_version
 
 from deemon import __version__
-from deemon.cmd import download, rollback, backup, extra, tests
+from deemon.cmd import download, rollback, backup, extra, tests, upgradelib
 from deemon.cmd.artistconfig import artist_lookup
 from deemon.cmd.monitor import Monitor
 from deemon.cmd.profile import ProfileConfig
@@ -127,19 +127,24 @@ def test(email, exclusions):
 
 @run.command(name='download', no_args_is_help=True)
 @click.argument('artist', nargs=-1, required=False)
+@click.option('-m', '--monitored', is_flag=True, help='Download all currently monitored artists')
+@click.option('-i', '--artist-id', multiple=True, metavar='ID', type=int, help='Download by artist ID')
 @click.option('-A', '--album-id', multiple=True, metavar='ID', type=int, help='Download by album ID')
+@click.option('-T', '--track-id', multiple=True, metavar='ID', type=int, help='Download by track ID')
+@click.option('-u', '--url', metavar='URL', multiple=True, help='Download by URL of artist/album/track/playlist')
+@click.option('-f', '--file', metavar='FILE', help='Download batch of artists or artist IDs from file', hidden=True)
+@click.option('--artist-file', metavar='FILE', help='Download batch of artists or artist IDs from file')
+@click.option('--album-file', metavar='FILE', help='Download batch of album IDs from file')
+@click.option('--track-file', metavar='FILE', help='Download batch of track IDs from file')
 @click.option('-a', '--after', 'from_date', metavar="YYYY-MM-DD", type=str, help='Grab releases released after this date')
 @click.option('-B', '--before', 'to_date', metavar="YYYY-MM-DD", type=str, help='Grab releases released before this date')
 @click.option('-b', '--bitrate', metavar="BITRATE", help='Set custom bitrate for this operation')
-@click.option('-f', '--file', metavar='FILE', help='Download batch of artists and/or artist IDs from file')
-@click.option('-i', '--artist-id', multiple=True, metavar='ID', type=int, help='Download by artist ID')
-@click.option('-m', '--monitored', is_flag=True, help='Download all currently monitored artists')
 @click.option('-o', '--download-path', metavar="PATH", type=str, help='Specify custom download directory')
 @click.option('-t', '--record-type', metavar="TYPE", type=str, help='Specify record types to download')
-@click.option('-u', '--url', metavar='URL', multiple=True, help='Download by URL of artist/album/track/playlist')
 def download_command(artist, artist_id, album_id, url, file, bitrate,
                      record_type, download_path, from_date, to_date,
-                     monitored):
+                     monitored, track_id, track_file, artist_file,
+                     album_file):
     """
     Download specific artist, album ID or by URL
 
@@ -148,6 +153,7 @@ def download_command(artist, artist_id, album_id, url, file, bitrate,
         download Mozart
         download -i 100 -t album -b 9
     """
+
     if bitrate:
         config.set('bitrate', bitrate)
     if download_path:
@@ -155,13 +161,15 @@ def download_command(artist, artist_id, album_id, url, file, bitrate,
     if record_type:
         config.set('record_type', record_type)
 
-    if monitored:
-        artists, artist_ids, album_ids, urls = None, None, None, None
-    else:
-        artists = dataprocessor.csv_to_list(artist) if artist else None
-        artist_ids = [x for x in artist_id] if artist_id else None
-        album_ids = [x for x in album_id] if album_id else None
-        urls = [x for x in url] if url else None
+    artists = dataprocessor.csv_to_list(artist) if artist else None
+    artist_ids = [x for x in artist_id] if artist_id else None
+    album_ids = [x for x in album_id] if album_id else None
+    track_ids = [x for x in track_id] if track_id else None
+    urls = [x for x in url] if url else None
+
+    if file:
+        logger.info("WARNING: -f/--file has been replaced with --artist-file and will be removed in future versions.")
+        artist_file = file
 
     if download_path and download_path != "":
         if Path(download_path).exists:
@@ -172,7 +180,7 @@ def download_command(artist, artist_id, album_id, url, file, bitrate,
 
     dl = download.Download()
     dl.set_dates(from_date, to_date)
-    dl.download(artists, artist_ids, album_ids, urls, file)
+    dl.download(artists, artist_ids, album_ids, urls, artist_file, track_file, album_file, track_ids, monitored=monitored)
 
 
 @run.command(name='monitor', context_settings={"ignore_unknown_options": False}, no_args_is_help=True)
@@ -184,12 +192,13 @@ def download_command(artist, artist_id, album_id, url, file, bitrate,
 @click.option('-I', '--import', 'im', metavar="PATH", help="Monitor artists/IDs from file or directory")
 @click.option('-i', '--artist-id', is_flag=True, help="Monitor artist by ID")
 @click.option('-p', '--playlist', is_flag=True, help='Monitor Deezer playlist by URL')
+@click.option('--include-artists', is_flag=True, help='Also monitor artists from playlist')
 @click.option('-u', '--url', is_flag=True, help='Monitor artist by URL')
 @click.option('-R', '--remove', is_flag=True, help='Stop monitoring an artist')
 @click.option('-s', '--search', 'search_flag', is_flag=True, help='Show similar artist results to choose from')
 @click.option('-T', '--time-machine', type=str, metavar="YYYY-MM-DD", help="Refresh newly added artists on this date")
 @click.option('-t', '--record-type', metavar="TYPE", type=str, help='Specify record types to download')
-def monitor_command(artist, im, playlist, bitrate, record_type, alerts, artist_id,
+def monitor_command(artist, im, playlist, include_artists, bitrate, record_type, alerts, artist_id,
                     dl, remove, url, download_path, search_flag, time_machine):
     """
     Monitor artist for new releases by ID, URL or name.
@@ -248,7 +257,7 @@ def monitor_command(artist, im, playlist, bitrate, record_type, alerts, artist_i
     if im:
         monitor.importer(im)
     elif playlist:
-        monitor.playlists(playlist_id)
+        monitor.playlists(playlist_id, include_artists)
     elif artist_id:
         monitor.artist_ids(dataprocessor.csv_to_list(artist))
     elif artist:
@@ -435,10 +444,12 @@ def profile_command(profile, add, clear, delete, edit):
     else:
         pc.show()
 
+
 @run.command(name="extra")
 def extra_command():
     """Fetch extra release info"""
     extra.main()
+
 
 @run.command(name="search")
 @click.argument('query', nargs=-1, required=False)
@@ -469,3 +480,24 @@ def rollback_command(num, view):
     elif num:
         rollback.rollback_last(num)
 
+
+@click.group(name="library")
+def library_command():
+    """
+    Library options such as upgrading from MP3 to FLAC
+    """
+
+
+@library_command.command(name="upgrade")
+@click.argument('library', metavar='PATH')
+@click.option('-A', '--album-only', is_flag=True, help="Get album IDs instead of track IDs (Fastest)")
+@click.option('-E', '--allow-exclusions', is_flag=True, help="Allow exclusions to be applied")
+@click.option('-O', '--output', metavar='PATH', help="Output file to save IDs (default: current directory)")
+def library_upgrade_command(library, output, album_only, allow_exclusions):
+    """ (BETA) Scans MP3 files in PATH and generates a text file containing album/track IDs """
+    if not output:
+        output = Path.cwd()
+    upgradelib.upgrade(library, output, album_only, allow_exclusions)
+
+
+run.add_command(library_command)

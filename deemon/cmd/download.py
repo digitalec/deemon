@@ -1,5 +1,7 @@
 import logging
 import os
+import sys
+
 import requests
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -65,7 +67,7 @@ class QueueItem:
             self.artist_name = track["artist"]["name"]
             self.track_id = track["id"]
             self.track_title = track["title"]
-            self.url = track["link"]
+            self.url = f"https://deezer.com/track/{self.track_id}"
 
         if playlist:
             self.url = playlist["url"]
@@ -224,7 +226,8 @@ class Download:
                 refresh_plex(plex)
         return True
 
-    def download(self, artist, artist_id, album_id, url, input_file, auto=True, from_date: str = None):
+    def download(self, artist, artist_id, album_id, url,
+                 artist_file, track_file, album_file, track_id, auto=True, monitored=False):
 
         def filter_artist_by_record_type(artist):
             album_api = self.api.get_artist_albums(query={'artist_name': '', 'artist_id': artist['id']})
@@ -263,7 +266,7 @@ class Download:
                     logger.error(f"Album ID {album_id} not found.")
             if track_id:
                 try:
-                    return self.dz.api.get_track(track_id)
+                    return self.api.get_track(track_id)
                 except (deezer.api.DataException, IndexError):
                     logger.error(f"Track ID {track_id} not found.")
 
@@ -305,7 +308,7 @@ class Download:
             if not album_id_result:
                 logger.debug(f"Album ID {i} was not found")
                 return
-            logger.debug(f"Requested Album: {i}, "
+            logger.debug(f"Requested album: {i}, "
                          f"Found: {album_id_result['artist']['name']} - {album_id_result['title']}")
             if album_id_result and not queue_item_exists(album_id_result['id']):
                 self.queue_list.append(QueueItem(album=album_id_result))
@@ -319,6 +322,17 @@ class Download:
                          f"Found: {track_id_result['artist']['name']} - {track_id_result['title']}")
             if track_id_result and not queue_item_exists(id):
                 self.queue_list.append(QueueItem(track=track_id_result))
+
+        def process_track_file(id):
+            if not queue_item_exists(id):
+                track_data = {
+                    "artist": {
+                        "name": "TRACK ID"
+                    },
+                    "id": id,
+                    "title": id
+                }
+                self.queue_list.append(QueueItem(track=track_data))
 
         def process_playlist_by_id(id):
             playlist_api = self.api.get_playlist(id)
@@ -356,7 +370,7 @@ class Download:
                 logger.info(":: Getting releases that were released before "
                             f"{dates.ui_date(self.release_to)}")
 
-        if all(not x for x in [artist, artist_id, album_id, url, input_file]):
+        if monitored:
             artist_id = self.db.get_all_monitored_artist_ids()
 
         if artist:
@@ -368,11 +382,35 @@ class Download:
         if album_id:
             [process_album_by_id(i) for i in album_id]
 
-        if input_file:
-            logger.info(f":: Reading from file {input_file}")
-            if Path(input_file).exists():
-                artists_csv = utils.dataprocessor.read_file_as_csv(input_file)
-                artist_list = utils.dataprocessor.process_input_file(artists_csv)
+        if track_id:
+            [process_track_by_id(i) for i in track_id]
+
+        if album_file:
+            logger.info(f":: Reading from file {album_file}")
+            if Path(album_file).exists():
+                album_list = utils.dataprocessor.read_file_as_csv(album_file, split_new_line=False)
+                album_list = utils.dataprocessor.process_input_file(album_list)
+                if album_list:
+                    if isinstance(album_list[0], int):
+                        with ThreadPoolExecutor(max_workers=self.api.max_threads) as ex:
+                            _api_results = list(tqdm(ex.map(process_album_by_id, album_list),
+                                                     total=len(album_list),
+                                                     desc=f"Fetching album data for {len(album_list)} "
+                                                          f"album(s), please wait...", ascii=" #",
+                                                     bar_format=ui.TQDM_FORMAT))
+                    else:
+                        logger.debug(f"Invalid album ID: \"{album_list[0]}\"")
+                        logger.error(f"Invalid album ID file detected.")
+            else:
+                logger.error(f"The file {album_file} could not be found")
+                sys.exit()
+
+        if artist_file:
+            # TODO artist_file is in different format than album_file and track_file
+            # TODO is one continuous CSV line better than separate lines?
+            logger.info(f":: Reading from file {artist_file}")
+            if Path(artist_file).exists():
+                artist_list = utils.dataprocessor.read_file_as_csv(artist_file)
                 if artist_list:
                     if isinstance(artist_list[0], int):
                         with ThreadPoolExecutor(max_workers=self.api.max_threads) as ex:
@@ -381,15 +419,38 @@ class Download:
                                                      desc=f"Fetching artist release data for {len(artist_list)} "
                                                           f"artist(s), please wait...", ascii=" #",
                                                      bar_format=ui.TQDM_FORMAT))
-                    else:
-                        if isinstance(artist_list[0], int):
-                            with ThreadPoolExecutor(max_workers=self.api.max_threads) as ex:
-                                _api_results = list(tqdm(ex.map(process_artist_by_name, artist_list),
-                                                         total=len(artist_list),
-                                                         desc=f"Fetching artist release data for {len(artist_list)} "
-                                                              f"artist(s), please wait...",
-                                                         ascii=" #",
-                                                         bar_format=ui.TQDM_FORMAT))
+                    elif isinstance(artist_list[0], str):
+                        with ThreadPoolExecutor(max_workers=self.api.max_threads) as ex:
+                            _api_results = list(tqdm(ex.map(process_artist_by_name, artist_list),
+                                                     total=len(artist_list),
+                                                     desc=f"Fetching artist release data for {len(artist_list)} "
+                                                          f"artist(s), please wait...",
+                                                     ascii=" #",
+                                                     bar_format=ui.TQDM_FORMAT))
+            else:
+                logger.error(f"The file {artist_file} could not be found")
+                sys.exit()
+
+        if track_file:
+            logger.info(f":: Reading from file {track_file}")
+            if Path(track_file).exists():
+                track_list = utils.dataprocessor.read_file_as_csv(track_file, split_new_line=False)
+                try:
+                    track_list = [int(x) for x in track_list]
+                except TypeError:
+                    logger.info("Track file must only contain track IDs")
+                    return
+
+                if track_list:
+                    with ThreadPoolExecutor(max_workers=self.api.max_threads) as ex:
+                        _api_results = list(tqdm(ex.map(process_track_file, track_list),
+                                                 total=len(track_list),
+                                                 desc=f"Fetching track release data for {len(track_list)} "
+                                                      f"track(s), please wait...", ascii=" #",
+                                                 bar_format=ui.TQDM_FORMAT))
+            else:
+                logger.error(f"The file {track_file} could not be found")
+                sys.exit()
 
         if url:
             logger.debug("Processing URLs")

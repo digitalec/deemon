@@ -137,8 +137,37 @@ class PlatformAPI:
                     return {}
             return {'id': int(result['ALB_ID']), 'title': result['ALB_TITLE'], 'artist': {'name': result['ART_NAME']}}
         else:
-            logger.warning("Please enable the fast_api for album downloads")
-            return {}
+            try:
+                result = self.api.get_album(query)
+            except deezer.errors.DataException as e:
+                logger.debug(f"API error: {e}")
+                return
+            else:
+                return result
+
+    def get_track(self, query: int) -> dict:
+        """Return a dictionary from API containing album info"""
+        if self.platform == "deezer-gw":
+            try:
+                result = self.api.get_track(query)
+            except deezer.errors.GWAPIError as e:
+                logger.debug(f"API error: {e}")
+                return {}
+            except json.decoder.JSONDecodeError:
+                logger.error(f"   [!] Empty response from API while getting data for album ID {query}, retrying...")
+                try:
+                    result = self.api.get_album(query)
+                except json.decoder.JSONDecodeError:
+                    logger.error(f"   [!] API still sending empty response for album ID {query}")
+                    return {}
+            return {'id': int(result['SNG_ID']), 'title': result['SNG_TITLE'], 'artist': {'name': result['ART_NAME']}}
+        else:
+            try:
+                result = self.api.get_track(query)
+            except deezer.errors.DataException as e:
+                logger.debug(f"API error: {e}")
+            else:
+                return result
 
     def get_extra_release_info(self, query: dict):
         album = {'id': query['album_id'], 'label': None}

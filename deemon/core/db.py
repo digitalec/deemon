@@ -82,7 +82,8 @@ class Database(object):
                    "'profile_id' INTEGER DEFAULT 1,"
                    "'download_path' TEXT,"
                    "'refreshed' INTEGER DEFAULT 0,"
-                   "'trans_id' INTEGER)")
+                   "'trans_id' INTEGER,"
+                   "'monitor_artists' INTEGER DEFAULT 0)")
 
         self.query("CREATE TABLE playlist_tracks ("
                    "'track_id' INTEGER,"
@@ -169,19 +170,19 @@ class Database(object):
             
         if current_ver < parse_version("3.5.2"):
             self.query("CREATE TABLE releases_tmp ("
-                   "'artist_id' INTEGER,"
-                   "'artist_name' TEXT,"
-                   "'album_id' INTEGER,"
-                   "'album_name' TEXT,"
-                   "'album_release' TEXT,"
-                   "'album_added' INTEGER,"
-                   "'explicit' INTEGER,"
-                   "'label' TEXT,"
-                   "'record_type' INTEGER,"
-                   "'profile_id' INTEGER DEFAULT 1,"
-                   "'future_release' INTEGER DEFAULT 0,"
-                   "'trans_id' INTEGER,"
-                   "unique(album_id, profile_id))")
+                       "'artist_id' INTEGER,"
+                       "'artist_name' TEXT,"
+                       "'album_id' INTEGER,"
+                       "'album_name' TEXT,"
+                       "'album_release' TEXT,"
+                       "'album_added' INTEGER,"
+                       "'explicit' INTEGER,"
+                       "'label' TEXT,"
+                       "'record_type' INTEGER,"
+                       "'profile_id' INTEGER DEFAULT 1,"
+                       "'future_release' INTEGER DEFAULT 0,"
+                       "'trans_id' INTEGER,"
+                       "unique(album_id, profile_id))")
             self.query("INSERT OR REPLACE INTO releases_tmp(artist_id, artist_name, "
                        "album_id, album_name, album_release, album_added, "
                        "explicit, label, record_type, profile_id, "
@@ -193,11 +194,32 @@ class Database(object):
             self.query("ALTER TABLE releases_tmp RENAME TO releases")
             self.query("INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('version', '3.5.2')")
             self.commit()
-            logger.debug(f"Database upgraded to version 3.5.2")
             
         if current_ver < parse_version("3.6"):
             # album_release_ts REMOVED
             pass
+
+        if current_ver < parse_version("3.7"):
+            self.query("CREATE TABLE playlists_tmp ("
+                       "'id' INTEGER UNIQUE,"
+                       "'title' TEXT,"
+                       "'url' TEXT,"
+                       "'bitrate' TEXT,"
+                       "'alerts' INTEGER,"
+                       "'profile_id' INTEGER DEFAULT 1,"
+                       "'download_path' TEXT,"
+                       "'refreshed' INTEGER DEFAULT 0,"
+                       "'trans_id' INTEGER,"
+                       "'monitor_artists' INTEGER DEFAULT 0)")
+            self.query("INSERT OR REPLACE INTO playlists_tmp (id, title, url, bitrate, "
+                       "alerts, profile_id, download_path, refreshed, trans_id) SELECT "
+                       "id, title, url, bitrate, alerts, profile_id, download_path, "
+                       "refreshed, trans_id FROM playlists")
+            self.query("DROP TABLE playlists")
+            self.query("ALTER TABLE playlists_tmp RENAME TO playlists")
+            self.query("INSERT OR REPLACE INTO 'deemon' ('property', 'value') VALUES ('version', '3.7')")
+            self.commit()
+            logger.debug(f"Database upgraded to version 3.7")
 
     def query(self, query, values=None):
         if values is None:
@@ -530,7 +552,7 @@ class Database(object):
 
     def fast_monitor_playlist(self, values):
         self.cursor.executemany(
-            "INSERT OR REPLACE INTO playlists (id, title, url, bitrate, alerts, profile_id, download_path, trans_id) VALUES (:id, :title, :link, :bitrate, :alerts, :profile_id, :download_path, :trans_id)",
+            "INSERT OR REPLACE INTO playlists (id, title, url, bitrate, alerts, profile_id, download_path, trans_id, monitor_artists) VALUES (:id, :title, :link, :bitrate, :alerts, :profile_id, :download_path, :trans_id, :monitor_artists)",
             values)
 
     def insert_multiple(self, table, values):
