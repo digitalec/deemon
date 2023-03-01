@@ -202,7 +202,7 @@ class DeemixInterface:
         })
 
 
-    def generateTrackName(filename, track, settings):
+    def generateTrackName(self, filename, track, settings):
         from deemix.utils.pathtemplates import fixName
 
         logger.debug("[PATCH] Overriding deemix method generateTrackName with bug fix")
