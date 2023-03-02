@@ -39,7 +39,7 @@ Docker support has been added for `amd64`, `arm64` and `armv7` architectures. It
 
 **Note:** Inside deemon's `config.json`, download_location **must** be set to `/downloads` until I can integrate this myself.
 
-**Example: Monitoring a file of artists**
+**Example: Refreshing an existing database**
 ```
 docker run --name deemon \
        --rm \
