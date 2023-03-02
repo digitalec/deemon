@@ -2,13 +2,15 @@
 
 [About](#about) | [Installation](#installation) | [Docker](#docker) | [Documentation](https://digitalec.github.io/deemon) | [Support](#support)
 
-![PyPI](https://img.shields.io/pypi/v/deemon?style=flat)
-[![Downloads](https://pepy.tech/badge/deemon)](https://pepy.tech/project/deemon)
-![GitHub last commit](https://img.shields.io/github/last-commit/digitalec/deemon?style=flat)
-![GitHub last release](https://img.shields.io/github/release-date/digitalec/deemon?style=flat)
-![Discord](https://img.shields.io/discord/831356172464160838?style=flat)
-![Docker](https://img.shields.io/github/workflow/status/digitalec/deemon/Deploy%20Docker?style=flat)
-[![Donate](https://img.shields.io/badge/Donate-PayPal-blue?style=flat&logo=paypal)](https://paypal.me/digitalec)
+![PyPI](https://img.shields.io/pypi/v/deemon?style=for-the-badge)
+![Downloads](https://img.shields.io/pypi/dm/deemon?style=for-the-badge)
+![GitHub last release](https://img.shields.io/github/release-date/digitalec/deemon?style=for-the-badge)
+
+![GitHub last commit](https://img.shields.io/github/last-commit/digitalec/deemon?style=for-the-badge)
+![Docker](https://img.shields.io/github/actions/workflow/status/digitalec/deemon/deploy-docker.yml?branch=main&style=for-the-badge&logo=docker)
+
+![Discord](https://img.shields.io/discord/831356172464160838?style=for-the-badge&logo=discord)
+[![Donate](https://img.shields.io/badge/Donate-PayPal-blue?style=for-the-badge&logo=paypal)](https://paypal.me/digitalec)
 
 
 ### About
