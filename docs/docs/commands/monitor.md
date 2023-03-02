@@ -49,6 +49,13 @@ Deemon will monitor the playlist URL, and will download any new additions to the
 $ deemon monitor --playlist https://www.deezer.com/en/playlist/1234
 ```
 
+## Monitor Playlist including Playlist Artists
+If you'd also like to setup monitoring for artists included in your playlist, you can add `--include-artists`:
+
+```bash
+$ deemon monitor --playlist https://www.deezer.com/en/playlist/1234 --include-artists
+```
+
 ## Import artists from file or directory
 
 This method imports artist names or IDs from a file (CSV or Text) or a directory and stores them in the database.
