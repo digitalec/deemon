@@ -47,7 +47,8 @@ DEFAULT_CONFIG = {
     "deemix": {
         "path": "",
         "arl": "",
-        "check_account_status": True
+        "check_account_status": True,
+        "halt_download_on_error": True,
     },
     "smtp_settings": {
         "server": "",
@@ -464,6 +465,11 @@ class Config(object):
     @staticmethod
     def plex_ssl_verify() -> bool:
         return Config._CONFIG.get('plex').get('ssl_verify')
+
+    @staticmethod
+    def halt_download_on_error() -> bool:
+        return Config._CONFIG.get('deemix').get('halt_download_on_error')
+
 
     @staticmethod
     def find_position(d, property):
