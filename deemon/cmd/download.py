@@ -9,6 +9,7 @@ from tqdm import tqdm
 
 import deemix.errors
 import deezer
+from deezer import errors
 import plexapi.exceptions
 from plexapi.server import PlexServer
 
@@ -199,8 +200,22 @@ class Download:
                     else:
                         logger.info(f"   > {item.playlist_title} (playlist)...")
                         self.di.download_url([item.url], dx_bitrate, download_path, override_deemix=True)
-                except deemix.errors.GenerationError:
+                except (deemix.errors.GenerationError, errors.WrongGeolocation) as e:
+                    logger.debug(e)
                     failed_count.append([(item, "No tracks listed or unavailable in your country")])
+                except Exception as e:
+                    if config.halt_download_on_error():
+                        raise e
+                    else:
+                        if item.artist_name and item.album_title:
+                            logger.info(f"The following error occured while downloading {item.artist_name} - {item.album_title}: {e}")
+                        elif item.artist_name and item.track_title:
+                            logger.info(f"The following error occured while downloading {item.artist_name} - {item.track_title}: {e}")
+                        else:
+                            logger.info(f"The following error occured while downloading {item.playlist_title}: {e}")
+                        pass
+
+
             failed_count = [x for x in failed_count if x]
 
             print("")
