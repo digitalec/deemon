@@ -70,7 +70,7 @@ class QueueItem:
             self.url = f"https://deezer.com/track/{self.track_id}"
 
         if playlist:
-            self.url = playlist["url"]
+            self.url = playlist["link"]
             self.playlist_title = playlist["title"]
 
 
