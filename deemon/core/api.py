@@ -289,7 +289,7 @@ class PlatformAPI:
                 logger.error(f"   [!] API still sending empty response while getting data for playlist ID {query}")
                 return
         return {'id': query, 'title': api_result['title'],
-                'link': f"https://deezer.com/playlist/{str(api_result['id'])}"}
+                'url': f"https://deezer.com/playlist/{str(api_result['id'])}"}
 
     @staticmethod
     def get_playlist_tracks(query: dict):

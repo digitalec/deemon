@@ -71,7 +71,7 @@ class QueueItem:
             self.url = f"https://deezer.com/track/{self.track_id}"
 
         if playlist:
-            self.url = playlist["link"]
+            self.url = playlist["url"]
             self.playlist_title = playlist["title"]
 
 
@@ -204,16 +204,13 @@ class Download:
                     logger.debug(e)
                     failed_count.append([(item, "No tracks listed or unavailable in your country")])
                 except Exception as e:
-                    if config.halt_download_on_error():
-                        raise e
+                    if item.artist_name and item.album_title:
+                        logger.info(f"The following error occured while downloading {item.artist_name} - {item.album_title}: {e}")
+                    elif item.artist_name and item.track_title:
+                        logger.info(f"The following error occured while downloading {item.artist_name} - {item.track_title}: {e}")
                     else:
-                        if item.artist_name and item.album_title:
-                            logger.info(f"The following error occured while downloading {item.artist_name} - {item.album_title}: {e}")
-                        elif item.artist_name and item.track_title:
-                            logger.info(f"The following error occured while downloading {item.artist_name} - {item.track_title}: {e}")
-                        else:
-                            logger.info(f"The following error occured while downloading {item.playlist_title}: {e}")
-                        pass
+                        logger.info(f"The following error occured while downloading {item.playlist_title}: {e}")
+                    pass
 
 
             failed_count = [x for x in failed_count if x]
