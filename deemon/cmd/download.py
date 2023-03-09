@@ -425,6 +425,7 @@ class Download:
                 artist_list = utils.dataprocessor.read_file_as_csv(artist_file)
                 if artist_list:
                     if isinstance(artist_list[0], int):
+                        logger.debug(f"{artist_file} contains artist IDs")
                         with ThreadPoolExecutor(max_workers=self.api.max_threads) as ex:
                             _api_results = list(tqdm(ex.map(process_artist_by_id, artist_list),
                                                      total=len(artist_list),
@@ -432,6 +433,7 @@ class Download:
                                                           f"artist(s), please wait...", ascii=" #",
                                                      bar_format=ui.TQDM_FORMAT))
                     elif isinstance(artist_list[0], str):
+                        logger.debug(f"{artist_file} contains artist names")
                         with ThreadPoolExecutor(max_workers=self.api.max_threads) as ex:
                             _api_results = list(tqdm(ex.map(process_artist_by_name, artist_list),
                                                      total=len(artist_list),

@@ -13,6 +13,12 @@ def read_file_as_csv(file, split_new_line=True):
             csv_to_list = make_csv.split(', ')
         sorted_list = sorted(list(filter(None, csv_to_list)))
         sorted_list = list(set(sorted_list))
+        
+        try:
+            sorted_list = [int(s) for s in sorted_list]
+        except ValueError:
+            pass
+
         return sorted_list
 
 
