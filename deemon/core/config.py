@@ -25,7 +25,7 @@ DEFAULT_CONFIG = {
     "prompt_duplicates": False,
     "prompt_no_matches": True,
     "fast_api": True,
-    "fast_api_threads": 10,
+    "fast_api_threads": 25,
     "exclusions": {
         "enable_exclusions": True,
         "patterns": [],
