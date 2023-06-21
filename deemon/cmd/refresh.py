@@ -15,11 +15,11 @@ logger = logging.getLogger(__name__)
 
 
 class Refresh:
-    def __init__(self, time_machine: datetime = None, skip_download: bool = False, ignore_filters: bool = False):
+    def __init__(self, time_machine: datetime = None, skip_download: bool = False, ignore_filters: bool = False, active_api=None):
         self.db = db.Database()
         self.refresh_date = datetime.now()
         self.max_refresh_date = None
-        self.api = api.PlatformAPI()
+        self.api = active_api or api.PlatformAPI()
         self.new_releases = []
         self.new_releases_alert = []
         self.new_playlist_releases = []
@@ -268,7 +268,7 @@ class Refresh:
             self.new_releases_alert.clear()
 
         if len(self.queue_list):
-            dl = Download()
+            dl = Download(active_api=self.api)
             dl.download_queue(self.queue_list)
 
         if len(self.new_playlist_releases) or len(self.new_releases):

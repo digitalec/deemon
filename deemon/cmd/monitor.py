@@ -157,7 +157,7 @@ class Monitor:
             return True
 
     def call_refresh(self):
-        refresh = Refresh(self.time_machine, ignore_filters=self.dl)
+        refresh = Refresh(self.time_machine, ignore_filters=self.dl, active_api=self.api)
         refresh.run()
 
     # @performance.timeit

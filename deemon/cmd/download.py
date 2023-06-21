@@ -115,9 +115,9 @@ def refresh_plex(plexobj):
 
 class Download:
 
-    def __init__(self):
+    def __init__(self, active_api=None):
         super().__init__()
-        self.api = api.PlatformAPI()
+        self.api = active_api or api.PlatformAPI()
         self.dz = deezer.Deezer()
         self.di = dmi.DeemixInterface()
         self.queue_list = []
