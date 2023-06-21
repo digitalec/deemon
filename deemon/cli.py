@@ -238,7 +238,7 @@ def monitor_command(artist, im, playlist, include_artists, bitrate, record_type,
             try:
                 aid = int(id_from_url[1])
             except (IndexError, ValueError):
-                logger.error(f"Invalid URL -- {url}")
+                logger.error(f"Invalid URL -- {u}")
                 return
             artist.append(aid)
 
@@ -250,7 +250,7 @@ def monitor_command(artist, im, playlist, include_artists, bitrate, record_type,
             try:
                 aid = int(id_from_url[1])
             except (IndexError, ValueError):
-                logger.error(f"Invalid playlist URL -- {url}")
+                logger.error(f"Invalid playlist URL -- {u}")
                 return
             playlist_id.append(aid)
 
