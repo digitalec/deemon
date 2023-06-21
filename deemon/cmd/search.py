@@ -74,6 +74,7 @@ class Search:
                 self.display_options(options="(d) Download Queue  (Q) Show Queue")
             if query:
                 search_query = query
+                query = None
             else:
                 search_query = input(f":: Enter an artist to search for{self.show_mini_queue()}: ")
                 if search_query == "exit":
