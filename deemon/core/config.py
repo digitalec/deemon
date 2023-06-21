@@ -48,7 +48,7 @@ DEFAULT_CONFIG = {
         "path": "",
         "arl": "",
         "check_account_status": True,
-        "halt_download_on_error": True,
+        "halt_download_on_error": False,
     },
     "smtp_settings": {
         "server": "",
