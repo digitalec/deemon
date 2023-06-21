@@ -32,9 +32,9 @@ class DeemixLogListener:
                 else:
                     logger.error(f"  [!] Error while downloading {value['data']['title']} by {value['data']['artist']}: {value['error']}")
                     if config.halt_download_on_error():
-                        logger.info("[X] Exiting due to halt_download_on_error")
+                        logger.info("[X] Exiting due to halt_download_on_error being set to True in config.")
                         sys.exit()
-
+                        
         log_string = formatListener(key, value)
         if config.debug_mode():
             if log_string: logger.debug(f"[DEEMIX] {log_string}")
