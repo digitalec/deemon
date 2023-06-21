@@ -21,7 +21,7 @@ DEFAULT_CONFIG = {
     "debug_mode": False,
     "release_channel": "stable",
     "query_limit": 5,
-    "smart_search": False,
+    "smart_search": True,
     "rollback_view_limit": 10,
     "prompt_duplicates": False,
     "prompt_no_matches": True,
