@@ -21,6 +21,7 @@ DEFAULT_CONFIG = {
     "debug_mode": False,
     "release_channel": "stable",
     "query_limit": 5,
+    "smart_search": False,
     "rollback_view_limit": 10,
     "prompt_duplicates": False,
     "prompt_no_matches": True,
@@ -469,6 +470,10 @@ class Config(object):
     @staticmethod
     def halt_download_on_error() -> bool:
         return Config._CONFIG.get('deemix').get('halt_download_on_error')
+
+    @staticmethod
+    def smart_search() -> bool:
+        return Config._CONFIG.get('smart_search')
 
 
     @staticmethod

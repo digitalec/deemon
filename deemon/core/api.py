@@ -68,11 +68,12 @@ class PlatformAPI:
         if self.platform == "deezer-gw":
             api_result = []
             try:
-                result = self.api.search(query=query, limit=limit)['ARTIST']['data']
+                logger.info(f"Searching for {query}, please wait...")
+                result = self.api.search(query=query)['ARTIST']['data'][:limit]
             except json.decoder.JSONDecodeError:
                 logger.error(f"   [!] Empty response from API while searching for artist {query}, retrying...")
                 try:
-                    result = self.api.search(query=query, limit=limit)['ARTIST']['data']
+                    result = self.api.search(query=query)['ARTIST']['data'][:limit]
                 except json.decoder.JSONDecodeError:
                     logger.error(f"   [!] API still sending empty response while searching for artist {query}")
                     return []

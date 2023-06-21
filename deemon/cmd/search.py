@@ -66,6 +66,7 @@ class Search:
     def search_menu(self, query: str = None):
         exit_search: bool = False
         quick_search: bool = False
+
         while exit_search is False:
             self.clear()
             print("deemon Interactive Search Client\n")
@@ -79,22 +80,40 @@ class Search:
                     if self.exit_search():
                         sys.exit()
                     continue
-                if search_query == "d":
+                elif search_query == "d":
                     if len(self.queue_list) > 0:
                         self.start_queue()
                         continue
-                if search_query == "Q":
+                elif search_query == "Q":
                     if len(self.queue_list) > 0:
                         self.queue_menu()
                     else:
                         self.status_message = "Queue is empty"
                     continue
-                if search_query == "":
+                elif search_query == "":
                     continue
+            
+            self.clear()
+            print("deemon Interactive Search Client\n")
             self.search_results = self.api.search_artist(search_query, config.query_limit())
-            if len(self.search_results['results']) == 0:
+            if not self.search_results['results']:
                 self.status_message = "No results found for: " + search_query
                 continue
+
+            smart_search = None
+            if config.smart_search():
+                for result in self.search_results['results']:
+                    if result['name'].lower() == search_query.lower():
+                        if not smart_search:
+                            smart_search = result
+                        else:
+                            smart_search = None
+                            break
+            
+            if smart_search:
+                album_selected = self.album_menu(smart_search)
+                if album_selected:
+                    return [album_selected]
 
             artist_selected = self.artist_menu(self.search_results['query'], self.search_results['results'], quick_search)
             if artist_selected:
