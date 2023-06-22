@@ -497,5 +497,6 @@ class Search:
 
             self.queue_list.append(download.QueueItem(track=track))
 
-        elif item.get('name'):
-            pass
+        else:
+            logger.error("Unknown record type. Please report this to add support:")
+            logger.error(item)
