@@ -112,6 +112,7 @@ class Search:
                             break
             
             if smart_search:
+                self.artist = smart_search['name']
                 album_selected = self.album_menu(smart_search)
                 if album_selected:
                     return [album_selected]
