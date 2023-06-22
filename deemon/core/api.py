@@ -269,7 +269,7 @@ class PlatformAPI:
             logger.warning(f"   [!] Permission Denied: Playlist {query} is private")
             return
         except deezer.errors.DataException:
-            logger.warning(f"   [!] Playlist ID {query['id']} was not found")
+            logger.warning(f"   [!] Playlist ID {query} was not found")
             return
         except json.decoder.JSONDecodeError:
             logger.error(f"   [!] Empty response from API while getting data for playlist ID {query}, retrying...")
