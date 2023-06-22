@@ -211,9 +211,7 @@ def monitor_command(artist, im, playlist, include_artists, bitrate, record_type,
     """
     monitor = Monitor()
     if download_path:
-        if Path(download_path).exists():
-            download_path = Path(download_path)
-        else:
+        if not Path(download_path).exists():
             return logger.error("Invalid download path provided")
 
     if time_machine:
