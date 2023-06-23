@@ -38,7 +38,8 @@ def exclusion_test(url):
             print("\nChecking for the following keywords:")
 
             for i, keyword in enumerate(config.exclusion_keywords(), start=1):
-                if re.search(r'\(([^)]+)\)|\[([^)]+)]', album['title'].lower()):
+                regex_find = re.search(r'\(([^)]+)\)|\[([^)]+)]', album['title'].lower()).group()
+                if keyword in regex_find:
                     print(f"  {i}.  {keyword}   >>   ** MATCH **")
                     match = True
                 else:
