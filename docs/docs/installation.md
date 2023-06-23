@@ -42,7 +42,7 @@ deemon is installed:
 
 ```bash
 $ deemon -V
-deemon 2.19.1
+deemon 2.19.2
 ```
 
 ## Configuration & First Use
