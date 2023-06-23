@@ -33,7 +33,7 @@ not present. For example: to generate this configuration file, run
 
 - **Windows**: %appdata%\deemon
 
-### Default Configuration (Version 2.9)
+### Default Configuration (Version 2.19.2)
 ```json
 {
     "check_update": 1,
