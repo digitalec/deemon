@@ -79,6 +79,9 @@ By default, deemon uses the settings configured in the `config.json` configurati
 $ deemon monitor ArtistA --bitrate FLAC
 ```
 
+## Monitor and download existing releases
+When setting up an artist (or artists) for monitoring, you can use the `-D` or `--download` flag to also download all releases matching the configured `record_type`.
+
 ## Stop Monitoring an Artist
 
 If you no longer wish to monitor an artist, include the `--remove` flag with one of the above methods and they will be removed from the database.

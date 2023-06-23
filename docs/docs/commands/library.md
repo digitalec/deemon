@@ -14,7 +14,7 @@ parent: Commands
 {:toc}
 
 ---
-**Warning: This feature is a working prototype and is provided as-is. It should work but it requires accurate metadata when querying for track/album IDs.**
+**Warning: This feature is a working prototype and is provided as-is. It should work but it requires accurate local metadata when querying for track/album IDs.**
 
 Starting in v2.18, deemon includes a library upgrade script to upgrade your existing collection from MP3 to FLAC by generating a file containing track/album IDs to be used with the `download` command.
 

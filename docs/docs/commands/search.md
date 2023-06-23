@@ -29,8 +29,16 @@ deemon Interactive Search Client
 :: Enter an artist to search for:
 ```
 
+You can also save yourself a step and include your query as an argument to the search command:
+
+```bash
+$ deemon search ArtistA 
+```
+
 ## Search Results
-When searching for an artist, you'll be presented with a list of results. In the event more than one artist is found with the exact same name, you'll be presented with some data regarding that artist to help you determine the one you're looking for:
+When searching for an artist, you'll be presented with a list of results. If you have `smart_search` enabled, you will be taken to the releases menu provided that there was only one exact match.
+
+In the event more than one artist is found with the exact same name, you'll be presented with some data regarding that artist to help you determine the one you're looking for:
 
 ```bash
 Search results for artist: John Doe
