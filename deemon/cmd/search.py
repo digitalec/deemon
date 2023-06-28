@@ -13,8 +13,8 @@ logger = logging.getLogger(__name__)
 
 
 class Search:
-    def __init__(self):
-        self.api = api.PlatformAPI()
+    def __init__(self, active_api=None):
+        self.api = active_api or api.PlatformAPI()
         self.artist_id: int = None
         self.artist: str = None
         self.choices: list = []
@@ -457,7 +457,7 @@ class Search:
 
     def start_queue(self):
         self.clear()
-        dl = download.Download()
+        dl = download.Download(active_api=self.api)
         dl.queue_list = self.queue_list
         download_result = dl.download_queue()
         self.queue_list.clear()

@@ -94,7 +94,7 @@ class Monitor:
                 return []
 
     def prompt_search(self, value, api_result):
-        menu = search.Search()
+        menu = search.Search(active_api=self.api)
         ask_user = menu.artist_menu(value, api_result, True)
         if ask_user:
             return {'id': ask_user['id'], 'name': ask_user['name']}
