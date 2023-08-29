@@ -296,7 +296,7 @@ class Refresh:
             logger.info(":: New artists to monitor, stand by...")
             time.sleep(2)
             from deemon.cmd.monitor import Monitor
-            monitor = Monitor()
+            monitor = Monitor(active_api=self.api)
             monitor.artist_ids(playlist_monitor_artists)
 
     def db_stats(self):

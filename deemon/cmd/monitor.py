@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 class Monitor:
 
-    def __init__(self):
+    def __init__(self, active_api=None):
         self.bitrate = None
         self.alerts = False
         self.record_type = None
@@ -28,7 +28,7 @@ class Monitor:
         self.time_machine = None
         self.dl = None
         self.db = Database()
-        self.api = PlatformAPI()
+        self.api = active_api or PlatformAPI()
 
     def set_config(self, bitrate: str, alerts: bool, record_type: str, download_path: Path):
         self.bitrate = bitrate
