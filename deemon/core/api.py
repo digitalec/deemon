@@ -285,7 +285,7 @@ class PlatformAPI:
     def get_playlist_tracks(query: dict):
         track_list = []
         try:
-            api_result = Deezer().api.get_playlist(query['id'])
+            api_result = Deezer().api.get_playlist_tracks(query['id'])
         except deezer.errors.PermissionException:
             logger.warning(f"   [!] Permission Denied: Playlist {query['title']} ({query['id']}) is private")
             return
@@ -295,11 +295,11 @@ class PlatformAPI:
         except json.decoder.JSONDecodeError:
             logger.error(f"   [!] Empty response from API while getting data for playlist ID {query['id']}")
             try:
-                api_result = Deezer().api.get_playlist(query['id'])
+                api_result = Deezer().api.get_playlist_tracks(query['id'])
             except json.decoder.JSONDecodeError:
                 logger.error(f"   [!] API still sending empty response while getting data for playlist ID {query['id']}")
                 return
-        for track in api_result['tracks']['data']:
+        for track in api_result['data']:
             track_list.append({'id': track['id'], 'title': track['title'],
                                'artist_id': track['artist']['id'],
                                'artist_name': track['artist']['name']})
