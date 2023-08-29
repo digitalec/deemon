@@ -41,6 +41,21 @@ def init_appdata_dir(appdata):
     Path(appdata / 'backups').mkdir(exist_ok=True)
 
 
+def delete_appdata(appdata):
+    import shutil
+    try:
+        shutil.rmtree(appdata)
+    except OSError as e:
+        logger.info(f"Error while deleting path: {e}")
+
+def reinit_appdata_dir(appdata):
+    if appdata.exists():
+        logger.info("Deleting existing application data directory (config, database, etc.)")
+        delete_appdata(appdata)
+    logger.info("Initializing new application data directory...")
+    init_appdata_dir(appdata)
+
+
 def get_config():
     return get_appdata_dir() / 'config.json'
 
