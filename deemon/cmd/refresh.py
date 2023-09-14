@@ -265,7 +265,7 @@ class Refresh:
         if self.skip_download:
             logger.info(f"   [!] You have opted to skip downloads, clearing {len(self.queue_list):,} item(s) from queue...")
             self.queue_list.clear()
-            self.new_releases_alert.clear()
+            # self.new_releases_alert.clear()
 
         if len(self.queue_list):
             dl = Download(active_api=self.api)
