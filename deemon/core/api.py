@@ -204,7 +204,7 @@ class PlatformAPI:
                 if not config.allow_unofficial() and not r['ARTISTS_ALBUMS_IS_OFFICIAL']:
                     logger.debug(f"Unofficial for {query['artist_name']} detected but are disabled in config")
                     continue
-                if not config.allow_compilations() and (r['SUBTYPES']['isCompilation'] or r['TYPE'] == '2'):
+                if not config.allow_compilations() and (r['SUBTYPES']['isCompilation'] or r['TYPE'] == '2') and r['ART_ID'] != str(query['artist_id']):
                     logger.debug(f"Compilation for {query['artist_name']} detected but are disabled in config")
                     continue
                 if not config.allow_featured_in() and not (r['SUBTYPES']['isCompilation'] or r['TYPE'] == '2') and r['ART_ID'] != str(query['artist_id']):
