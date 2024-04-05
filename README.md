@@ -10,7 +10,6 @@
 ![Docker](https://img.shields.io/github/actions/workflow/status/digitalec/deemon/deploy-docker.yml?branch=main&style=for-the-badge&logo=docker)
 
 ![Discord](https://img.shields.io/discord/831356172464160838?style=for-the-badge&logo=discord)
-[![Donate](https://img.shields.io/badge/Donate-PayPal-blue?style=for-the-badge&logo=paypal)](https://paypal.me/digitalec)
 
 
 ### About
