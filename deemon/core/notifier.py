@@ -8,7 +8,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.utils import formataddr, formatdate
 
-import pkg_resources
+import pkgutil
 
 from deemon import __version__
 from deemon.core.config import Config as config
@@ -187,7 +187,7 @@ class Notify:
         else:
             self.subject = f"1 new release found!"
         
-        index = pkg_resources.resource_filename('deemon', 'assets/index.html')
+        index = pkgutil.get_data('deemon', 'assets/index.html')
         with open(index, 'r') as f:
             html_output = f.read()
 
