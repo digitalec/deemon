@@ -221,15 +221,20 @@ class Download:
                 with open(startup.get_appdata_dir() / "failed.csv", "w", encoding="utf-8") as f:
                     f.writelines(','.join([str(x) for x in vars(self.queue_list[0]).keys()]) + "\n")
                     for failed in failed_count:
-                        raw_values = [str(x) for x in vars(failed[0]).values()]
-                        # TODO move this to shared function
-                        for i, v in enumerate(raw_values):
-                            if '"' in v:
-                                raw_values[i] = v.replace('"', "'")
-                            if ',' in v:
-                                raw_values[i] = f'"{v}"'
-                        f.writelines(','.join(raw_values) + "\n")
-                        print(f"+ {failed[0].artist_name} - {failed[0].album_title} --- Reason: {failed[1]}")
+                        try:
+                            raw_values = [str(x) for x in vars(failed[0]).values()]
+                        except TypeError as e:
+                            print(f"Error reading from failed.csv. Entry that failed was either invalid or empty: {failed}")
+                            logger.error(e)
+                        else:
+                            # TODO move this to shared function
+                            for i, v in enumerate(raw_values):
+                                if '"' in v:
+                                    raw_values[i] = v.replace('"', "'")
+                                if ',' in v:
+                                    raw_values[i] = f'"{v}"'
+                            f.writelines(','.join(raw_values) + "\n")
+                            print(f"+ {failed[0].artist_name} - {failed[0].album_title} --- Reason: {failed[1]}")
                 print("")
                 logger.info(f":: Failed downloads exported to: {startup.get_appdata_dir()}/failed.csv")
             else:
