@@ -71,7 +71,11 @@ class QueueItem:
             self.url = f"https://deezer.com/track/{self.track_id}"
 
         if playlist:
-            self.url = playlist["url"]
+            try:
+                self.url = playlist["link"]
+            except KeyError:
+                logger.error("DEPRECATED dict key: playlist['url'] should not be used in favor of playlist['link']")
+                self.url = playlist.get("url", None)
             self.playlist_title = playlist["title"]
 
 
