@@ -13,3 +13,4 @@ artists.txt
 .vscode/settings.json
 .vscode/launch.json
 createenv.sh
+.python-version
