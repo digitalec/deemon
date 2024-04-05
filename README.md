@@ -3,7 +3,7 @@
 [About](#about) | [Installation](#installation) | [Docker](#docker) | [Documentation](https://digitalec.github.io/deemon) | [Support](#support)
 
 ![PyPI](https://img.shields.io/pypi/v/deemon?style=for-the-badge)
-![Downloads](https://img.shields.io/pypi/dm/deemon?style=for-the-badge)
+![Downloads](https://img.shields.io/pepy/dt/deemon?style=for-the-badge)
 ![GitHub last release](https://img.shields.io/github/release-date/digitalec/deemon?style=for-the-badge)
 
 ![GitHub last commit](https://img.shields.io/github/last-commit/digitalec/deemon?style=for-the-badge)
