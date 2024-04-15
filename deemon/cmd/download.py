@@ -74,7 +74,7 @@ class QueueItem:
             try:
                 self.url = playlist["link"]
             except KeyError:
-                logger.error("DEPRECATED dict key: playlist['url'] should not be used in favor of playlist['link']")
+                logger.debug("DEPRECATED dict key: playlist['url'] should not be used in favor of playlist['link']")
                 self.url = playlist.get("url", None)
             self.playlist_title = playlist["title"]
 
