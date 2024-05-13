@@ -19,12 +19,12 @@ setup(
     license="GPL3",
     classifiers=[
         "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
-        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.8",
         "Operating System :: OS Independent",
     ],
     packages=find_packages(),
     include_package_data=True,
-    python_requires=">=3.9",
+    python_requires=">=3.8",
     install_requires=required,
     url="https://github.com/digitalec/deemon",
     entry_points = {
