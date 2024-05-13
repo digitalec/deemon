@@ -187,20 +187,18 @@ class Notify:
         else:
             self.subject = f"1 new release found!"
         
-        index = pkgutil.get_data('deemon', 'assets/index.html')
-        with open(index, 'r') as f:
-            html_output = f.read()
+        html_output = pkgutil.get_data('deemon', 'assets/index.html').decode('ascii')
+        
+        if config.update_available():
+            html_output = html_output.replace("{UPDATE_MESSAGE}", f"Update to v{config.update_available()} is now available!")
+        else:
+            html_output = html_output.replace("{UPDATE_MESSAGE}", "")
+            html_output = html_output.replace("{VIEW_UPDATE_MESSAGE}", "display:none;")
 
-            if config.update_available():
-                html_output = html_output.replace("{UPDATE_MESSAGE}", f"Update to v{config.update_available()} is now available!")
-            else:
-                html_output = html_output.replace("{UPDATE_MESSAGE}", "")
-                html_output = html_output.replace("{VIEW_UPDATE_MESSAGE}", "display:none;")
-
-            html_output = html_output.replace("{NEW_RELEASE_COUNT}", str(new_release_count))
-            html_output = html_output.replace("{NEW_RELEASE_LIST}", all_new_releases)
-            html_output = html_output.replace("{DEEMON_VER}", app_version)
-            html_output = html_output.replace("{PY_VER}", py_version)
-            html_output = html_output.replace("{SYS_VER}", sys_version)
+        html_output = html_output.replace("{NEW_RELEASE_COUNT}", str(new_release_count))
+        html_output = html_output.replace("{NEW_RELEASE_LIST}", all_new_releases)
+        html_output = html_output.replace("{DEEMON_VER}", app_version)
+        html_output = html_output.replace("{PY_VER}", py_version)
+        html_output = html_output.replace("{SYS_VER}", sys_version)
 
         return html_output
