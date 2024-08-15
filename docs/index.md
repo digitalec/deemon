@@ -6,7 +6,7 @@ description: "deemon is a monitoring utility for new artist releases that can pr
 permalink: /
 ---
 
-# deemon 2.19.2 Documentation
+# deemon 2.21.3-dev Documentation
 {: .fs-9 }
 
 deemon is a monitoring utility for new artist releases that can provide email alerts and automate downloading via the deemix library
@@ -14,7 +14,7 @@ deemon is a monitoring utility for new artist releases that can provide email al
 
 [Get started now](#getting-started){: .btn .btn-primary .fs-5 .mb-4 .mb-md-0 .mr-2 } [View it on GitHub](https://github.com/digitalec/deemon){: .btn .fs-5 .mb-4 .mb-md-0 }
 
-<small>Version 2.19.2</small>
+<small>Version 2.21.3-dev</small>
 ---
 
 ## Disclaimer

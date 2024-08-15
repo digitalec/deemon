@@ -3,6 +3,7 @@ packaging
 requests
 click
 setuptools
+wheel
 PlexAPI
 tqdm
 mutagen
