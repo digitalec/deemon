@@ -147,24 +147,24 @@ class Notify:
 					{release_date_str}
 				</span>
 			</div>
-            """
+      """
 
-            new_release_list_item = ""
+      new_release_list_item = ""
 
-            for album in release["releases"]:
-                new_release_count += 1
-                if album['record_type'].lower() == "ep":
-                    record_type = "EP"
-                else:
-                    record_type = album['record_type'].title()
-            
-                if not album['track_num']:
-                    album_info = record_type
-                else:
-                    album_info = f"{record_type} | {album['track_num']} track(s)"
-            
-                new_release_list_item += f"""
-            <div class="album body">
+      for album in release["releases"]:
+          new_release_count += 1
+          if album['record_type'].lower() == "ep":
+              record_type = "EP"
+          else:
+              record_type = album['record_type'].title()
+
+          if not album['track_num']:
+              album_info = record_type
+          else:
+              album_info = f"{record_type} | {album['track_num']} track(s)"
+
+          new_release_list_item += f"""
+    <div class="album body">
 				<div class="albumart">
 					<img src="{album['cover']}">
 				</div>
@@ -186,9 +186,8 @@ class Notify:
             self.subject = f"{str(new_release_count)} new releases found!"
         else:
             self.subject = f"1 new release found!"
-
         html_output = pkgutil.get_data('deemon', 'assets/index.html').decode('ascii')
-
+        
         if config.update_available():
             html_output = html_output.replace("{UPDATE_MESSAGE}", f"Update to v{config.update_available()} is now available!")
         else:
