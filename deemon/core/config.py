@@ -527,15 +527,15 @@ class Config(object):
                 if isinstance(ALLOWED_VALUES[property], dict):
                     if value in [str(x.lower()) for x in ALLOWED_VALUES[property].values()]:
                         tmpConfig[property_path[-1]] = value
-                        return
+                        return True
                 if value in ALLOWED_VALUES[property]:
                     tmpConfig[property_path[-1]] = value
-                    return
+                    return True
                 raise ValueNotAllowed(f"Value for {property} is invalid: {value} (type: {type(value).__name__})")
 
             if isinstance(value, type(tmpConfig[property])):
                 tmpConfig[property] = value
-                return
+                return True
             else:
                 raise PropertyTypeMismatch(f"Type mismatch while setting {property} "
                                            f"to {value} (type: {type(value).__name__})")

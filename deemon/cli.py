@@ -32,10 +32,11 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 @click.option('--whats-new', is_flag=True, help="Show release notes from this version")
 @click.option('--init', is_flag=True, help="""Initialize deemon application data
               directory. Warning: if directory exists, this will delete existing config and database.""")
+@click.option('--arl', help="Update ARL")
 @click.option('-P', '--profile', help="Specify profile to run deemon as")
 @click.version_option(__version__, '-V', '--version', message='deemon %(version)s')
 @click.option('-v', '--verbose', is_flag=True, help="Show debug output")
-def run(whats_new, init, verbose, profile):
+def run(whats_new, init, arl, verbose, profile):
     """Monitoring and alerting tool for new music releases using the Deezer API.
 
     deemon is a free and open source tool. To report issues or to contribute,
@@ -66,6 +67,14 @@ def run(whats_new, init, verbose, profile):
     db.do_upgrade()
     tid = db.get_next_transaction_id()
     config.set('tid', tid, validate=False)
+    
+    if arl:
+        if config.set("arl", arl):
+            config._Config__write_modified_config()
+            reload_config = Config()
+            return print(f"ARL has been successfully updated to: {reload_config.arl()}")
+        else:
+            return print("Error when updating ARL.")
 
     if profile:
         profile_config = db.get_profile(profile)
