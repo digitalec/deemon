@@ -205,10 +205,10 @@ class Search:
 
     @staticmethod
     def explicit_lyrics(is_explicit):
-        if is_explicit:
-            return " [E]"
+        if is_explicit > 0:
+            return f"[E]"
         else:
-            return ""
+            return f"   "
 
     def item_selected(self, id):
         if self.select_mode:
@@ -452,7 +452,7 @@ class Search:
     def filter_choices(self, choices):
         apply_filter = [x for x in choices if x['record_type'] == self.filter or self.filter is None]
         if self.explicit_only:
-            apply_filter = [x for x in apply_filter if x['explicit_lyrics'] == True]
+            apply_filter = [x for x in apply_filter if x['explicit_lyrics'] > 0]
         return sorted(apply_filter, key=lambda x: x[self.sort], reverse=self.desc)
 
     def start_queue(self):
