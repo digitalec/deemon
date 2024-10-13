@@ -235,8 +235,8 @@ class Search:
             self.album_menu_header(artist['name'])
             filtered_choices = self.filter_choices(artist_albums)
             for idx, album in enumerate(filtered_choices, start=1):
-                print(f"{self.item_selected(album['id'])}{idx}. ({dates.get_year(album['release_date'])}) "
-                      f"{album['title']} {self.explicit_lyrics(album['explicit_lyrics'])}")
+                print(f"{self.explicit_lyrics(album['explicit_lyrics'])} {self.item_selected(album['id'])}{idx}. ({dates.get_year(album['release_date'])}) "
+                      f"{album['title']}")
             monitored = self.db.get_monitored_artist_by_id(artist['id'])
             self.album_menu_options(monitored)
 
