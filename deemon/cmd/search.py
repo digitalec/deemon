@@ -28,6 +28,10 @@ class Search:
         self.filter: str = None
         self.desc: bool = True
 
+        self.gte_year = None
+        self.lte_year = None
+        self.eq_year = None
+
         self.db = db.Database()
         self.dz = Deezer()
 
@@ -181,14 +185,27 @@ class Search:
                     self.status_message = f"Invalid selection: {response}"
                     continue
 
+    def get_filtered_year(self):
+        if self.gte_year and self.lte_year:
+            return f"{self.gte_year} - {self.lte_year}"
+        elif self.gte_year:
+            return f">={self.gte_year}"
+        elif self.lte_year:
+            return f"<={self.lte_year}"
+        elif self.eq_year:
+            return f"{self.eq_year}"
+        else:
+            return "All"
+
     def album_menu_header(self, artist: str):
         filter_text = "All" if not self.filter else self.filter.title()
+        filter_year = self.get_filtered_year()
         if self.explicit_only:
             filter_text = filter_text + " (Explicit Only)"
         desc_text = "desc" if self.desc else "asc"
         sort_text = self.sort.replace("_", " ").title() + " (" + desc_text + ")"
         print("Discography for artist: " + artist)
-        print("Filter by: " + filter_text + " | Sort by: " + sort_text + "\n")
+        print("Filter: " + filter_text + " | Sort: " + sort_text + " | Year: " + filter_year + "\n")
 
     def album_menu_options(self, monitored):
         print("")
@@ -256,6 +273,19 @@ class Search:
                 self.explicit_only = False
                 self.sort = "release_date"
                 self.desc = True
+                self.gte_year = None
+                self.lte_year = None
+                self.eq_year = None
+            elif prompt.startswith(">="):
+                self.eq_year = None
+                self.gte_year = int(prompt[2:])
+            elif prompt.startswith("<="):
+                self.eq_year = None
+                self.lte_year = int(prompt[2:])
+            elif prompt.startswith("="):
+                self.lte_year = None
+                self.gte_year = None
+                self.eq_year = int(prompt[1:])
             elif prompt == "y":
                 self.sort = "release_date"
                 self.desc = True
@@ -453,6 +483,17 @@ class Search:
         apply_filter = [x for x in choices if x['record_type'] == self.filter or self.filter is None]
         if self.explicit_only:
             apply_filter = [x for x in apply_filter if x['explicit_lyrics'] > 0]
+
+        if any([self.gte_year, self.lte_year, self.eq_year]):
+            if self.eq_year:
+                apply_filter = [x for x in apply_filter if dates.get_year(x['release_date']) == self.eq_year]
+            elif self.gte_year and self.lte_year:
+                apply_filter = [x for x in apply_filter if dates.get_year(x['release_date']) >= self.gte_year and dates.get_year(x['release_date']) <= self.lte_year]
+            elif self.gte_year:
+                apply_filter = [x for x in apply_filter if dates.get_year(x['release_date']) >= self.gte_year]
+            elif self.lte_year:
+                apply_filter = [x for x in apply_filter if dates.get_year(x['release_date']) <= self.lte_year]
+
         return sorted(apply_filter, key=lambda x: x[self.sort], reverse=self.desc)
 
     def start_queue(self):
