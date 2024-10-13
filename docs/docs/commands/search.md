@@ -86,6 +86,23 @@ At the bottom of the screen you see four rows: Filters, Sort, Mode and Actions.
 ### Filters
 Here you can filter albums by type (albums, EP and singles), show only explicit releases and reset filters back to their default view.
 
+As of v2.22, you can now filter by date using `>=`, `<=` or `=` followed by the four digit year. For example, to find all releases between (and including) 2000 and 2003:
+
+Released in year 2000 or later:
+```bash
+:: [SELECT] Please choose an option or type 'exit': >=2000
+```
+
+Released in year 2003 or prior:
+```bash
+:: [SELECT] Please choose an option or type 'exit': <=2003
+```
+
+You'll notice the header has updated to reflect the filter:
+```bash
+Filter: All | Sort: Release Date (desc) | Year: 2000 - 2003
+```
+
 ### Sorting
 You can sort the results by release year and title, both ascending and descending.
 
