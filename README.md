@@ -32,7 +32,7 @@ $ pip install -r requirements.txt
 $ python3 -m deemon
 ```
 
-### Docker
+#### Docker
 
 Docker support has been added for `amd64`, `arm64` and `armv7` architectures. It is recommended to save your `docker run` command as a script to execute via cron/Task Scheduler.
 
@@ -48,8 +48,29 @@ docker run --name deemon \
        ghcr.io/digitalec/deemon:latest \
        python3 -m deemon refresh
 ```
+#### Unraid
 
-### Installation in a Python Virtual Environment (venv)
+Install Python/PIP using either Nerd-tools Plugin (Unraid 6), Python 3 for UNRAID Plugin (Unraid 6 or 7), or manually via command line.
+
+See the installation instructions [here](https://digitalec.github.io/deemon/docs/installation.html) or install as root (**NOT** recommended!):
+
+```bash
+pip install deemon
+```
+Then:
+```bash
+deemon --init
+```
+
+If deemon is not found in your path, you can also call it as a python module:
+```bash
+python3 -m deemon --init
+```       
+If installed using the **root** account, the config.json will be located at: **/root/.config/deemon/config.json**. Edit your configuration using the documentation located [here](https://digitalec.github.io/deemon/docs/configuration.html).
+
+Use `deemon monitor -h` for help on adding artists, playlists, or albums to monitor for new releases.
+
+#### Installation in a Python Virtual Environment (venv)
 
 If you wish to install deemon and it's dependencies in a sandbox-style environment, I would recommend using venv.
 
@@ -73,6 +94,5 @@ $ deemon refresh
 
 If you are moving to venv from the Docker container, be sure to update your cron/Task Scheduler scripts.
 
-### Default Configuration
-If you need to generate a new default configuration, please rename or delete your current `config.json`. The
-configuration will be generated the next time you run deemon.
+### Getting Started
+You have to manually add artists, playlists, albums, etc.. deemon does not automatically pull artists unless they're being monitored. Refer to the documentation [here](https://digitalec.github.io/deemon/docs/commands/monitor.html).
