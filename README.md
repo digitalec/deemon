@@ -32,7 +32,7 @@ $ pip install -r requirements.txt
 $ python3 -m deemon
 ```
 
-### Docker
+#### Docker
 
 Docker support has been added for `amd64`, `arm64` and `armv7` architectures. It is recommended to save your `docker run` command as a script to execute via cron/Task Scheduler.
 
@@ -48,86 +48,29 @@ docker run --name deemon \
        ghcr.io/digitalec/deemon:latest \
        python3 -m deemon refresh
 ```
-### Unraid
+#### Unraid
 
 Install Python/PIP using either Nerd-tools Plugin (Unraid 6), Python 3 for UNRAID Plugin (Unraid 6 or 7), or manually via command line.
 
-Run: (or see the Python venv section)
+See the installation instructions [here](https://digitalec.github.io/deemon/docs/installation.html) or install as root (**NOT** recommended!):
+
 ```bash
 pip install deemon
 ```
 Then:
 ```bash
-deemon refresh
+deemon --init
 ```
-or
+
+If deemon is not found in your path, you can also call it as a python module:
 ```bash
-python3 -m deemon refresh
-```
-This will generate the default config.json
+python3 -m deemon --init
+```       
+If installed using the **root** account, the config.json will be located at: **/root/.config/deemon/config.json**. Edit your configuration using the documentation located [here](https://digitalec.github.io/deemon/docs/configuration.html).
 
-Edit the global config.json located in **/root/.config/deemon/config.json**
+Use `deemon monitor -h` for help on adding artists, playlists, or albums to monitor for new releases.
 
-Example:
-```commandline
-{
-    "check_update": 1,
-    "debug_mode": false,
-    "release_channel": "stable",
-    "query_limit": 5,
-    "smart_search": true,
-    "rollback_view_limit": 10,
-    "prompt_duplicates": false,
-    "prompt_no_matches": true,
-    "fast_api": true,
-    "fast_api_threads": 25,
-    "exclusions": {
-        "enable_exclusions": true,
-        "patterns": [],
-        "keywords": []
-    },
-    "new_releases": {
-        "release_max_age": 90,
-        "include_unofficial": false,
-        "include_compilations": false,
-        "include_featured_in": false
-    },
-    "global": {
-        "bitrate": "flac",                        #128, 320, flac
-        "alerts": false,                          
-        "record_type": "all",                     #all, album, ep, single
-        "download_path": "/Your/Path/To/Music/",  #Example: /mnt/user/Share/media/Music/
-        "email": ""
-    },
-    "deemix": {
-        "path": "/Your/Path/to/deemix/",          #Example: /mnt/user/appdata/deemix/
-        "arl": "YourDeezerARL"                    #Copy from Deemix
-        "check_account_status": true,
-        "halt_download_on_error": false
-    },
-    "smtp_settings": {
-        "server": "",
-        "port": 465,
-        "starttls": false,
-        "username": "",
-        "password": "",
-        "from_addr": ""
-    },
-    "plex": {
-        "base_url": "https://yourplexip:32400",
-        "ssl_verify": true,
-        "token": "YourPlextoken",           #Google how to obtain your Plex Token
-        "library": "YourMusic"              #Name of your Plex Music Library, most likely 'Music'
-    },
-    "profile_id": 1,
-    "tid": 0
-}
-```
-
-Use ```deemon monitor -h``` for help on adding artists, playlists, or albums to monitor for new releases.
-
-
-### Installation in a Python Virtual Environment (venv)
+#### Installation in a Python Virtual Environment (venv)
 
 If you wish to install deemon and it's dependencies in a sandbox-style environment, I would recommend using venv.
 
@@ -151,14 +94,5 @@ $ deemon refresh
 
 If you are moving to venv from the Docker container, be sure to update your cron/Task Scheduler scripts.
 
-### IMPORTANT!!
-You have to manually add artists, playlists, albums, etc.. Deemon does not automatically pull artists from Deemix.
-Example:
-
-```deemon monitor Post Malone```
-
-```deemon monitor -p https://www.deezer.com/us/playlist/2228601362```
-
-### Default Configuration
-If you need to generate a new default configuration, please rename or delete your current `config.json`. The
-configuration will be generated the next time you run deemon.
+### Getting Started
+You have to manually add artists, playlists, albums, etc.. deemon does not automatically pull artists unless they're being monitored. Refer to the documentation [here](https://digitalec.github.io/deemon/docs/commands/monitor.html).
