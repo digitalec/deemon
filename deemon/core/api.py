@@ -201,60 +201,76 @@ class PlatformAPI:
                     return query
             api_result = []
             for r in result:
-                # Remove ID check to get compilations
-                if (r['ART_ID'] == str(query['artist_id']) and r['ARTISTS_ALBUMS_IS_OFFICIAL']) or (r['ART_ID'] == str(query['artist_id']) and config.allow_unofficial()) or config.allow_compilations():
-                    # TYPE 0 - single, TYPE 1 - album, TYPE 2 - compilation, TYPE 3 - ep
-                    if r['TYPE'] == '0':
-                        r['TYPE'] = "single"
-                    elif r['TYPE'] == '1' and r['ART_ID'] != str(query['artist_id']):
-                        if not config.allow_featured_in():
-                            logger.debug(f"Featured In for {query['artist_name']} detected but are disabled in config")
-                            continue
-                        else:
-                            logger.debug(f"Featured In detected for artist {query['artist_name']}: {r['ALB_TITLE']}")
-                            r['TYPE'] = "album"
-                            # TODO set unique r['TYPE'] for FEATURED IN
-                    elif r['TYPE'] == '2':
-                        if not config.allow_compilations():
-                            logger.debug(f"Compilation for {query['artist_name']} detected but are disabled in config")
-                            continue
-                        else:
-                            logger.debug(f"Compilation detected for artist {query['artist_name']}: {r['ALB_TITLE']}")
-                            r['TYPE'] = "album"
-                            # TODO set unique r['TYPE'] for COMPILATIONS
-                    elif r['TYPE'] == '3':
-                        r['TYPE'] = "ep"
-                    else:
-                        r['TYPE'] = "album"
+                if not config.allow_unofficial() and not r['ARTISTS_ALBUMS_IS_OFFICIAL']:
+                    logger.debug(f"Unofficial for {query['artist_name']} detected but are disabled in config")
+                    continue
+                if not config.allow_compilations() and (r['SUBTYPES']['isCompilation'] or r['TYPE'] == '2') and r['ART_ID'] != str(query['artist_id']):
+                    logger.debug(f"Compilation for {query['artist_name']} detected but are disabled in config")
+                    continue
+                if not config.allow_featured_in() and not (r['SUBTYPES']['isCompilation'] or r['TYPE'] == '2') and r['ART_ID'] != str(query['artist_id']):
+                    logger.debug(f"Featured In for {query['artist_name']} detected but are disabled in config")
+                    continue
+                # TYPE 0 - single, TYPE 1 - album, TYPE 2 - compilation, TYPE 3 - ep
+                if r['TYPE'] == '0':
+                    r['TYPE'] = "single"
+                    if r['SUBTYPES']['isCompilation']:
+                        logger.debug(f"Compilation detected for artist {query['artist_name']}: {r['ALB_TITLE']}")
+                        # TODO set unique r['TYPE'] for COMPILATIONS
+                    elif r['ART_ID'] != str(query['artist_id']):
+                        logger.debug(f"Featured In detected for artist {query['artist_name']}: {r['ALB_TITLE']}")
+                        # TODO set unique r['TYPE'] for FEATURED IN
+                elif r['TYPE'] == '1':
+                    r['TYPE'] = "album"
+                    if r['SUBTYPES']['isCompilation']:
+                        logger.debug(f"Compilation detected for artist {query['artist_name']}: {r['ALB_TITLE']}")
+                        # TODO set unique r['TYPE'] for COMPILATIONS
+                    elif r['ART_ID'] != str(query['artist_id']):
+                        logger.debug(f"Featured In detected for artist {query['artist_name']}: {r['ALB_TITLE']}")
+                        # TODO set unique r['TYPE'] for FEATURED IN
+                elif r['TYPE'] == '2':
+                    r['TYPE'] = "album"
+                    logger.debug(f"Compilation detected for artist {query['artist_name']}: {r['ALB_TITLE']}")
+                    # TODO set unique r['TYPE'] for COMPILATIONS
+                elif r['TYPE'] == '3':
+                    r['TYPE'] = "ep"
+                    if r['SUBTYPES']['isCompilation']:
+                        logger.debug(f"Compilation detected for artist {query['artist_name']}: {r['ALB_TITLE']}")
+                        # TODO set unique r['TYPE'] for COMPILATIONS
+                    elif r['ART_ID'] != str(query['artist_id']):
+                        logger.debug(f"Featured In detected for artist {query['artist_name']}: {r['ALB_TITLE']}")
+                        # TODO set unique r['TYPE'] for FEATURED IN
+                else:
+                    logger.debug(f"Unable to process {query['artist_name']}: {r['ALB_TITLE']} ({r['ALB_ID']}), skipping")
+                    continue
 
-                    if r['ORIGINAL_RELEASE_DATE'] != "0000-00-00":
-                        release_date = r['ORIGINAL_RELEASE_DATE']
-                    elif r['PHYSICAL_RELEASE_DATE'] != "0000-00-00":
-                        release_date = r['PHYSICAL_RELEASE_DATE']
-                    elif r['DIGITAL_RELEASE_DATE'] != "0000-00-00":
-                        release_date = r['DIGITAL_RELEASE_DATE']
-                    else:
-                        # In the event of an unknown release date, set it to today's date
-                        # See album ID: 417403
-                        logger.warning(f"   [!] Found release without release date, assuming today: "
-                                       f"{query['artist_name']} - {r['ALB_TITLE']}")
-                        release_date = datetime.strftime(datetime.today(), "%Y-%m-%d")
-                    
-                    cover_art = f"https://e-cdns-images.dzcdn.net/images/cover/{r['ALB_PICTURE']}/500x500-00000-80-0-0.jpg"
-                    album_url = f"https://www.deezer.com/album/{r['ALB_ID']}"
-                    
-                    api_result.append(
-                        {
-                            'id': int(r['ALB_ID']),
-                            'title': r['ALB_TITLE'],
-                            'release_date': release_date,
-                            'explicit_lyrics': r['EXPLICIT_ALBUM_CONTENT']['EXPLICIT_LYRICS_STATUS'],
-                            'record_type': r['TYPE'],
-                            'cover_big': cover_art,
-                            'link': album_url,
-                            'nb_tracks': r['NUMBER_TRACK'],
-                            }
-                    )
+                if r['ORIGINAL_RELEASE_DATE'] != "0000-00-00":
+                    release_date = r['ORIGINAL_RELEASE_DATE']
+                elif r['PHYSICAL_RELEASE_DATE'] != "0000-00-00":
+                    release_date = r['PHYSICAL_RELEASE_DATE']
+                elif r['DIGITAL_RELEASE_DATE'] != "0000-00-00":
+                    release_date = r['DIGITAL_RELEASE_DATE']
+                else:
+                    # In the event of an unknown release date, set it to today's date
+                    # See album ID: 417403
+                    logger.warning(f"   [!] Found release without release date, assuming today: "
+                                   f"{query['artist_name']} - {r['ALB_TITLE']}")
+                    release_date = datetime.strftime(datetime.today(), "%Y-%m-%d")
+                
+                cover_art = f"https://e-cdns-images.dzcdn.net/images/cover/{r['ALB_PICTURE']}/500x500-00000-80-0-0.jpg"
+                album_url = f"https://www.deezer.com/album/{r['ALB_ID']}"
+                
+                api_result.append(
+                    {
+                        'id': int(r['ALB_ID']),
+                        'title': r['ALB_TITLE'],
+                        'release_date': release_date,
+                        'explicit_lyrics': r['EXPLICIT_ALBUM_CONTENT']['EXPLICIT_LYRICS_STATUS'],
+                        'record_type': r['TYPE'],
+                        'cover_big': cover_art,
+                        'link': album_url,
+                        'nb_tracks': r['NUMBER_TRACK'],
+                        }
+                )
         else:
             api_result = self.api.get_artist_albums(artist_id=query['artist_id'], limit=limit)['data']
 
